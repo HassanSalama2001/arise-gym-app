@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
@@ -69,8 +69,8 @@ export default function ProfileScreen() {
 
   const profile = useLiveQuery(() => db.playerProfile.get('profile'));
   const achievements = useLiveQuery(() => db.achievements.toArray());
-  const inbodyScans = useLiveQuery(() => db.inbodyScans.orderBy('date').reverse().toArray());
-  const measurements = useLiveQuery(() => db.measurements.orderBy('date').reverse().toArray());
+  const inbodyScans = useLiveQuery(() => db.inbodyScans ? db.inbodyScans.orderBy('date').reverse().toArray() : []);
+  const measurements = useLiveQuery(() => db.measurements ? db.measurements.orderBy('date').reverse().toArray() : []);
   const allSets = useLiveQuery(() => db.sets.toArray());
   const allExercises = useLiveQuery(() => db.exercises.toArray());
 
@@ -220,7 +220,7 @@ export default function ProfileScreen() {
             </div>
           ) : (
             <button className="profile-name-btn" onClick={startEditName} id="edit-name-btn">
-              <h2 className="profile-name">{profile.name.toUpperCase()}</h2>
+              <h2 className="profile-name">{(profile?.name || 'Hunter').toUpperCase()}</h2>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
           )}
