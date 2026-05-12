@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
+import templates from '../data/templates.json';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
@@ -322,6 +323,11 @@ export default function WorkoutsScreen() {
             onClick={() => setActiveTab('plans')}
             id="tab-plans"
           >MY PLANS</button>
+          <button
+            className={`tab-pill ${activeTab === 'discover' ? 'active' : ''}`}
+            onClick={() => setActiveTab('discover')}
+            id="tab-discover"
+          >DISCOVER</button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -390,7 +396,7 @@ export default function WorkoutsScreen() {
                 )}
               </div>
             </motion.div>
-          ) : (
+          ) : activeTab === 'plans' ? (
             <motion.div
               key="plans"
               initial={{ opacity: 0, x: 20 }}
@@ -422,6 +428,43 @@ export default function WorkoutsScreen() {
                   >CREATE PLAN</button>
                 </div>
               )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="discover"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="plans-list mt-8">
+                {templates.map(tpl => (
+                  <div key={tpl.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <h3 style={{ fontSize: 18, color: 'var(--text-primary)' }}>{tpl.name}</h3>
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                        {tpl.exercises.length} Exercises included
+                      </p>
+                    </div>
+                    <button 
+                      className="btn-primary" 
+                      onClick={async () => {
+                        const planId = await db.workoutPlans.add({ name: tpl.name, createdAt: Date.now() });
+                        const pes = tpl.exercises.map((e, i) => ({
+                          planId,
+                          exerciseId: e.exerciseId,
+                          order: i
+                        }));
+                        await db.planExercises.bulkAdd(pes);
+                        alert(`Cloned "${tpl.name}" successfully!`);
+                        setActiveTab('plans');
+                      }}
+                    >
+                      CLONE TO MY PLANS
+                    </button>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

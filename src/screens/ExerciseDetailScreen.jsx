@@ -87,18 +87,51 @@ export default function ExerciseDetailScreen() {
         <AnimatePresence mode="wait">
           {activeTab === 'guide' && (
             <motion.div key="guide" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              
+              {/* Media Player */}
+              {exercise.videoUri && (
+                <div className="guide-section">
+                  <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', justifyContent: 'center', background: 'var(--bg-surface)' }}>
+                    <img 
+                      src={exercise.videoUri} 
+                      alt={exercise.name} 
+                      style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* How To Do It */}
               <div className="guide-section">
                 <span className="section-label">HOW TO DO IT</span>
-                <div className="steps-list">
-                  {(exercise.instructions || []).map((step, i) => (
-                    <div key={i} className="step-row">
-                      <div className="step-number">{i + 1}</div>
-                      <p className="step-text">{step}</p>
-                    </div>
-                  ))}
-                </div>
+                {typeof exercise.instructions === 'string' ? (
+                  <div className="card">
+                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: 14 }}>
+                      {exercise.instructions || 'No instructions provided.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="steps-list">
+                    {(exercise.instructions || []).map((step, i) => (
+                      <div key={i} className="step-row">
+                        <div className="step-number">{i + 1}</div>
+                        <p className="step-text">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Equipment */}
+              {exercise.equipment && (
+                <div className="guide-section">
+                  <span className="section-label">EQUIPMENT REQUIRED</span>
+                  <div className="card">
+                    <p style={{ color: 'var(--text-secondary)', textTransform: 'capitalize', fontWeight: 600 }}>{exercise.equipment}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Common Mistakes */}
               {exercise.commonMistakes && exercise.commonMistakes.length > 0 && (

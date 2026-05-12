@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo, RANKS, calculateSetXP } from '../data/progression';
+import { supabase } from '../db/supabaseClient';
+import { backupToCloud, restoreFromCloud } from '../db/sync';
 import './ProfileScreen.css';
 
 const ALL_ACHIEVEMENTS = [
@@ -56,7 +58,14 @@ export default function ProfileScreen() {
   const [nameVal, setNameVal] = useState('');
   const [showDelete, setShowDelete] = useState(false);
   const [exportMsg, setExportMsg] = useState('');
+  const [session, setSession] = useState(null);
   const nameInputRef = useRef(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
 
   const profile = useLiveQuery(() => db.playerProfile.get('profile'));
   const achievements = useLiveQuery(() => db.achievements.toArray());
@@ -368,24 +377,76 @@ export default function ProfileScreen() {
           </div>
         </div>
 
-        {/* Data */}
+        {/* Data & Sync */}
         <div className="profile-section">
-          <span className="section-label">DATA</span>
+          <span className="section-label">DATA & SYNC</span>
           <div className="data-actions card mt-8">
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 20 }}>☁️</span>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cloud Sync</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {session ? `Logged in as ${session.user.email}` : 'Guest Mode (Local Only)'}
+                </p>
+              </div>
+            </div>
+            
+            {session ? (
+              <>
+                <button className="data-btn" onClick={async () => { 
+                  setExportMsg('Backing up...');
+                  const ok = await backupToCloud();
+                  setExportMsg(ok ? '✓ Cloud Backup Complete' : '❌ Cloud Backup Failed');
+                  setTimeout(() => setExportMsg(''), 3000);
+                }} style={{ color: 'var(--accent-blue)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  {exportMsg && exportMsg.includes('Backup') ? exportMsg : 'Backup to Cloud'}
+                </button>
+                <div className="data-divider"/>
+                <button className="data-btn" onClick={async () => {
+                  setExportMsg('Restoring...');
+                  const ok = await restoreFromCloud();
+                  setExportMsg(ok ? '✓ Cloud Restore Complete' : '❌ Cloud Restore Failed');
+                  setTimeout(() => setExportMsg(''), 3000);
+                }} style={{ color: 'var(--accent-gold)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {exportMsg && exportMsg.includes('Restore') ? exportMsg : 'Restore from Cloud'}
+                </button>
+                <div className="data-divider"/>
+                <button className="data-btn" onClick={async () => { 
+                  if (window.confirm("Signing out will remove your local data from this device (it remains safe in the cloud). Continue?")) {
+                    await supabase.auth.signOut(); 
+                    await db.delete(); // clear local data
+                    window.location.reload(); 
+                  }
+                }} style={{ color: 'var(--accent-red)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <button className="data-btn" onClick={() => { db.playerProfile.update('profile', { guestMode: false }); window.location.reload(); }} style={{ color: 'var(--accent-blue)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                Sign In / Sync to Cloud
+              </button>
+            )}
+
+            <div className="data-divider"/>
+
             <button className="data-btn" onClick={handleExport} id="export-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              {exportMsg || 'Export JSON'}
+              {exportMsg && exportMsg.includes('Export') ? exportMsg : 'Export JSON Backup'}
             </button>
             <div className="data-divider"/>
             <label className="data-btn" id="import-label">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Import JSON
+              Import JSON Backup
               <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
             </label>
             <div className="data-divider"/>
             <button className="data-btn data-danger" onClick={() => setShowDelete(true)} id="clear-all-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-              Clear All Data
+              Wipe Device Data
             </button>
           </div>
         </div>

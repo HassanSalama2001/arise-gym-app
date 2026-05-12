@@ -13,20 +13,11 @@ const LogWorkoutScreen = lazy(() => import('./screens/LogWorkoutScreen'));
 const MissionCompleteScreen = lazy(() => import('./screens/MissionCompleteScreen'));
 const ProgressScreen = lazy(() => import('./screens/ProgressScreen'));
 const ProfileScreen = lazy(() => import('./screens/ProfileScreen'));
+const LoginScreen = lazy(() => import('./screens/LoginScreen'));
 
-/* Placeholder screens — will be built one by one */
-function PlaceholderScreen({ title }) {
-  return (
-    <div className="screen">
-      <div className="screen-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--accent-blue)', fontSize: '24px', marginBottom: '8px' }}>{title}</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Coming soon...</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { supabase } from './db/supabaseClient';
+import db from './db/db';
+import { backupToCloud, restoreFromCloud } from './db/sync';
 
 // Page transition wrapper
 function PageWrapper({ children }) {
@@ -65,16 +56,68 @@ function AnimatedRoutes() {
 export default function App() {
   const [ready, setReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [authState, setAuthState] = useState('loading'); // 'loading' | 'authenticated' | 'guest' | 'unauthenticated'
 
   useEffect(() => {
-    seedDatabase().then(() => {
+    async function init() {
+      await seedDatabase();
+      
+      // Check auth state
+      const { data: { session } } = await supabase.auth.getSession();
+      const profile = await db.playerProfile.get('profile');
+
+      if (session) {
+        setAuthState('authenticated');
+      } else if (profile?.guestMode) {
+        setAuthState('guest');
+      } else {
+        setAuthState('unauthenticated');
+      }
+
       setReady(true);
       setTimeout(() => setShowSplash(false), 1500);
-    });
+
+      // Listen for auth changes
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          setAuthState('authenticated');
+        } else if (authState !== 'guest') {
+          setAuthState('unauthenticated');
+        }
+      });
+      
+      // Auto-sync when coming online
+      window.addEventListener('online', () => {
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) backupToCloud();
+        });
+      });
+      
+      // Auto-sync when app goes to background
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          supabase.auth.getSession().then(({ data }) => {
+            if (data.session) backupToCloud();
+          });
+        }
+      });
+    }
+    init();
   }, []);
 
-  if (showSplash || !ready) {
+  if (showSplash || !ready || authState === 'loading') {
     return <SplashScreen />;
+  }
+
+  if (authState === 'unauthenticated') {
+    return (
+      <Suspense fallback={<SplashScreen />}>
+        <LoginScreen 
+          onGuest={() => setAuthState('guest')} 
+          onLogin={() => setAuthState('authenticated')} 
+        />
+      </Suspense>
+    );
   }
 
   return (

@@ -7,10 +7,7 @@ export async function seedDatabase() {
   if (seedingPromise) return seedingPromise;
   seedingPromise = (async () => {
     const count = await db.exercises.count();
-    if (count === 0) {
-      await db.exercises.bulkAdd(exerciseData);
-    } else if (count > exerciseData.length) {
-      // Fix duplicates from StrictMode double-invoke
+    if (count !== exerciseData.length) {
       await db.exercises.clear();
       await db.exercises.bulkAdd(exerciseData);
     }
