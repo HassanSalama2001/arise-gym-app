@@ -1,0 +1,129 @@
+.rest-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 13, 20, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rest-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Ring */
+.rest-ring-container {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+
+.rest-timer-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.rest-time-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 64px;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-label {
+  font-size: 11px;
+}
+
+/* Presets */
+.rest-presets {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.rest-preset {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  padding: 10px 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 44px;
+  transition: all 0.15s;
+}
+
+.rest-preset.active {
+  background: var(--accent-blue-dim);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.rest-preset:active { transform: scale(0.93); }
+
+/* Custom row */
+.rest-custom-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.rest-custom-input {
+  width: 110px;
+  height: 48px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+/* Controls */
+.rest-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.rest-skip-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  padding: 14px 32px;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 50px;
+}
+
+.rest-skip-btn:active { transform: scale(0.95); }
+
+.rest-done-btn {
+  background: var(--success-dim);
+  border-color: var(--success);
+  color: var(--success);
+}

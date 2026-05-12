@@ -1,0 +1,301 @@
+/* Profile Hero */
+.profile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 0;
+  margin-bottom: 8px;
+}
+
+.profile-rank-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 3px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 56px;
+}
+
+.profile-name-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.profile-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+
+.name-edit-row {
+  width: 100%;
+  max-width: 240px;
+}
+
+.name-input {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--accent-blue);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  width: 100%;
+}
+
+.profile-rank-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.profile-xp-section {
+  width: 100%;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-xp-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Profile sections */
+.profile-section {
+  margin-bottom: 24px;
+}
+
+/* Lifetime grid */
+.lifetime-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.lifetime-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 8px;
+  text-align: center;
+}
+
+/* Settings card */
+.settings-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  gap: 12px;
+}
+
+.setting-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 16px;
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setting-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Unit toggle */
+.unit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.unit-active {
+  color: var(--accent-blue);
+}
+
+.unit-sep {
+  color: var(--border);
+}
+
+/* Rest presets mini */
+.rest-preset-row {
+  display: flex;
+  gap: 6px;
+}
+
+.rest-mini-preset {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  padding: 6px 10px;
+  cursor: pointer;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.rest-mini-preset.active {
+  background: var(--accent-blue-dim);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* Toggle switch */
+.toggle-switch {
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 3px;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-switch.on {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  justify-content: flex-end;
+}
+
+.toggle-switch.off {
+  justify-content: flex-start;
+}
+
+.toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s ease;
+}
+
+/* Achievements grid */
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.achievement-tile {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-card-raised));
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.achievement-tile.earned {
+  border-color: rgba(79, 195, 247, 0.3);
+  border-left: 2px solid var(--accent-blue);
+}
+
+.achievement-tile.locked {
+  opacity: 0.4;
+}
+
+.achievement-tile-icon {
+  font-size: 28px;
+}
+
+.achievement-tile-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.achievement-tile-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* Data section */
+.data-actions {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.data-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 52px;
+  text-align: left;
+  width: 100%;
+}
+
+.data-btn:active { background: var(--bg-surface); }
+
+.data-danger {
+  color: var(--accent-red);
+}
+
+.data-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 16px;
+}

@@ -1,0 +1,311 @@
+/* ═══════════════════════════════
+   Home Screen Styles
+   ═══════════════════════════════ */
+
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.arise-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--accent-blue);
+  letter-spacing: 0.15em;
+}
+
+.icon-btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+/* Hunter Card */
+.hunter-card {
+  padding: 20px;
+}
+
+.hunter-card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.hunter-rank-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hunter-rank-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.hunter-rank-label {
+  font-size: 9px;
+}
+
+.hunter-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+}
+
+.xp-bar-section {
+  margin-bottom: 16px;
+}
+
+.xp-text {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.xp-current {
+  font-size: 18px;
+  color: var(--accent-blue);
+}
+
+.xp-separator {
+  color: var(--text-muted);
+}
+
+.xp-total {
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+
+.hunter-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.hunter-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hunter-stat .stat-number {
+  font-size: 22px;
+  color: var(--text-primary);
+}
+
+.hunter-stat .section-label {
+  font-size: 9px;
+}
+
+.hunter-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+}
+
+/* Section */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.quest-timer {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+/* Quest Cards */
+.quest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quest-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.quest-completed {
+  opacity: 0.6;
+}
+
+.quest-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quest-desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.quest-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quest-progress-bar {
+  flex: 1;
+  height: 4px;
+}
+
+.quest-progress-text {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 28px;
+  text-align: right;
+}
+
+.quest-reward {
+  flex-shrink: 0;
+}
+
+.quest-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--success);
+  color: var(--bg-void);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Streak Ring */
+.streak-ring-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.streak-ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.streak-number {
+  font-size: 28px;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.streak-label {
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+}
+
+/* Achievements */
+.achievements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.achievement-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.achievement-icon {
+  font-size: 20px;
+}
+
+.achievement-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.achievement-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.achievement-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Begin Mission Button */
+.begin-mission-btn {
+  margin-top: 8px;
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: max(calc((100vw - 430px) / 2 + 16px), 16px);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  color: var(--bg-void);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  z-index: 99;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 18px;
+}

@@ -1,0 +1,48 @@
+.splash-screen {
+  height: 100dvh;
+  width: 100%;
+  background: var(--bg-void);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.splash-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 56px;
+  color: var(--accent-blue);
+  letter-spacing: 0.2em;
+  z-index: 2;
+  position: relative;
+  text-shadow: 0 0 40px rgba(79, 195, 247, 0.4);
+}
+
+.splash-glow {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 195, 247, 0.3) 0%, transparent 70%);
+  z-index: 1;
+}
+
+.splash-subtitle {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
