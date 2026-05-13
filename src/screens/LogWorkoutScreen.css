@@ -66,11 +66,7 @@
 
 /* ── Scroll Area ─────────────── */
 .workout-scroll-area {
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  height: calc(100dvh - var(--topbar-h, 110px));
-  scrollbar-width: none;
+  padding-bottom: 20px;
 }
 
 .workout-scroll-area::-webkit-scrollbar { display: none; }
@@ -239,6 +235,11 @@
 
 .set-input:disabled {
   opacity: 0.5;
+}
+
+select.set-input {
+  text-align-last: center;
+  padding-right: 2px !important;
 }
 
 .set-input-label {

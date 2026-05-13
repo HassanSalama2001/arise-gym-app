@@ -106,19 +106,20 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
         </div>
         <span className="set-x" style={{ color: 'var(--text-muted)' }}>|</span>
         <div className="set-input-group">
-          <input
-            type="number"
-            inputMode="decimal"
+          <select
             className="set-input"
-            placeholder="-"
             value={set.rpe || ''}
             onChange={e => onUpdate({ rpe: parseFloat(e.target.value) || 0 })}
             disabled={set.completed}
-            aria-label="RPE"
             id={`set-rpe-${index}`}
-            style={{ width: 44 }}
-          />
-          <span className="set-input-label">RPE</span>
+            style={{ width: 54, padding: '0 4px', fontSize: 16 }}
+          >
+            <option value="">-</option>
+            {[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5, 4].map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+          <span className="set-input-label" onClick={() => alert('RPE (Rate of Perceived Exertion):\n10: Max effort (0 reps left)\n9: 1 rep left\n8: 2 reps left\n7-6: Challenging\n<5: Warm-up')} style={{ cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: 'var(--text-muted)' }}>RPE</span>
         </div>
       </div>
 
@@ -544,8 +545,8 @@ export default function LogWorkoutScreen() {
           </div>
         </div>
 
-        <div style={{ padding: '0 16px 32px', display: 'flex', justifyContent: 'center' }}>
-          <button className="btn-ghost" style={{ width: '100%', maxWidth: '400px', color: 'var(--accent-red)' }} onClick={handleDiscard} id="discard-workout-btn">
+        <div style={{ padding: '24px 16px 48px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <button className="btn-ghost" style={{ width: '100%', maxWidth: '360px', color: 'var(--accent-red)', margin: '0 auto' }} onClick={handleDiscard} id="discard-workout-btn">
             DISCARD WORKOUT
           </button>
         </div>
