@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo, RANKS, calculateSetXP } from '../data/progression';
@@ -21,11 +21,74 @@ const ALL_ACHIEVEMENTS = [
   { type: 'pr_first', title: 'First PR', desc: 'Set your first personal record', icon: '🏆' },
 ];
 
+/* ── Rank Progression Sheet ─────────────────────── */
+function RankProgressionSheet({ currentXP, onClose }) {
+  const currentRankInfo = getRankInfo(currentXP);
+  
+  return (
+    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} style={{ zIndex: 1100 }}>
+      <motion.div 
+        className="bottom-sheet" 
+        drag="y"
+        dragConstraints={{ top: 0 }}
+        dragElastic={0.2}
+        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
+        initial={{ y: '100%' }} 
+        animate={{ y: 0 }} 
+        exit={{ y: '100%' }} 
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
+        onClick={e => e.stopPropagation()}
+        style={{ maxHeight: '90vh', overflowY: 'auto' }}
+      >
+        <div className="bottom-sheet-handle" />
+        <h3 className="sheet-title">RANK PROGRESSION</h3>
+        
+        <div className="rank-list mt-16">
+          {RANKS.map((rank, i) => {
+            const isUnlocked = currentXP >= rank.minXP;
+            const isCurrent = currentRankInfo.current.rank === rank.rank;
+            const xpToReach = rank.minXP - currentXP;
+            
+            return (
+              <div key={rank.rank} className={`rank-item ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`}>
+                <div className="rank-item-badge" style={{ borderColor: rank.color, color: rank.color }}>
+                  {rank.rank}
+                </div>
+                <div className="rank-item-info">
+                  <span className="rank-item-name">{rank.name}</span>
+                  <span className="section-label">
+                    {isUnlocked 
+                      ? (isCurrent ? 'CURRENT RANK' : 'UNLOCKED') 
+                      : `REACH AT: ${rank.minXP.toLocaleString()} XP (${xpToReach.toLocaleString()} REMAINING)`}
+                  </span>
+                </div>
+                {isUnlocked && <div className="rank-check">✓</div>}
+              </div>
+            );
+          })}
+        </div>
+        
+        <button className="btn-primary mt-24" onClick={onClose} style={{ marginBottom: 40 }}>GOT IT</button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function ConfirmDeleteSheet({ onConfirm, onClose }) {
   const [input, setInput] = useState('');
   return (
     <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div className="bottom-sheet" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
+      <motion.div 
+        className="bottom-sheet" 
+        drag="y"
+        dragConstraints={{ top: 0 }}
+        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
+        initial={{ y: '100%' }} 
+        animate={{ y: 0 }} 
+        exit={{ y: '100%' }} 
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
+        onClick={e => e.stopPropagation()}
+      >
         <div className="bottom-sheet-handle" />
         <h3 className="sheet-title" style={{ color: 'var(--accent-red)' }}>DANGER ZONE</h3>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>This will permanently delete ALL your workout data, XP, and progress. Type <strong style={{ color: 'var(--text-primary)' }}>ARISE</strong> to confirm.</p>
@@ -37,7 +100,7 @@ function ConfirmDeleteSheet({ onConfirm, onClose }) {
           id="delete-confirm-input"
           style={{ marginBottom: 16 }}
         />
-        <div className="sheet-actions">
+        <div className="sheet-actions" style={{ paddingBottom: 40 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
           <button
             className="btn-primary"
@@ -56,10 +119,16 @@ function ConfirmDeleteSheet({ onConfirm, onClose }) {
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState('');
   const [showDelete, setShowDelete] = useState(false);
+  const [showInbody, setShowInbody] = useState(false);
+  const [showMeasurement, setShowMeasurement] = useState(false);
+  const [showRankDetails, setShowRankDetails] = useState(false);
   const [exportMsg, setExportMsg] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
   const [session, setSession] = useState(null);
   const nameInputRef = useRef(null);
 
@@ -69,6 +138,13 @@ export default function ProfileScreen() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.openSheet === 'inbody') {
+      setShowInbody(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const profile = useLiveQuery(() => db.playerProfile.get('profile'));
   const achievements = useLiveQuery(() => db.achievements.toArray());
   const inbodyScans = useLiveQuery(() => db.inbodyScans ? db.inbodyScans.orderBy('date').reverse().toArray() : []);
@@ -76,10 +152,10 @@ export default function ProfileScreen() {
   const allSets = useLiveQuery(() => db.sets.toArray());
   const allExercises = useLiveQuery(() => db.exercises.toArray());
 
-  const rankInfo = profile ? getRankInfo(profile.totalXP) : null;
+  const rankInfo = useMemo(() => profile ? getRankInfo(profile.totalXP) : null, [profile?.totalXP]);
   const earnedTypes = new Set((achievements || []).map(a => a.type));
 
-  const muscleXP = React.useMemo(() => {
+  const muscleXP = useMemo(() => {
     if (!allSets || !allExercises) return {};
     const totals = {};
     for (const set of allSets) {
@@ -88,13 +164,13 @@ export default function ProfileScreen() {
       if (!ex) continue;
       const mg = ex.muscleGroup || 'Other';
       if (!totals[mg]) totals[mg] = 0;
-      const xp = calculateSetXP(set.weight || 0, set.reps || 0, ex.difficulty || 1, set.type || 'normal');
+      const xp = calculateSetXP(set.weight || 0, set.reps || 0, ex.difficulty || 'E', set.type || 'normal');
       totals[mg] += xp;
     }
     return totals;
   }, [allSets, allExercises]);
 
-  const muscleLevels = React.useMemo(() => {
+  const muscleLevels = useMemo(() => {
     const levels = {};
     for (const [mg, xp] of Object.entries(muscleXP)) {
       const currentLevel = Math.floor(Math.sqrt(xp / 50)) + 1;
@@ -117,6 +193,36 @@ export default function ProfileScreen() {
     setTimeout(() => nameInputRef.current?.focus(), 100);
   }
 
+  async function handleBackup() {
+    setSyncing(true);
+    setSyncStatus('Backing up...');
+    const res = await backupToCloud();
+    if (res.success) {
+      setSyncStatus('Backup successful');
+      await db.playerProfile.update('profile', { lastSyncedAt: Date.now() });
+    } else {
+      setSyncStatus('Backup failed: ' + res.error);
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncStatus(''), 3000);
+  }
+
+  async function handleRestore() {
+    if (!window.confirm('This will OVERWRITE your local data with cloud data. Continue?')) return;
+    setSyncing(true);
+    setSyncStatus('Restoring...');
+    const res = await restoreFromCloud();
+    if (res.success) {
+      setSyncStatus('Restore successful');
+      await db.playerProfile.update('profile', { lastSyncedAt: Date.now() });
+      window.location.reload();
+    } else {
+      setSyncStatus('Restore failed: ' + res.error);
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncStatus(''), 3000);
+  }
+
   async function handleExport() {
     const data = {
       profile: await db.playerProfile.toArray(),
@@ -132,231 +238,125 @@ export default function ProfileScreen() {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `arise-backup-${Date.now()}.json`;
-    a.click(); URL.revokeObjectURL(url);
-    setExportMsg('✓ Exported!');
-    setTimeout(() => setExportMsg(''), 2000);
-  }
-
-  async function handleImport(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (data.profile) await db.playerProfile.bulkPut(data.profile);
-      if (data.sessions) await db.sessions.bulkPut(data.sessions);
-      if (data.sets) await db.sets.bulkPut(data.sets);
-      if (data.achievements) await db.achievements.bulkPut(data.achievements);
-      if (data.workoutPlans) await db.workoutPlans.bulkPut(data.workoutPlans);
-      if (data.planExercises) await db.planExercises.bulkPut(data.planExercises);
-      alert('Import successful!');
-    } catch {
-      alert('Failed to import — invalid file.');
-    }
+    a.href = url;
+    a.download = `arise-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    setExportMsg('Exported successfully');
+    setTimeout(() => setExportMsg(''), 3000);
   }
 
   async function handleDeleteAll() {
-    await db.sessions.clear();
-    await db.sets.clear();
-    await db.achievements.clear();
-    await db.dailyQuests.clear();
-    await db.bodyWeight.clear();
-    await db.personalRecords.clear();
-    await db.workoutPlans.clear();
-    await db.planExercises.clear();
-    await db.playerProfile.put({
-      key: 'profile',
-      name: profile?.name || 'Hunter',
-      totalXP: 0, currentRank: 'E', rankName: 'Awakened',
-      currentStreak: 0, longestStreak: 0, totalSessions: 0, totalVolume: 0,
-      lastSessionDate: null, unitPreference: 'kg', defaultRestDuration: 60, hapticEnabled: true
-    });
-    setShowDelete(false);
+    await db.delete();
+    window.location.reload();
   }
 
-  async function toggleUnit() {
-    const current = profile?.unitPreference || 'kg';
-    await db.playerProfile.update('profile', { unitPreference: current === 'kg' ? 'lbs' : 'kg' });
-  }
-
-  async function toggleHaptic() {
-    await db.playerProfile.update('profile', { hapticEnabled: !profile?.hapticEnabled });
-  }
-
-  async function setRestDuration(val) {
-    await db.playerProfile.update('profile', { defaultRestDuration: val });
-  }
-
-  if (!profile || !rankInfo) return <div className="screen"><div className="screen-content loading-screen">Loading...</div></div>;
+  if (!profile) return null;
 
   return (
     <div className="screen" id="profile-screen">
       <div className="screen-content">
-        <h1 className="screen-title" style={{ marginBottom: 24 }}>PROFILE</h1>
-
-        {/* Rank Badge Hero */}
-        <div className="profile-hero">
-          <motion.div
-            className="profile-rank-circle"
-            style={{ borderColor: rankInfo.current.color, color: rankInfo.current.color, boxShadow: `0 0 40px ${rankInfo.current.color}40` }}
-            animate={{ boxShadow: [`0 0 20px ${rankInfo.current.color}40`, `0 0 50px ${rankInfo.current.color}60`, `0 0 20px ${rankInfo.current.color}40`] }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
-            {rankInfo.current.rank}
-          </motion.div>
-
-          {/* Name (editable) */}
-          {editingName ? (
-            <div className="name-edit-row">
-              <input
-                ref={nameInputRef}
-                className="name-input"
-                type="text"
-                value={nameVal}
-                onChange={e => setNameVal(e.target.value)}
-                onBlur={saveName}
-                onKeyDown={e => e.key === 'Enter' && saveName()}
-                id="profile-name-input"
-              />
-            </div>
-          ) : (
-            <button className="profile-name-btn" onClick={startEditName} id="edit-name-btn">
-              <h2 className="profile-name">{(profile?.name || 'Hunter').toUpperCase()}</h2>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-          )}
-
-          <p className="profile-rank-name" style={{ color: rankInfo.current.color }}>{rankInfo.current.name}</p>
-
-          {/* XP Bar */}
-          <div className="profile-xp-section">
-            <div className="progress-bar" style={{ height: 10 }}>
-              <motion.div
-                className="progress-fill"
-                style={{ background: `linear-gradient(90deg, ${rankInfo.current.color}, var(--accent-blue))` }}
-                initial={{ width: 0 }}
-                animate={{ width: `${rankInfo.progress * 100}%` }}
-                transition={{ duration: 1.2, ease: 'easeOut' }}
-              />
-            </div>
-            <div className="profile-xp-text">
-              <span style={{ fontFamily: 'var(--font-display)', color: 'var(--text-secondary)', fontSize: 12 }}>
-                {rankInfo.xpIntoRank.toLocaleString()} / {rankInfo.xpForNext > 0 ? `${rankInfo.xpForNext.toLocaleString()} XP` : 'MAX RANK'}
-              </span>
-              {rankInfo.next && (
-                <span style={{ fontFamily: 'var(--font-display)', color: rankInfo.next.color, fontSize: 12 }}>→ {rankInfo.next.name}</span>
-              )}
-            </div>
-          </div>
+        <div className="workouts-header">
+          <h1 className="screen-title">PROFILE</h1>
+          <button className="icon-btn" onClick={() => navigate('/login')} id="settings-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round">
+              <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </button>
         </div>
 
-        {/* Lifetime Stats */}
+        {/* Hunter Identity */}
+        <div className="profile-hero">
+          <motion.div 
+            className="rank-badge rank-badge-lg" 
+            style={{ borderColor: rankInfo?.current.color, color: rankInfo?.current.color, cursor: 'pointer' }}
+            onClick={() => setShowRankDetails(true)}
+            whileTap={{ scale: 0.9 }}
+          >
+            {rankInfo?.current.rank}
+          </motion.div>
+          {editingName ? (
+            <div className="edit-name-row">
+              <input ref={nameInputRef} type="text" value={nameVal} onChange={e => setNameVal(e.target.value)} onBlur={saveName} onKeyDown={e => e.key === 'Enter' && saveName()} id="edit-name-input" />
+            </div>
+          ) : (
+            <div className="profile-name-row" onClick={startEditName}>
+              <h2 className="profile-name">{profile.name.toUpperCase()}</h2>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+          )}
+          <span className="hunter-rank-name" style={{ color: rankInfo?.current.color }}>{rankInfo?.current.name}</span>
+        </div>
+
+        {/* Muscle Mastery */}
         <div className="profile-section">
-          <span className="section-label">LIFETIME STATS</span>
-          <div className="lifetime-grid mt-8">
-            {[
-              { label: 'Total XP', value: profile.totalXP.toLocaleString(), color: 'var(--accent-gold)' },
-              { label: 'Sessions', value: profile.totalSessions, color: 'var(--accent-blue)' },
-              { label: 'Volume (kg)', value: Math.round(profile.totalVolume).toLocaleString(), color: 'var(--text-primary)' },
-              { label: 'Best Streak', value: `${profile.longestStreak}d`, color: 'var(--success)' },
-            ].map(s => (
-              <div key={s.label} className="lifetime-box card">
-                <span className="stat-number" style={{ fontSize: 22, color: s.color }}>{s.value}</span>
-                <span className="section-label">{s.label}</span>
+          <span className="section-label">MUSCLE MASTERY</span>
+          <div className="muscle-mastery-list mt-8">
+            {muscleLevels.map(([mg, data]) => (
+              <div key={mg} className="muscle-mastery-item card">
+                <div className="muscle-mastery-top">
+                  <span className="muscle-mg">{mg.toUpperCase()}</span>
+                  <span className="muscle-level">LVL {data.level}</span>
+                </div>
+                <div className="progress-bar">
+                  <motion.div className="progress-fill" style={{ width: `${data.progress * 100}%` }} initial={{ width: 0 }} animate={{ width: `${data.progress * 100}%` }} />
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Muscle Levels */}
-        {muscleLevels.length > 0 && (
-          <div className="profile-section">
-            <span className="section-label">MUSCLE LEVELS</span>
-            <div className="card mt-8" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {muscleLevels.map(([mg, data]) => (
-                <div key={mg}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{mg}</span>
-                    <span style={{ fontSize: 13, color: 'var(--accent-blue)', fontFamily: 'var(--font-display)', fontWeight: 700 }}>Lv. {data.level}</span>
-                  </div>
-                  <div className="progress-bar" style={{ height: 6, background: 'var(--bg-void)' }}>
-                    <motion.div
-                      className="progress-fill"
-                      style={{ background: 'var(--accent-blue)' }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${data.progress * 100}%` }}
-                      transition={{ duration: 1, ease: 'easeOut' }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Preferences */}
+        {/* Data & Sync Section */}
         <div className="profile-section">
-          <span className="section-label">PREFERENCES</span>
-          <div className="settings-card card mt-8">
-            {/* Unit toggle */}
-            <div className="setting-row">
-              <div className="setting-info">
-                <span className="setting-label">Weight Unit</span>
-                <span className="section-label">kg or lbs</span>
+          <span className="section-label">DATA & CLOUD SYNC</span>
+          <div className="sync-card card mt-8">
+            <div className="sync-status-row">
+              <div className="sync-info">
+                <span className="sync-status-label">{session ? (syncing ? 'SYNCING...' : 'CLOUD ACTIVE') : 'LOCAL ONLY'}</span>
+                {profile.lastSyncedAt && (
+                  <span className="last-sync-date">Last synced: {new Date(profile.lastSyncedAt).toLocaleString()}</span>
+                )}
               </div>
-              <button className="unit-toggle" onClick={toggleUnit} id="unit-toggle-btn">
-                <span className={profile.unitPreference === 'kg' ? 'unit-active' : ''}>kg</span>
-                <span className="unit-sep">/</span>
-                <span className={profile.unitPreference === 'lbs' ? 'unit-active' : ''}>lbs</span>
-              </button>
+              {session && (
+                <div className="sync-badge">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+              )}
             </div>
 
-            <div className="setting-divider" />
-
-            {/* Default rest */}
-            <div className="setting-row">
-              <div className="setting-info">
-                <span className="setting-label">Default Rest</span>
-                <span className="section-label">Between sets</span>
-              </div>
-              <div className="rest-preset-row">
-                {[30, 60, 90, 120].map(v => (
-                  <button
-                    key={v}
-                    className={`rest-mini-preset ${profile.defaultRestDuration === v ? 'active' : ''}`}
-                    onClick={() => setRestDuration(v)}
-                    id={`rest-preset-${v}`}
-                  >
-                    {v}s
+            <div className="sync-actions-grid mt-16">
+              {session ? (
+                <>
+                  <button className="sync-btn" onClick={handleBackup} disabled={syncing}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    BACKUP
                   </button>
-                ))}
-              </div>
+                  <button className="sync-btn" onClick={handleRestore} disabled={syncing}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    RESTORE
+                  </button>
+                </>
+              ) : (
+                <button className="btn-primary" onClick={() => navigate('/login')} style={{ gridColumn: 'span 2' }}>
+                  SIGN IN TO ENABLE SYNC
+                </button>
+              )}
             </div>
 
-            <div className="setting-divider" />
-
-            {/* Haptic */}
-            <div className="setting-row">
-              <div className="setting-info">
-                <span className="setting-label">Haptic Feedback</span>
-                <span className="section-label">Vibration on timer end</span>
-              </div>
-              <button
-                className={`toggle-switch ${profile.hapticEnabled ? 'on' : 'off'}`}
-                onClick={toggleHaptic}
-                aria-label="Toggle haptic"
-                id="haptic-toggle"
-              >
-                <div className="toggle-knob" />
+            <div className="sync-secondary-actions mt-16">
+              <button className="data-btn" onClick={handleExport} style={{ padding: 0, minHeight: 'auto' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                EXPORT .JSON
               </button>
+              {exportMsg && <span className="sync-msg success">{exportMsg}</span>}
+              {syncStatus && <span className={`sync-msg ${syncStatus.includes('failed') ? 'error' : 'success'}`}>{syncStatus}</span>}
             </div>
           </div>
         </div>
 
-        {/* Holistic Tracking */}
-        <InBodyTracker scans={inbodyScans} />
-        <MeasurementsTracker measurements={measurements} />
+        {/* Tracker Section */}
+        <InBodyTracker scans={inbodyScans} openSheet={showInbody} setOpenSheet={setShowInbody} />
+        <MeasurementsTracker measurements={measurements} openSheet={showMeasurement} setOpenSheet={setShowMeasurement} />
 
         {/* Achievements */}
         <div className="profile-section">
@@ -365,91 +365,13 @@ export default function ProfileScreen() {
             {ALL_ACHIEVEMENTS.map(a => {
               const earned = earnedTypes.has(a.type);
               return (
-                <motion.div
-                  key={a.type}
-                  className={`achievement-tile ${earned ? 'earned' : 'locked'}`}
-                  whileTap={earned ? { scale: 0.95 } : {}}
-                >
-                  <span className="achievement-tile-icon">{earned ? a.icon : '?'}</span>
-                  <span className="achievement-tile-name">{earned ? a.title : '???'}</span>
-                  <span className="achievement-tile-desc">{earned ? a.desc : 'Locked'}</span>
-                </motion.div>
+                <div key={a.type} className={`achievement-tile card ${earned ? 'earned' : 'locked'}`} id={`achievement-${a.type}`}>
+                  <span className="achievement-tile-icon">{a.icon}</span>
+                  <span className="achievement-tile-name">{a.title}</span>
+                  <span className="achievement-tile-desc">{a.desc}</span>
+                </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Data & Sync */}
-        <div className="profile-section">
-          <span className="section-label">DATA & SYNC</span>
-          <div className="data-actions card mt-8">
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 20 }}>☁️</span>
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cloud Sync</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  {session ? `Logged in as ${session.user.email}` : 'Guest Mode (Local Only)'}
-                </p>
-              </div>
-            </div>
-            
-            {session ? (
-              <>
-                <button className="data-btn" onClick={async () => { 
-                  setExportMsg('Backing up...');
-                  const ok = await backupToCloud();
-                  setExportMsg(ok ? '✓ Cloud Backup Complete' : '❌ Cloud Backup Failed');
-                  setTimeout(() => setExportMsg(''), 3000);
-                }} style={{ color: 'var(--accent-blue)' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  {exportMsg && exportMsg.includes('Backup') ? exportMsg : 'Backup to Cloud'}
-                </button>
-                <div className="data-divider"/>
-                <button className="data-btn" onClick={async () => {
-                  setExportMsg('Restoring...');
-                  const ok = await restoreFromCloud();
-                  setExportMsg(ok ? '✓ Cloud Restore Complete' : '❌ Cloud Restore Failed');
-                  setTimeout(() => setExportMsg(''), 3000);
-                }} style={{ color: 'var(--accent-gold)' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  {exportMsg && exportMsg.includes('Restore') ? exportMsg : 'Restore from Cloud'}
-                </button>
-                <div className="data-divider"/>
-                <button className="data-btn" onClick={async () => { 
-                  if (window.confirm("Signing out will remove your local data from this device (it remains safe in the cloud). Continue?")) {
-                    await supabase.auth.signOut(); 
-                    await db.delete(); // clear local data
-                    window.location.reload(); 
-                  }
-                }} style={{ color: 'var(--accent-red)' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <button className="data-btn" onClick={() => navigate('/login')} style={{ color: 'var(--accent-blue)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                Sign In / Sync to Cloud
-              </button>
-            )}
-
-            <div className="data-divider"/>
-
-            <button className="data-btn" onClick={handleExport} id="export-btn">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              {exportMsg && exportMsg.includes('Export') ? exportMsg : 'Export JSON Backup'}
-            </button>
-            <div className="data-divider"/>
-            <label className="data-btn" id="import-label">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Import JSON Backup
-              <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
-            </label>
-            <div className="data-divider"/>
-            <button className="data-btn data-danger" onClick={() => setShowDelete(true)} id="clear-all-btn">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-              Wipe Device Data
-            </button>
           </div>
         </div>
 
@@ -463,19 +385,28 @@ export default function ProfileScreen() {
           </div>
         </div>
 
+        <button 
+          className="btn-ghost" 
+          style={{ margin: '32px 0 110px', color: 'var(--accent-red)', width: '100%' }} 
+          onClick={() => setShowDelete(true)}
+          id="danger-zone-btn"
+        >
+          DANGER ZONE: DELETE ACCOUNT
+        </button>
+
       </div>
 
-      {/* Delete Confirm Sheet */}
+      {/* Sheets */}
       <AnimatePresence>
         {showDelete && <ConfirmDeleteSheet onConfirm={handleDeleteAll} onClose={() => setShowDelete(false)} />}
+        {showRankDetails && <RankProgressionSheet currentXP={profile.totalXP} onClose={() => setShowRankDetails(false)} />}
       </AnimatePresence>
     </div>
   );
 }
 
 /* ── InBody Scan Tracker ────────────────────────── */
-function InBodyTracker({ scans }) {
-  const [showForm, setShowForm] = useState(false);
+function InBodyTracker({ scans, openSheet, setOpenSheet }) {
   const [formData, setFormData] = useState({ weight: '', smm: '', bf: '', score: '', photoUrl: '' });
   
   async function handleSave() {
@@ -488,7 +419,7 @@ function InBodyTracker({ scans }) {
       score: parseFloat(formData.score) || 0,
       photoUrl: formData.photoUrl
     });
-    setShowForm(false);
+    setOpenSheet(false);
     setFormData({ weight: '', smm: '', bf: '', score: '', photoUrl: '' });
   }
 
@@ -532,32 +463,43 @@ function InBodyTracker({ scans }) {
           <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: '12px 0' }}>No InBody scans recorded yet.</p>
         )}
         
-        <button className="btn-ghost" style={{ marginTop: 16 }} onClick={() => setShowForm(true)}>+ ADD INBODY SCAN</button>
+        <button className="btn-ghost" style={{ marginTop: 16 }} onClick={() => setOpenSheet(true)}>+ ADD INBODY SCAN</button>
       </div>
 
       <AnimatePresence>
-        {showForm && (
-          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowForm(false)} style={{ zIndex: 1000 }}>
-            <motion.div className="bottom-sheet" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
+        {openSheet && (
+          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)} style={{ zIndex: 1000 }}>
+            <motion.div 
+              className="bottom-sheet" 
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              onDragEnd={(_, info) => { if (info.offset.y > 100) setOpenSheet(false); }}
+              initial={{ y: '100%' }} 
+              animate={{ y: 0 }} 
+              exit={{ y: '100%' }} 
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
+              onClick={e => e.stopPropagation()}
+              style={{ paddingBottom: 40 }}
+            >
               <div className="bottom-sheet-handle" />
               <p className="section-label" style={{ marginBottom: 16 }}>RECORD INBODY SCAN</p>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label className="section-label">Weight (kg)</label>
-                  <input type="number" inputMode="decimal" value={formData.weight} onChange={e => setFormData(p => ({ ...p, weight: e.target.value }))} style={{ marginTop: 4 }} />
+                  <input type="number" inputMode="decimal" value={formData.weight} onChange={e => setFormData(p => ({ ...p, weight: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
                 </div>
                 <div>
                   <label className="section-label">SMM - Muscle (kg)</label>
-                  <input type="number" inputMode="decimal" value={formData.smm} onChange={e => setFormData(p => ({ ...p, smm: e.target.value }))} style={{ marginTop: 4 }} />
+                  <input type="number" inputMode="decimal" value={formData.smm} onChange={e => setFormData(p => ({ ...p, smm: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
                 </div>
                 <div>
                   <label className="section-label">Body Fat (%)</label>
-                  <input type="number" inputMode="decimal" value={formData.bf} onChange={e => setFormData(p => ({ ...p, bf: e.target.value }))} style={{ marginTop: 4 }} />
+                  <input type="number" inputMode="decimal" value={formData.bf} onChange={e => setFormData(p => ({ ...p, bf: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
                 </div>
                 <div>
                   <label className="section-label">InBody Score</label>
-                  <input type="number" inputMode="decimal" value={formData.score} onChange={e => setFormData(p => ({ ...p, score: e.target.value }))} style={{ marginTop: 4 }} />
+                  <input type="number" inputMode="decimal" value={formData.score} onChange={e => setFormData(p => ({ ...p, score: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
                 </div>
               </div>
 
@@ -569,7 +511,7 @@ function InBodyTracker({ scans }) {
                     <button onClick={() => setFormData(p => ({ ...p, photoUrl: '' }))} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', padding: 4, borderRadius: '50%' }}>❌</button>
                   </div>
                 ) : (
-                  <label style={{ display: 'block', marginTop: 8, padding: '16px', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: 'var(--accent-blue)' }}>
+                  <label style={{ display: 'block', marginTop: 8, padding: '16px', border: '1px solid var(--border)', borderStyle: 'dashed', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: 'var(--accent-blue)', cursor: 'pointer' }}>
                     Tap to upload scan photo
                     <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
                   </label>
@@ -586,8 +528,7 @@ function InBodyTracker({ scans }) {
 }
 
 /* ── Measurements Tracker ────────────────────────── */
-function MeasurementsTracker({ measurements }) {
-  const [showForm, setShowForm] = useState(false);
+function MeasurementsTracker({ measurements, openSheet, setOpenSheet }) {
   const [showGuide, setShowGuide] = useState(null);
   const [formData, setFormData] = useState({ neck: '', chest: '', waist: '', arms: '' });
 
@@ -606,7 +547,7 @@ function MeasurementsTracker({ measurements }) {
       waist: parseFloat(formData.waist) || null,
       arms: parseFloat(formData.arms) || null
     });
-    setShowForm(false);
+    setOpenSheet(false);
     setFormData({ neck: '', chest: '', waist: '', arms: '' });
   }
 
@@ -621,36 +562,47 @@ function MeasurementsTracker({ measurements }) {
             {['neck', 'chest', 'waist', 'arms'].map(k => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 4 }}>
                 <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{k}</span>
-                <span className="stat-number">{latest[k] ? `${latest[k]} cm` : '-'}</span>
+                <span className="stat-number" style={{ fontSize: 16 }}>{latest[k]}cm</span>
               </div>
             ))}
           </div>
         ) : (
-          <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: '12px 0' }}>No measurements logged yet.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: '12px 0' }}>No measurements yet.</p>
         )}
-        <button className="btn-ghost" style={{ marginTop: 16 }} onClick={() => setShowForm(true)}>+ UPDATE MEASUREMENTS</button>
+        <button className="btn-ghost" style={{ marginTop: 16 }} onClick={() => setOpenSheet(true)}>+ ADD MEASUREMENTS</button>
       </div>
 
       <AnimatePresence>
-        {showForm && (
-          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowForm(false)} style={{ zIndex: 1000 }}>
-            <motion.div className="bottom-sheet" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
+        {openSheet && (
+          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)} style={{ zIndex: 1000 }}>
+            <motion.div 
+              className="bottom-sheet" 
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              onDragEnd={(_, info) => { if (info.offset.y > 100) setOpenSheet(false); }}
+              initial={{ y: '100%' }} 
+              animate={{ y: 0 }} 
+              exit={{ y: '100%' }} 
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
+              onClick={e => e.stopPropagation()}
+              style={{ paddingBottom: 40 }}
+            >
               <div className="bottom-sheet-handle" />
-              <p className="section-label" style={{ marginBottom: 16 }}>LOG MEASUREMENTS (cm)</p>
+              <p className="section-label" style={{ marginBottom: 16 }}>RECORD MEASUREMENTS</p>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
                 {['neck', 'chest', 'waist', 'arms'].map(k => (
                   <div key={k}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="section-label" style={{ textTransform: 'capitalize' }}>{k}</label>
-                      <button onClick={() => setShowGuide(k === showGuide ? null : k)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: 12, textDecoration: 'underline', padding: 0 }}>How to measure?</button>
+                      <label className="section-label" style={{ textTransform: 'capitalize' }}>{k} (cm)</label>
+                      <button className="guide-btn" onClick={() => setShowGuide(showGuide === k ? null : k)} style={{ background: 'var(--bg-void)', border: '1px solid var(--border)', width: 20, height: 20, borderRadius: '50%', fontSize: 10, color: 'var(--text-muted)' }}>?</button>
                     </div>
-                    <input type="number" inputMode="decimal" value={formData[k]} onChange={e => setFormData(p => ({ ...p, [k]: e.target.value }))} style={{ marginTop: 4 }} />
+                    <input type="number" inputMode="decimal" value={formData[k]} onChange={e => setFormData(p => ({ ...p, [k]: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
                     <AnimatePresence>
                       {showGuide === k && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ background: 'var(--bg-void)', padding: '8px 12px', borderRadius: 4, marginTop: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
-                          ℹ️ {guides[k]}
-                        </motion.div>
+                        <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ fontSize: 11, color: 'var(--accent-blue)', marginTop: 4, overflow: 'hidden' }}>
+                          {guides[k]}
+                        </motion.p>
                       )}
                     </AnimatePresence>
                   </div>

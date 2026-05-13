@@ -223,7 +223,7 @@ export default function HomeScreen() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn-primary" style={{ flex: 1, padding: '8px', fontSize: 14 }} onClick={() => navigate('/profile')}>UPDATE NOW</button>
+                <button className="btn-primary" style={{ flex: 1, padding: '8px', fontSize: 14 }} onClick={() => navigate('/profile', { state: { openSheet: 'inbody' } })}>UPDATE NOW</button>
                 <button className="btn-ghost" style={{ flex: 1, padding: '8px', fontSize: 14 }} onClick={postponeInBody}>POSTPONE</button>
               </div>
             </motion.div>

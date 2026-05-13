@@ -67,6 +67,7 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
             placeholder="0"
             value={set.weight || ''}
             onChange={e => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
+            onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
             disabled={set.completed}
             aria-label="Weight"
             id={`set-weight-${index}`}
@@ -96,6 +97,7 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
             placeholder="0"
             value={set.reps || ''}
             onChange={e => onUpdate({ reps: parseInt(e.target.value) || 0 })}
+            onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
             disabled={set.completed}
             aria-label="Reps"
             id={`set-reps-${index}`}
@@ -543,9 +545,11 @@ export default function LogWorkoutScreen() {
         </div>
 
         {/* Discard */}
-        <button className="btn-ghost" style={{ margin: '0 16px 80px' }} onClick={handleDiscard} id="discard-workout-btn">
-          DISCARD WORKOUT
-        </button>
+        <div style={{ padding: '0 16px 110px', display: 'flex', justifyContent: 'center' }}>
+          <button className="btn-ghost" style={{ width: '100%', maxWidth: '400px' }} onClick={handleDiscard} id="discard-workout-btn">
+            DISCARD WORKOUT
+          </button>
+        </div>
       </div>
 
       {/* Add Exercise Sheet (quick start) */}

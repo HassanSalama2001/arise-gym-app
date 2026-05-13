@@ -122,11 +122,15 @@ function CreatePlanSheet({ onClose, onCreated }) {
     >
       <motion.div
         className="bottom-sheet"
+        drag="y"
+        dragConstraints={{ top: 0 }}
+        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         onClick={e => e.stopPropagation()}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
       >
         <div className="bottom-sheet-handle" />
         <h3 className="sheet-title">CREATE PLAN</h3>
@@ -142,7 +146,7 @@ function CreatePlanSheet({ onClose, onCreated }) {
             autoFocus
           />
         </div>
-        <div className="sheet-actions">
+        <div className="sheet-actions" style={{ marginTop: 24, paddingBottom: 24 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
           <button
             className="btn-primary"
@@ -191,11 +195,15 @@ function CreateExerciseSheet({ onClose, onCreated }) {
     >
       <motion.div
         className="bottom-sheet"
+        drag="y"
+        dragConstraints={{ top: 0 }}
+        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         onClick={e => e.stopPropagation()}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
       >
         <div className="bottom-sheet-handle" />
         <h3 className="sheet-title">CREATE EXERCISE</h3>
@@ -229,7 +237,7 @@ function CreateExerciseSheet({ onClose, onCreated }) {
             ))}
           </select>
         </div>
-        <div className="sheet-actions" style={{ marginTop: 24 }}>
+        <div className="sheet-actions" style={{ marginTop: 24, paddingBottom: 24 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
           <button
             className="btn-primary"
@@ -253,12 +261,12 @@ export default function WorkoutsScreen() {
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
 
-  const exercises = useLiveQuery(() => db.exercises.toArray(), []);
-  const plans = useLiveQuery(() => db.workoutPlans.orderBy('createdAt').reverse().toArray(), []);
-  const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
+  const exercises = useLiveQuery(() => db.exercises.toArray());
+  const plans = useLiveQuery(() => db.workoutPlans.orderBy('createdAt').reverse().toArray());
+  const planExercises = useLiveQuery(() => db.planExercises.toArray());
 
   const filtered = useMemo(() => {
-    if (!exercises) return [];
+    if (!exercises || exercises.length === 0) return [];
     return exercises.filter(ex => {
       const matchSearch = !search || ex.name.toLowerCase().includes(search.toLowerCase());
       const matchFilter = filter === 'All' || ex.muscleGroup === filter;

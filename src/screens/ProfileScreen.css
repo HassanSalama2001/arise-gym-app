@@ -299,3 +299,132 @@
   background: var(--border);
   margin: 0 16px;
 }
+
+.last-sync-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.sync-badge {
+  width: 24px;
+  height: 24px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sync-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.sync-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sync-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sync-btn:active {
+  transform: scale(0.96);
+  border-color: var(--accent-blue);
+}
+
+.sync-btn svg {
+  color: var(--accent-blue);
+}
+
+.sync-secondary-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sync-msg {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sync-msg.success { color: var(--success); }
+.sync-msg.error { color: var(--accent-red); }
+
+/* Rank Detail Sheet */
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 20px;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+.rank-item.locked {
+  opacity: 0.5;
+}
+
+.rank-item.current {
+  border-color: var(--accent-blue);
+  background: rgba(79, 195, 247, 0.05);
+  box-shadow: 0 0 12px var(--accent-blue-glow);
+}
+
+.rank-item-badge {
+  width: 36px;
+  height: 36px;
+  border: 2px solid;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.rank-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rank-item-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.rank-check {
+  color: var(--success);
+  font-size: 18px;
+}
