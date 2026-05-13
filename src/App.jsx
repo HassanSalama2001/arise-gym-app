@@ -26,7 +26,7 @@ function PageWrapper({ children }) {
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
       style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
     >
       {children}
@@ -61,46 +61,54 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
+      // 1. Local-First: Initialize database from local files/defaults
       await seedDatabase();
       
-      // Check auth state
-      const { data: { session } } = await supabase.auth.getSession();
-      const profile = await db.playerProfile.get('profile');
+      // 2. Check if we have existing local user data (beyond the default profile)
+      const sessionCount = await db.sessions.count();
+      const isNewUser = sessionCount === 0;
 
-      if (session) {
-        setAuthState('authenticated');
+      // 3. Conditional Cloud Sync: Only check network/auth if local data is empty or if we specifically need to
+      if (isNewUser && navigator.onLine) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setAuthState('authenticated');
+          // No local data, but user is logged in and online -> Try to restore
+          const restored = await restoreFromCloud();
+          if (restored) console.log('Data restored from cloud');
+        } else {
+          setAuthState('guest');
+        }
       } else {
-        // Default to guest if no session. 
-        // If profile doesn't exist, seedDatabase already created it.
-        setAuthState('guest');
+        // We have local data, or we are offline -> Stick to local Source of Truth
+        const { data: { session } } = await supabase.auth.getSession();
+        setAuthState(session ? 'authenticated' : 'guest');
       }
 
       setReady(true);
       setTimeout(() => setShowSplash(false), 1000);
 
+      // 4. Background Sync Guards: Only sync if online and signed in
+      const syncIfPossible = async () => {
+        if (!navigator.onLine) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          backupToCloud().catch(err => console.error('Auto-backup failed:', err));
+        }
+      };
+
       // Listen for auth changes
       supabase.auth.onAuthStateChange((_event, session) => {
-        if (session) {
-          setAuthState('authenticated');
-        } else {
-          // If logged out, stay as guest (local data remains until wiped)
-          setAuthState('guest');
-        }
+        setAuthState(session ? 'authenticated' : 'guest');
       });
       
       // Auto-sync when coming online
-      window.addEventListener('online', () => {
-        supabase.auth.getSession().then(({ data }) => {
-          if (data.session) backupToCloud();
-        });
-      });
+      window.addEventListener('online', syncIfPossible);
       
       // Auto-sync when app goes to background
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
-          supabase.auth.getSession().then(({ data }) => {
-            if (data.session) backupToCloud();
-          });
+          syncIfPossible();
         }
       });
     }

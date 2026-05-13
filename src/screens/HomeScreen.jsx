@@ -6,18 +6,21 @@ import db from '../db/db';
 import { getRankInfo, getRankColor, generateDailyQuests } from '../data/progression';
 import './HomeScreen.css';
 
-function AnimatedNumber({ value, duration = 1000 }) {
+function AnimatedNumber({ value, duration = 800 }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
-    if (value === 0) { setDisplay(0); return; }
-    let start = 0;
-    const step = value / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= value) { setDisplay(value); clearInterval(timer); }
-      else setDisplay(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
+    if (!value) { setDisplay(0); return; }
+    let startTime = null;
+    const startVal = 0;
+    const endVal = value;
+    
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setDisplay(Math.floor(progress * (endVal - startVal) + startVal));
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }, [value, duration]);
   return <span>{display.toLocaleString()}</span>;
 }

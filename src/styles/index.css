@@ -87,13 +87,17 @@ body {
 }
 
 #root {
-  height: 100dvh;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
-  margin: 0 auto;
-  position: relative;
   overflow: hidden;
   background: var(--bg-void);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Scanline overlay effect */

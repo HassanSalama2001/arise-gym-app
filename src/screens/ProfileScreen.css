@@ -31,12 +31,22 @@
   touch-action: manipulation;
 }
 
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
 .profile-name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 28px;
+  font-size: 32px;
   color: var(--text-primary);
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .name-edit-row {
