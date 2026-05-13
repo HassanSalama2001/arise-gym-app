@@ -154,6 +154,8 @@ function SessionCard({ session, onClick }) {
 export default function ProgressScreen() {
   const [activeTab, setActiveTab] = useState('stats');
   const [historyFilter, setHistoryFilter] = useState('all');
+  const [calendarView, setCalendarView] = useState('week');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const profile = useLiveQuery(() => db.playerProfile.get('profile'));
   const sessions = useLiveQuery(() => db.sessions.orderBy('startTime').reverse().toArray());
@@ -161,6 +163,12 @@ export default function ProgressScreen() {
   const achievements = useLiveQuery(() => db.achievements.orderBy('id').reverse().toArray());
   const bodyWeights = useLiveQuery(() => db.bodyWeight.orderBy('date').toArray());
   const exercises = useLiveQuery(() => db.exercises.toArray());
+
+  // Sessions for selected date
+  const selectedSessions = useMemo(() => {
+    if (!sessions) return [];
+    return sessions.filter(s => new Date(s.startTime).toISOString().split('T')[0] === selectedDate);
+  }, [sessions, selectedDate]);
 
   // Build 30-day XP history
   const xpChartData = useMemo(() => {
@@ -256,10 +264,40 @@ export default function ProgressScreen() {
             )}
 
             {/* Consistency Calendar */}
-            <div className="chart-section" style={{ marginTop: 24 }}>
-              <span className="section-label">CONSISTENCY</span>
-              <div className="chart-card card mt-8">
-                <WorkoutCalendar sessions={sessions || []} />
+            <div className="chart-section" style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span className="section-label">CONSISTENCY</span>
+                <div className="view-toggle">
+                  <button className={calendarView === 'week' ? 'active' : ''} onClick={() => setCalendarView('week')}>WEEK</button>
+                  <button className={calendarView === 'month' ? 'active' : ''} onClick={() => setCalendarView('month')}>MONTH</button>
+                </div>
+              </div>
+              <div className="chart-card card">
+                <WorkoutCalendar 
+                  sessions={sessions || []} 
+                  viewMode={calendarView}
+                  selectedDate={selectedDate}
+                  onDateClick={(d) => setSelectedDate(d.toISOString().split('T')[0])}
+                />
+                
+                {/* Selected Day Details */}
+                <div className="cal-details">
+                  <span className="section-label" style={{ fontSize: 10, display: 'block', marginBottom: 8, textAlign: 'center' }}>
+                    {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
+                  </span>
+                  {selectedSessions.length > 0 ? (
+                    <div className="cal-session-strip">
+                      {selectedSessions.map(s => (
+                        <div key={s.id} className="cal-session-item">
+                          <span className="session-name" style={{ fontSize: 14 }}>{s.name}</span>
+                          <span className="chip chip-gold">+{s.xpEarned} XP</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>Rest Day</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -497,47 +535,79 @@ function OneRepMaxChart({ sets, sessions, exercises }) {
 }
 
 /* ── Workout Calendar ─────────────────────────────── */
-function WorkoutCalendar({ sessions }) {
-  const weeks = 12; // About 3 months
-  const days = 7;
+function WorkoutCalendar({ sessions, viewMode, selectedDate, onDateClick }) {
   const now = new Date();
-  now.setHours(0,0,0,0);
-  
-  // Find the start date
-  const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mon = 0, Sun = 6
-  const startDate = new Date(now);
-  startDate.setDate(now.getDate() - dayOfWeek - (weeks - 1) * 7);
+  const [currentMonth, setCurrentMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
 
-  // Map sessions to dates
-  const activeDates = new Set();
-  (sessions || []).forEach(s => {
-    activeDates.add(new Date(s.startTime).toISOString().split('T')[0]);
-  });
+  // Get days for weekly view
+  const weekDays = useMemo(() => {
+    const start = new Date(now);
+    const day = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mon=0
+    start.setDate(now.getDate() - day);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, []);
+
+  // Get days for monthly view
+  const monthDays = useMemo(() => {
+    const start = new Date(currentMonth);
+    const firstDay = start.getDay() === 0 ? 6 : start.getDay() - 1;
+    start.setDate(start.getDate() - firstDay);
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, [currentMonth]);
+
+  const activeDates = useMemo(() => {
+    const set = new Set();
+    (sessions || []).forEach(s => set.add(new Date(s.startTime).toISOString().split('T')[0]));
+    return set;
+  }, [sessions]);
+
+  const renderDay = (date, isSelected) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const isActive = activeDates.has(dateStr);
+    const isToday = dateStr === now.toISOString().split('T')[0];
+    const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+
+    return (
+      <div
+        key={dateStr}
+        className={`cal-day ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${!isCurrentMonth && viewMode === 'month' ? 'other-month' : ''}`}
+        onClick={() => onDateClick(date)}
+      >
+        <span className="cal-day-num">{date.getDate()}</span>
+        {isActive && <div className="cal-dot" />}
+      </div>
+    );
+  };
 
   return (
-    <div style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 8 }}>
-      {Array.from({ length: weeks }).map((_, w) => (
-        <div key={w} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {Array.from({ length: days }).map((_, d) => {
-            const cellDate = new Date(startDate);
-            cellDate.setDate(startDate.getDate() + w * 7 + d);
-            const isFuture = cellDate > now;
-            const cellDateStr = cellDate.toISOString().split('T')[0];
-            const isActive = activeDates.has(cellDateStr);
-            return (
-              <div 
-                key={d} 
-                style={{ 
-                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                  backgroundColor: isActive ? 'var(--accent-blue)' : (isFuture ? 'transparent' : 'var(--bg-surface)'),
-                  opacity: isFuture ? 0 : 1
-                }} 
-                title={cellDateStr}
-              />
-            );
-          })}
+    <div className="workout-calendar">
+      {viewMode === 'month' && (
+        <div className="cal-month-nav">
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <span>{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}</span>
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
         </div>
-      ))}
+      )}
+      
+      <div className="cal-days-header">
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => <span key={d}>{d}</span>)}
+      </div>
+
+      <div className={`cal-grid ${viewMode}`}>
+        {(viewMode === 'week' ? weekDays : monthDays).map(d => renderDay(d, d.toISOString().split('T')[0] === selectedDate))}
+      </div>
     </div>
   );
 }

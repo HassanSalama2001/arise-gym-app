@@ -1,3 +1,16 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Production
+dist/
+dist-ssr/
+build/
+
 # Logs
 logs
 *.log
@@ -7,18 +20,34 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment Variables (CRITICAL)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
 
-# Editor directories and files
+# Editor & OS
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.bak
+Thumbs.db
+
+# Agentic Coding & AI Tools
+.agents/
+.gemini/
+.ai/
+skills-lock.json
+
+# Local Backups
+assets_backup/
+temp/
+scratch/

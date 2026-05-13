@@ -47,6 +47,7 @@ function AnimatedRoutes() {
           <Route path="/mission-complete" element={<PageWrapper><MissionCompleteScreen /></PageWrapper>} />
           <Route path="/progress" element={<PageWrapper><ProgressScreen /></PageWrapper>} />
           <Route path="/profile" element={<PageWrapper><ProfileScreen /></PageWrapper>} />
+          <Route path="/login" element={<PageWrapper><LoginScreen onGuest={() => {}} onLogin={() => {}} /></PageWrapper>} />
         </Routes>
       </Suspense>
     </AnimatePresence>
@@ -68,21 +69,22 @@ export default function App() {
 
       if (session) {
         setAuthState('authenticated');
-      } else if (profile?.guestMode) {
-        setAuthState('guest');
       } else {
-        setAuthState('unauthenticated');
+        // Default to guest if no session. 
+        // If profile doesn't exist, seedDatabase already created it.
+        setAuthState('guest');
       }
 
       setReady(true);
-      setTimeout(() => setShowSplash(false), 1500);
+      setTimeout(() => setShowSplash(false), 1000);
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange((_event, session) => {
         if (session) {
           setAuthState('authenticated');
-        } else if (authState !== 'guest') {
-          setAuthState('unauthenticated');
+        } else {
+          // If logged out, stay as guest (local data remains until wiped)
+          setAuthState('guest');
         }
       });
       
@@ -109,16 +111,8 @@ export default function App() {
     return <SplashScreen />;
   }
 
-  if (authState === 'unauthenticated') {
-    return (
-      <Suspense fallback={<SplashScreen />}>
-        <LoginScreen 
-          onGuest={() => setAuthState('guest')} 
-          onLogin={() => setAuthState('authenticated')} 
-        />
-      </Suspense>
-    );
-  }
+  // Login screen is now handled as an overlay or separate route if needed,
+  // but for now we just show the main app.
 
   return (
     <HashRouter>

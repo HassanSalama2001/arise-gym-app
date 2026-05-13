@@ -458,7 +458,8 @@ input[type="number"] {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 20px;
-  padding-bottom: calc(20px + var(--safe-bottom));
+  /* Extra padding to ensure content is not hidden behind the BottomNav */
+  padding-bottom: 110px;
 }
 
 .bottom-sheet-handle {

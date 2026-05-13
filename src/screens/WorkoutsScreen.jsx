@@ -45,7 +45,7 @@ function ExerciseCard({ exercise, onClick }) {
   );
 }
 
-function PlanCard({ plan, exerciseCount, onDelete }) {
+function PlanCard({ plan, exerciseCount, onDelete, onClick }) {
   const [swipedLeft, setSwipedLeft] = useState(false);
   const [touchStartX, setTouchStartX] = useState(null);
 
@@ -59,7 +59,7 @@ function PlanCard({ plan, exerciseCount, onDelete }) {
   }
 
   return (
-    <div className="plan-card-wrapper">
+    <div className="plan-card-wrapper" onClick={onClick}>
       <motion.div
         className="plan-card card"
         animate={{ x: swipedLeft ? -80 : 0 }}
@@ -412,6 +412,11 @@ export default function WorkoutsScreen() {
                       plan={plan}
                       exerciseCount={planExerciseCount[plan.id] || 0}
                       onDelete={handleDeletePlan}
+                      onClick={() => {
+                        if (window.confirm(`Start training with "${plan.name}"?`)) {
+                          navigate('/log', { state: { planId: plan.id } });
+                        }
+                      }}
                     />
                   ))}
                 </div>
