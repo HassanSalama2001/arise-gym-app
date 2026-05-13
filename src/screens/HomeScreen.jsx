@@ -54,9 +54,9 @@ function StreakRing({ streak }) {
 
 export default function HomeScreen() {
   const navigate = useNavigate();
-  const profile = useLiveQuery(() => db.playerProfile.get('profile'));
-  const achievements = useLiveQuery(() => db.achievements.orderBy('id').reverse().limit(3).toArray());
-  const quests = useLiveQuery(() => db.dailyQuests.where('date').equals(getToday()).toArray());
+  const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
+  const achievements = useLiveQuery(() => db.achievements.orderBy('id').reverse().limit(3).toArray(), []);
+  const quests = useLiveQuery(() => db.dailyQuests.where('date').equals(getToday()).toArray(), []);
 
   useEffect(() => {
     let cancelled = false;

@@ -37,7 +37,7 @@ function PageWrapper({ children }) {
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <Suspense fallback={<div className="screen"><div className="screen-content loading-screen">Loading...</div></div>}>
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<PageWrapper><HomeScreen /></PageWrapper>} />

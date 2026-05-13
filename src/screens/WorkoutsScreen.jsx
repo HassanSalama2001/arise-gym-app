@@ -130,7 +130,7 @@ function CreatePlanSheet({ onClose, onCreated }) {
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         onClick={e => e.stopPropagation()}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
+        style={{ maxHeight: '85vh' }}
       >
         <div className="bottom-sheet-handle" />
         <h3 className="sheet-title">CREATE PLAN</h3>
@@ -203,7 +203,7 @@ function CreateExerciseSheet({ onClose, onCreated }) {
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         onClick={e => e.stopPropagation()}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
+        style={{ maxHeight: '85vh' }}
       >
         <div className="bottom-sheet-handle" />
         <h3 className="sheet-title">CREATE EXERCISE</h3>
@@ -261,17 +261,23 @@ export default function WorkoutsScreen() {
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
 
-  const exercises = useLiveQuery(() => db.exercises.toArray());
-  const plans = useLiveQuery(() => db.workoutPlans.orderBy('createdAt').reverse().toArray());
-  const planExercises = useLiveQuery(() => db.planExercises.toArray());
+  const exercises = useLiveQuery(() => db.exercises.toArray(), []);
+  const plans = useLiveQuery(() => db.workoutPlans.orderBy('createdAt').reverse().toArray(), []);
+  const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
 
   const filtered = useMemo(() => {
-    if (!exercises || exercises.length === 0) return [];
-    return exercises.filter(ex => {
-      const matchSearch = !search || ex.name.toLowerCase().includes(search.toLowerCase());
-      const matchFilter = filter === 'All' || ex.muscleGroup === filter;
-      return matchSearch && matchFilter;
-    });
+    if (!exercises) return []; // Still loading
+    try {
+      return exercises.filter(ex => {
+        if (!ex) return false;
+        const matchSearch = !search || (ex.name && ex.name.toLowerCase().includes(search.toLowerCase()));
+        const matchFilter = filter === 'All' || ex.muscleGroup === filter;
+        return matchSearch && matchFilter;
+      });
+    } catch (e) {
+      console.error('Filter error:', e);
+      return [];
+    }
   }, [exercises, search, filter]);
 
   const planExerciseCount = useMemo(() => {

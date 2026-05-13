@@ -157,12 +157,12 @@ export default function ProgressScreen() {
   const [calendarView, setCalendarView] = useState('week');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const profile = useLiveQuery(() => db.playerProfile.get('profile'));
-  const sessions = useLiveQuery(() => db.sessions.orderBy('startTime').reverse().toArray());
-  const sets = useLiveQuery(() => db.sets.toArray());
-  const achievements = useLiveQuery(() => db.achievements.orderBy('id').reverse().toArray());
-  const bodyWeights = useLiveQuery(() => db.bodyWeight.orderBy('date').toArray());
-  const exercises = useLiveQuery(() => db.exercises.toArray());
+  const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
+  const sessions = useLiveQuery(() => db.sessions.orderBy('startTime').reverse().toArray(), []);
+  const sets = useLiveQuery(() => db.sets.toArray(), []);
+  const achievements = useLiveQuery(() => db.achievements.orderBy('id').reverse().toArray(), []);
+  const bodyWeights = useLiveQuery(() => db.bodyWeight.orderBy('date').toArray(), []);
+  const exercises = useLiveQuery(() => db.exercises.toArray(), []);
 
   // Sessions for selected date
   const selectedSessions = useMemo(() => {

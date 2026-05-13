@@ -151,9 +151,9 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
 /* ── Log Setup (pick plan or quick start) ────────── */
 function LogSetupScreen({ onStart }) {
   const navigate = useNavigate();
-  const plans = useLiveQuery(() => db.workoutPlans.toArray());
-  const planExercises = useLiveQuery(() => db.planExercises.toArray());
-  const exercises = useLiveQuery(() => db.exercises.toArray());
+  const plans = useLiveQuery(() => db.workoutPlans.toArray(), []);
+  const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
+  const exercises = useLiveQuery(() => db.exercises.toArray(), []);
 
   const [selectedPlan, setSelectedPlan] = useState(null);
 
@@ -256,7 +256,7 @@ export default function LogWorkoutScreen() {
   // For quick start — dynamic exercise list
   // For quick start — dynamic exercise list
   const [blocks, setBlocks] = useState([]); // Array of blocks. A block is an array of exercises: [ex1, ex2]
-  const allExercises = useLiveQuery(() => db.exercises.toArray());
+  const allExercises = useLiveQuery(() => db.exercises.toArray(), []);
 
   function showXPToast(amount) {
     const id = Date.now();
@@ -544,9 +544,8 @@ export default function LogWorkoutScreen() {
           </div>
         </div>
 
-        {/* Discard */}
-        <div style={{ padding: '0 16px 110px', display: 'flex', justifyContent: 'center' }}>
-          <button className="btn-ghost" style={{ width: '100%', maxWidth: '400px' }} onClick={handleDiscard} id="discard-workout-btn">
+        <div style={{ padding: '0 16px 32px', display: 'flex', justifyContent: 'center' }}>
+          <button className="btn-ghost" style={{ width: '100%', maxWidth: '400px', color: 'var(--accent-red)' }} onClick={handleDiscard} id="discard-workout-btn">
             DISCARD WORKOUT
           </button>
         </div>
@@ -623,7 +622,7 @@ function AddExerciseSheet({ allExercises, onAdd, onClose, hasCurrentBlock }) {
 
   return (
     <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div className="bottom-sheet" style={{ maxHeight: '80vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
+      <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
         <div className="bottom-sheet-handle" />
         <p className="section-label" style={{ marginBottom: 12 }}>ADD EXERCISE</p>
         
@@ -653,7 +652,7 @@ function ExerciseJumpSheet({ blocks, currentIdx, onSelect, onClose }) {
   if (!blocks) return null;
   return (
     <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div className="bottom-sheet" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
+      <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
         <div className="bottom-sheet-handle" />
         <p className="section-label" style={{ marginBottom: 16 }}>JUMP TO BLOCK</p>
         <div className="jump-list">
@@ -695,7 +694,7 @@ function PlateCalculatorSheet({ weight, onClose }) {
 
   return (
     <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} style={{ zIndex: 300 }}>
-      <motion.div className="bottom-sheet" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
+      <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
         <div className="bottom-sheet-handle" />
         <p className="section-label" style={{ marginBottom: 16 }}>PLATE CALCULATOR</p>
         

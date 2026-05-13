@@ -454,12 +454,11 @@ input[type="number"] {
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   width: 100%;
   max-width: 430px;
-  max-height: 85vh;
+  max-height: 90vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 20px;
-  /* Extra padding to ensure content is not hidden behind the BottomNav */
-  padding-bottom: 110px;
+  padding: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-sheet-handle {

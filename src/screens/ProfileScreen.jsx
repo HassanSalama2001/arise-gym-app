@@ -38,7 +38,7 @@ function RankProgressionSheet({ currentXP, onClose }) {
         exit={{ y: '100%' }} 
         transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
         onClick={e => e.stopPropagation()}
-        style={{ maxHeight: '90vh', overflowY: 'auto' }}
+        style={{ maxHeight: '85vh' }}
       >
         <div className="bottom-sheet-handle" />
         <h3 className="sheet-title">RANK PROGRESSION</h3>
@@ -100,7 +100,7 @@ function ConfirmDeleteSheet({ onConfirm, onClose }) {
           id="delete-confirm-input"
           style={{ marginBottom: 16 }}
         />
-        <div className="sheet-actions" style={{ paddingBottom: 40 }}>
+        <div className="sheet-actions">
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
           <button
             className="btn-primary"
@@ -141,16 +141,20 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (location.state?.openSheet === 'inbody') {
       setShowInbody(true);
-      window.history.replaceState({}, document.title);
+      // Only clear if we actually opened it
+      const timer = setTimeout(() => {
+        navigate(location.pathname, { replace: true, state: {} });
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [location.state]);
+  }, [location.state, location.pathname, navigate]);
 
-  const profile = useLiveQuery(() => db.playerProfile.get('profile'));
-  const achievements = useLiveQuery(() => db.achievements.toArray());
-  const inbodyScans = useLiveQuery(() => db.inbodyScans ? db.inbodyScans.orderBy('date').reverse().toArray() : []);
-  const measurements = useLiveQuery(() => db.measurements ? db.measurements.orderBy('date').reverse().toArray() : []);
-  const allSets = useLiveQuery(() => db.sets.toArray());
-  const allExercises = useLiveQuery(() => db.exercises.toArray());
+  const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
+  const achievements = useLiveQuery(() => db.achievements.toArray(), []);
+  const inbodyScans = useLiveQuery(() => db.inbodyScans ? db.inbodyScans.orderBy('date').reverse().toArray() : [], []);
+  const measurements = useLiveQuery(() => db.measurements ? db.measurements.orderBy('date').reverse().toArray() : [], []);
+  const allSets = useLiveQuery(() => db.sets.toArray(), []);
+  const allExercises = useLiveQuery(() => db.exercises.toArray(), []);
 
   const rankInfo = useMemo(() => profile ? getRankInfo(profile.totalXP) : null, [profile?.totalXP]);
   const earnedTypes = new Set((achievements || []).map(a => a.type));
@@ -250,7 +254,14 @@ export default function ProfileScreen() {
     window.location.reload();
   }
 
-  if (!profile) return null;
+  if (!profile) return (
+    <div className="screen">
+      <div className="screen-content loading-screen">
+        <div className="shimmer" style={{ height: 100, borderRadius: 'var(--radius-lg)', marginBottom: 16 }} />
+        <div className="shimmer" style={{ height: 200, borderRadius: 'var(--radius-lg)' }} />
+      </div>
+    </div>
+  );
 
   return (
     <div className="screen" id="profile-screen">
@@ -479,7 +490,7 @@ function InBodyTracker({ scans, openSheet, setOpenSheet }) {
               exit={{ y: '100%' }} 
               transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
               onClick={e => e.stopPropagation()}
-              style={{ paddingBottom: 40 }}
+              style={{ maxHeight: '85vh' }}
             >
               <div className="bottom-sheet-handle" />
               <p className="section-label" style={{ marginBottom: 16 }}>RECORD INBODY SCAN</p>
@@ -585,7 +596,7 @@ function MeasurementsTracker({ measurements, openSheet, setOpenSheet }) {
               exit={{ y: '100%' }} 
               transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
               onClick={e => e.stopPropagation()}
-              style={{ paddingBottom: 40 }}
+              style={{ maxHeight: '85vh' }}
             >
               <div className="bottom-sheet-handle" />
               <p className="section-label" style={{ marginBottom: 16 }}>RECORD MEASUREMENTS</p>
