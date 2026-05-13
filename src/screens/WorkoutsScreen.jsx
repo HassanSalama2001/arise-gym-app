@@ -260,10 +260,18 @@ export default function WorkoutsScreen() {
   const [filter, setFilter] = useState('All');
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(30);
+
+  // Reset pagination when searching or filtering
+  React.useEffect(() => {
+    setVisibleCount(30);
+  }, [search, filter]);
 
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
   const plans = useLiveQuery(() => db.workoutPlans.orderBy('createdAt').reverse().toArray(), []);
   const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
+
+  const isLoading = exercises === undefined;
 
   const filtered = useMemo(() => {
     if (!exercises) return []; // Still loading
@@ -387,26 +395,48 @@ export default function WorkoutsScreen() {
               </div>
 
               {/* Exercise list */}
-              <div className="exercise-list">
-                {filtered.map((ex, i) => (
-                  <motion.div
-                    key={ex.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.02 }}
-                  >
-                    <ExerciseCard
-                      exercise={ex}
-                      onClick={() => navigate(`/exercise/${ex.id}`)}
-                    />
-                  </motion.div>
-                ))}
-                {filtered.length === 0 && (
-                  <div className="empty-state">
-                    <span style={{ fontSize: 32 }}>🔍</span>
-                    <p>No exercises found</p>
-                    <span className="section-label">Try a different search or filter</span>
-                  </div>
+              <div 
+                className="exercise-list" 
+                style={{ minHeight: '400px' }}
+              >
+                {isLoading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="shimmer card" style={{ height: 80, borderRadius: 'var(--radius-md)', marginBottom: 12 }} />
+                  ))
+                ) : (
+                  <>
+                    {filtered.slice(0, visibleCount).map((ex, i) => (
+                      <motion.div
+                        key={ex.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ExerciseCard
+                          exercise={ex}
+                          onClick={() => navigate(`/exercise/${ex.id}`)}
+                        />
+                      </motion.div>
+                    ))}
+                    
+                    {filtered.length > visibleCount && (
+                      <button 
+                        className="btn-ghost" 
+                        style={{ marginTop: 12, padding: '16px' }} 
+                        onClick={() => setVisibleCount(prev => prev + 50)}
+                      >
+                        LOAD MORE (+{filtered.length - visibleCount})
+                      </button>
+                    )}
+
+                    {filtered.length === 0 && (
+                      <div className="empty-state">
+                        <span style={{ fontSize: 32 }}>🔍</span>
+                        <p>No exercises found</p>
+                        <span className="section-label">Try a different search or filter</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </motion.div>
