@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,8 +18,62 @@ export default function ExerciseDetailScreen() {
   const planExercises = useLiveQuery(() =>
     db.planExercises.where('exerciseId').equals(Number(id)).toArray(), [id]
   );
+  const sessionSets = useLiveQuery(() => db.sets.where('exerciseId').equals(Number(id)).toArray(), [id]);
+  const sessions = useLiveQuery(() => db.sessions.toArray(), []);
+  const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
 
   const addedPlanIds = new Set((planExercises || []).map(pe => pe.planId));
+
+  const historyData = useMemo(() => {
+    if (!sessionSets || !sessions) return { prWeight: 0, prVolume: 0, prOneRepMax: 0, sessionsHistory: [] };
+
+    const setsBySession = {};
+    let prWeight = 0;
+    let prOneRepMax = 0;
+
+    sessionSets.forEach(s => {
+      if (s.completed) {
+        if (s.weight > prWeight) prWeight = s.weight;
+        const epley = s.weight * (1 + s.reps / 30);
+        if (epley > prOneRepMax) prOneRepMax = Math.round(epley * 10) / 10;
+
+        if (!setsBySession[s.sessionId]) {
+          setsBySession[s.sessionId] = [];
+        }
+        setsBySession[s.sessionId].push(s);
+      }
+    });
+
+    let prVolume = 0;
+    const sessionsHistory = [];
+
+    Object.entries(setsBySession).forEach(([sessId, sets]) => {
+      const sessionInfo = sessions.find(sess => sess.id === Number(sessId));
+      if (!sessionInfo) return;
+
+      const volume = sets.reduce((acc, curr) => acc + (curr.weight * curr.reps), 0);
+      if (volume > prVolume) prVolume = volume;
+
+      sessionsHistory.push({
+        sessionId: Number(sessId),
+        sessionName: sessionInfo.name,
+        date: sessionInfo.startTime,
+        volume,
+        sets: sets.sort((a, b) => a.setNumber - b.setNumber)
+      });
+    });
+
+    sessionsHistory.sort((a, b) => b.date - a.date);
+
+    return {
+      prWeight,
+      prVolume: Math.round(prVolume * 10) / 10,
+      prOneRepMax: Math.round(prOneRepMax * 10) / 10,
+      sessionsHistory
+    };
+  }, [sessionSets, sessions]);
+
+  const unitLabel = profile?.unitPreference || 'kg';
 
   async function togglePlan(planId) {
     setAddingToPlan(planId);
@@ -80,6 +134,7 @@ export default function ExerciseDetailScreen() {
         {/* Tabs */}
         <div className="tab-pills" style={{ marginTop: 16 }}>
           <button className={`tab-pill ${activeTab === 'guide' ? 'active' : ''}`} onClick={() => setActiveTab('guide')} id="tab-guide">FORM GUIDE</button>
+          <button className={`tab-pill ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')} id="tab-history">HISTORY</button>
           <button className={`tab-pill ${activeTab === 'videos' ? 'active' : ''}`} onClick={() => setActiveTab('videos')} id="tab-videos">VIDEOS</button>
           <button className={`tab-pill ${activeTab === 'plans' ? 'active' : ''}`} onClick={() => setActiveTab('plans')} id="tab-add-plan">ADD TO PLAN</button>
         </div>
@@ -160,6 +215,68 @@ export default function ExerciseDetailScreen() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'history' && (
+            <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              {/* PR Stats Card Grid */}
+              <div className="history-pr-grid">
+                <div className="card history-pr-card">
+                  <span className="section-label" style={{ fontSize: 10, marginBottom: 4 }}>MAX WEIGHT</span>
+                  <span className="history-pr-val">{historyData.prWeight || '--'} <span style={{ fontSize: 11, fontWeight: 500 }}>{unitLabel}</span></span>
+                </div>
+                <div className="card history-pr-card">
+                  <span className="section-label" style={{ fontSize: 10, marginBottom: 4 }}>MAX VOLUME</span>
+                  <span className="history-pr-val">{historyData.prVolume || '--'} <span style={{ fontSize: 11, fontWeight: 500 }}>{unitLabel}</span></span>
+                </div>
+                <div className="card history-pr-card">
+                  <span className="section-label" style={{ fontSize: 10, marginBottom: 4 }}>EST. 1RM</span>
+                  <span className="history-pr-val text-gold">{historyData.prOneRepMax || '--'} <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>{unitLabel}</span></span>
+                </div>
+              </div>
+
+              {/* History list */}
+              <div className="history-log-title">
+                <span className="section-label">LOGGED HISTORY ({historyData.sessionsHistory.length})</span>
+              </div>
+              {historyData.sessionsHistory.length > 0 ? (
+                <div className="history-sessions-list">
+                  {historyData.sessionsHistory.map(session => (
+                    <div key={session.sessionId} className="card history-session-card">
+                      <div className="history-session-header">
+                        <span className="history-session-name">{session.sessionName}</span>
+                        <span className="history-session-date">{new Date(session.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                      <div className="history-sets-table">
+                        <div className="history-set-row table-header">
+                          <span>SET</span>
+                          <span>WEIGHT</span>
+                          <span>REPS</span>
+                          <span>RPE</span>
+                        </div>
+                        {session.sets.map((set, idx) => (
+                          <div key={set.id} className="history-set-row">
+                            <span>{idx + 1}</span>
+                            <span>{set.weight} {unitLabel}</span>
+                            <span>{set.reps} reps</span>
+                            <span>@{set.rpe || '--'}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>
+                        Volume: <strong>{session.volume} {unitLabel}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state" style={{ marginTop: 16 }}>
+                  <span style={{ fontSize: 32 }}>💪</span>
+                  <p>No history for this exercise yet</p>
+                  <span className="section-label">Your logged sets will appear here</span>
                 </div>
               )}
             </motion.div>

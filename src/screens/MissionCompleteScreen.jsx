@@ -8,6 +8,7 @@ import quotes from '../data/quotes';
 import RankUpCinematic from '../components/RankUpCinematic';
 import { playLevelUpSound } from '../utils/audio';
 import { hapticLevelUp } from '../utils/haptics';
+import { useAlert } from '../context/AlertContext';
 import './MissionCompleteScreen.css';
 
 function FloatingParticle({ style }) {
@@ -39,9 +40,10 @@ function AnimatedNumber({ value, duration = 1500, prefix = '', suffix = '' }) {
 }
 
 export default function MissionCompleteScreen() {
+  const { showConfirm } = useAlert();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { sessionId, finalXP = 0, totalVol = 0, duration = 0, prevXP = 0 } = state || {};
+  const { sessionId, finalXP = 0, totalVol = 0, duration = 0, prevXP = 0, prevProfile, prevQuests, prevAchievements } = state || {};
 
   const [rankUp, setRankUp] = useState(null);
   const [showCinematic, setShowCinematic] = useState(false);
@@ -193,9 +195,28 @@ export default function MissionCompleteScreen() {
           <button
             className="btn-ghost"
             onClick={async () => {
+              const confirmed = await showConfirm('Discard this workout? All XP and stats gained will be lost.', 'Discard Workout?', { danger: true });
+              if (!confirmed) return;
               if (sessionId) {
                 await db.sets.where('sessionId').equals(sessionId).delete();
                 await db.sessions.delete(sessionId);
+              }
+              if (prevProfile) {
+                await db.playerProfile.put(prevProfile);
+              }
+              if (prevQuests && prevQuests.length > 0) {
+                for (const q of prevQuests) {
+                  await db.dailyQuests.put(q);
+                }
+              }
+              if (prevAchievements) {
+                const prevIds = new Set(prevAchievements.map(a => a.id));
+                const currentAchievements = await db.achievements.toArray();
+                for (const ach of currentAchievements) {
+                  if (!prevIds.has(ach.id)) {
+                    await db.achievements.delete(ach.id);
+                  }
+                }
               }
               navigate('/');
             }}

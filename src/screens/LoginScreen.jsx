@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { supabase } from '../db/supabaseClient';
 import db from '../db/db';
 import { restoreFromCloud } from '../db/sync';
+import { useAlert } from '../context/AlertContext';
 
 export default function LoginScreen({ onGuest, onLogin }) {
+  const { showAlert } = useAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,7 @@ export default function LoginScreen({ onGuest, onLogin }) {
       if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        alert('Check your email for the confirmation link!');
+        await showAlert('Check your email for the confirmation link!', 'Check Email');
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

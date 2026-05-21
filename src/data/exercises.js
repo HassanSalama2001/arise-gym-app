@@ -146,8 +146,88 @@ const exercises = [
   { id: 310, name: 'Sled Push', muscleGroup: 'Legs', difficulty: 'C', instructions: ['Lean into sled','Drive with legs','Maintain straight back'], secondaryMuscles: ['Full Body'] },
 ];
 
-// Placeholder for the remaining 350+ exercises to reach ~510 total.
-// I will append variations and specific equipment-based versions (Resistance Bands, Kettlebells, TRX).
+function getExerciseDetails(name, baseName, variationName) {
+  const lowercaseName = name.toLowerCase();
+  
+  let instructions = [];
+  let secondaryMuscles = [];
+  
+  if (lowercaseName.includes('bench press') || lowercaseName.includes('floor press')) {
+    instructions = [
+      `Set up your ${variationName || 'equipment'} and lie flat on your back.`,
+      `Grip the weight firmly, slightly wider than shoulder-width.`,
+      `Lower the weight with control to your mid-chest level, keeping elbows at a 45-degree angle.`,
+      `Press the weight back up explosively until your arms are fully extended.`
+    ];
+    secondaryMuscles = ['Triceps', 'Front Delts'];
+  } else if (lowercaseName.includes('shoulder press') || lowercaseName.includes('overhead press') || lowercaseName.includes('arnold press') || lowercaseName.includes('push press')) {
+    instructions = [
+      `Hold the ${variationName || 'weight'} at shoulder height with your palms facing forward.`,
+      `Brace your core and press the weight directly overhead until your elbows lock out.`,
+      `Ensure you do not arch your lower back during the lift.`,
+      `Lower the weight back down to your shoulders with control.`
+    ];
+    secondaryMuscles = ['Triceps', 'Upper Traps'];
+  } else if (lowercaseName.includes('squat') || lowercaseName.includes('lunge') || lowercaseName.includes('step-up')) {
+    instructions = [
+      `Stand upright with feet shoulder-width apart, holding the ${variationName || 'weight'}.`,
+      `Lower your body by hinging your hips back and bending your knees, as if sitting in a chair.`,
+      `Keep your chest up, back straight, and knees aligned with your toes.`,
+      `Drive through your heels to return to the standing position.`
+    ];
+    secondaryMuscles = ['Glutes', 'Hamstrings', 'Core'];
+  } else if (lowercaseName.includes('deadlift') || lowercaseName.includes('rdl') || lowercaseName.includes('good morning')) {
+    instructions = [
+      `Stand with feet hip-width apart. Keep the ${variationName || 'weight'} close to your shins/body.`,
+      `Hinge at your hips and bend your knees slightly to reach the weight.`,
+      `Keep your spine neutral, shoulder blades pulled back, and core braced.`,
+      `Push through your feet to stand up straight, locking out your hips at the top.`
+    ];
+    secondaryMuscles = ['Glutes', 'Hamstrings', 'Lower Back'];
+  } else if (lowercaseName.includes('row') || lowercaseName.includes('pulldown') || lowercaseName.includes('pull-up') || lowercaseName.includes('pullup') || lowercaseName.includes('chin-up')) {
+    instructions = [
+      `Position yourself and grip the ${variationName || 'weight'} securely.`,
+      `Pull the weight (or pull your body) towards your chest/waist, leading with your elbows.`,
+      `Focus on squeezing your shoulder blades together at the peak contraction.`,
+      `Extend your arms back to the starting position under complete control.`
+    ];
+    secondaryMuscles = ['Biceps', 'Rear Delts'];
+  } else if (lowercaseName.includes('curl')) {
+    instructions = [
+      `Stand or sit upright, holding the ${variationName || 'weight'} with a firm grip.`,
+      `Pin your elbows to your sides and curl the weight upwards toward your chest.`,
+      `Squeeze your biceps hard at the top of the movement.`,
+      `Lower the weight slowly to the starting position, fully extending your arms.`
+    ];
+    secondaryMuscles = ['Forearms'];
+  } else if (lowercaseName.includes('tricep') || lowercaseName.includes('extension') || lowercaseName.includes('skull crusher') || lowercaseName.includes('dip') || lowercaseName.includes('pushdown') || lowercaseName.includes('kickback')) {
+    instructions = [
+      `Position yourself and grip the ${variationName || 'weight'} securely.`,
+      `Extend your arms to push or pull the weight, moving only at the elbows.`,
+      `Squeeze your triceps forcefully at the point of full extension.`,
+      `Slowly return the weight to the starting position, keeping your upper arms stationary.`
+    ];
+    secondaryMuscles = ['Chest', 'Front Delts'];
+  } else if (lowercaseName.includes('crunch') || lowercaseName.includes('raise') || lowercaseName.includes('plank') || lowercaseName.includes('twist') || lowercaseName.includes('superman') || lowercaseName.includes('sit-up')) {
+    instructions = [
+      `Lie or position yourself on the floor/mat.`,
+      `Engage your core muscles to perform the contraction or hold.`,
+      `Control the movement, avoiding momentum and neck strain.`,
+      `Slowly return to the starting position, keeping tension on your core.`
+    ];
+    secondaryMuscles = ['Hip Flexors', 'Obliques'];
+  } else {
+    instructions = [
+      `Set up the ${variationName || 'equipment'} and assume the starting stance.`,
+      `Execute the movement through a full range of motion with control.`,
+      `Squeeze the target muscles at the peak of the contraction.`,
+      `Return to the starting position slowly, keeping tension on the muscle.`
+    ];
+    secondaryMuscles = [];
+  }
+  
+  return { instructions, secondaryMuscles };
+}
 
 const variations = [
   'Resistance Band', 'Kettlebell', 'TRX', 'Medicine Ball', 'Sandbag', 'Single Leg', 'Single Arm', 'Alternating', 'Weighted', 'Paused', 'Tempo'
@@ -170,13 +250,15 @@ const baseExercises = [
 let currentId = 400;
 baseExercises.forEach(base => {
   variations.forEach(v => {
+    const fullName = `${v} ${base.name}`;
+    const details = getExerciseDetails(fullName, base.name, v);
     exercises.push({
       id: currentId++,
-      name: `${v} ${base.name}`,
+      name: fullName,
       muscleGroup: base.mg,
       difficulty: base.diff,
-      instructions: [`Perform ${base.name} using ${v}.`],
-      secondaryMuscles: []
+      instructions: details.instructions,
+      secondaryMuscles: details.secondaryMuscles
     });
   });
 });
@@ -209,13 +291,15 @@ const more = [
 more.forEach(m => {
   const localVariations = ['Dumbbell', 'Barbell', 'Cable', 'Machine', 'Smith Machine'];
   localVariations.forEach(v => {
+    const fullName = `${v} ${m.name}`;
+    const details = getExerciseDetails(fullName, m.name, v);
     exercises.push({
       id: currentId++,
-      name: `${v} ${m.name}`,
+      name: fullName,
       muscleGroup: m.mg,
       difficulty: m.diff,
-      instructions: [`Standard ${m.name} variation using ${v}.`],
-      secondaryMuscles: []
+      instructions: details.instructions,
+      secondaryMuscles: details.secondaryMuscles
     });
   });
 });

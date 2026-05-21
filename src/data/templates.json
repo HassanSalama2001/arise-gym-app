@@ -3,79 +3,79 @@
     "id": "tpl_1",
     "name": "PPL - Push Day",
     "exercises": [
-      { "exerciseId": 25, "order": 0, "name": "barbell bench press" },
-      { "exerciseId": 289, "order": 1, "name": "dumbbell bench press" },
-      { "exerciseId": 334, "order": 2, "name": "dumbbell lateral raise" }
+      { "exerciseId": 1, "order": 0, "name": "Barbell Bench Press" },
+      { "exerciseId": 4, "order": 1, "name": "Dumbbell Bench Press" },
+      { "exerciseId": 64, "order": 2, "name": "Lateral Raise (Dumbbell)" }
     ]
   },
   {
     "id": "tpl_2",
     "name": "PPL - Pull Day",
     "exercises": [
-      { "exerciseId": 32, "order": 0, "name": "barbell deadlift" },
-      { "exerciseId": 652, "order": 1, "name": "pull-up" },
-      { "exerciseId": 31, "order": 2, "name": "barbell curl" }
+      { "exerciseId": 21, "order": 0, "name": "Deadlift (Conventional)" },
+      { "exerciseId": 23, "order": 1, "name": "Pull-Up" },
+      { "exerciseId": 76, "order": 2, "name": "Barbell Bicep Curl" }
     ]
   },
   {
     "id": "tpl_3",
     "name": "PPL - Legs Day",
     "exercises": [
-      { "exerciseId": 26, "order": 0, "name": "barbell squat" }
+      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" }
     ]
   },
   {
     "id": "tpl_4",
     "name": "Full Body Starter",
     "exercises": [
-      { "exerciseId": 26, "order": 0, "name": "barbell squat" },
-      { "exerciseId": 25, "order": 1, "name": "barbell bench press" },
-      { "exerciseId": 32, "order": 2, "name": "barbell deadlift" },
-      { "exerciseId": 652, "order": 3, "name": "pull-up" }
+      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" },
+      { "exerciseId": 1, "order": 1, "name": "Barbell Bench Press" },
+      { "exerciseId": 21, "order": 2, "name": "Deadlift (Conventional)" },
+      { "exerciseId": 23, "order": 3, "name": "Pull-Up" }
     ]
   },
   {
     "id": "tpl_5",
     "name": "Upper Body Strength",
     "exercises": [
-      { "exerciseId": 25, "order": 0, "name": "barbell bench press" },
-      { "exerciseId": 652, "order": 1, "name": "pull-up" },
-      { "exerciseId": 289, "order": 2, "name": "dumbbell bench press" },
-      { "exerciseId": 334, "order": 3, "name": "dumbbell lateral raise" },
-      { "exerciseId": 31, "order": 4, "name": "barbell curl" }
+      { "exerciseId": 1, "order": 0, "name": "Barbell Bench Press" },
+      { "exerciseId": 23, "order": 1, "name": "Pull-Up" },
+      { "exerciseId": 4, "order": 2, "name": "Dumbbell Bench Press" },
+      { "exerciseId": 64, "order": 3, "name": "Lateral Raise (Dumbbell)" },
+      { "exerciseId": 76, "order": 4, "name": "Barbell Bicep Curl" }
     ]
   },
   {
     "id": "tpl_6",
     "name": "Lower Body Power",
     "exercises": [
-      { "exerciseId": 26, "order": 0, "name": "barbell squat" },
-      { "exerciseId": 32, "order": 1, "name": "barbell deadlift" }
+      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" },
+      { "exerciseId": 21, "order": 1, "name": "Deadlift (Conventional)" }
     ]
   },
   {
     "id": "tpl_7",
     "name": "Arnold Split - Chest & Back",
     "exercises": [
-      { "exerciseId": 25, "order": 0, "name": "barbell bench press" },
-      { "exerciseId": 652, "order": 1, "name": "pull-up" },
-      { "exerciseId": 289, "order": 2, "name": "dumbbell bench press" }
+      { "exerciseId": 1, "order": 0, "name": "Barbell Bench Press" },
+      { "exerciseId": 23, "order": 1, "name": "Pull-Up" },
+      { "exerciseId": 4, "order": 2, "name": "Dumbbell Bench Press" }
     ]
   },
   {
     "id": "tpl_8",
     "name": "Arnold Split - Shoulders & Arms",
     "exercises": [
-      { "exerciseId": 334, "order": 0, "name": "dumbbell lateral raise" },
-      { "exerciseId": 31, "order": 1, "name": "barbell curl" }
+      { "exerciseId": 64, "order": 0, "name": "Lateral Raise (Dumbbell)" },
+      { "exerciseId": 76, "order": 1, "name": "Barbell Bicep Curl" }
     ]
   },
   {
     "id": "tpl_9",
     "name": "Arnold Split - Legs",
     "exercises": [
-      { "exerciseId": 26, "order": 0, "name": "barbell squat" },
-      { "exerciseId": 32, "order": 1, "name": "barbell deadlift" }
+      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" },
+      { "exerciseId": 21, "order": 1, "name": "Deadlift (Conventional)" }
     ]
   }
 ]

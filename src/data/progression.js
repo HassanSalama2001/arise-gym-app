@@ -30,6 +30,10 @@ export function getRankColor(rank) {
 }
 
 export function calculateSetXP(weight, reps) {
+  if (!weight || weight <= 0) {
+    // Bodyweight exercises scale by reps
+    return Math.max(Math.round(reps * 2), 5);
+  }
   const base = Math.round((weight * reps) / 10);
   return Math.max(base, 5);
 }
@@ -47,13 +51,32 @@ export const QUEST_TEMPLATES = [
   { type: 'core_work', description: 'Do 3 sets of core exercises', target: 3, xpReward: 50 },
 ];
 
+function mulberry32(a) {
+  return function() {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
 export function generateDailyQuests(date) {
-  const seed = date.split('-').join('');
-  const shuffled = [...QUEST_TEMPLATES].sort((a, b) => {
-    const ha = hashCode(seed + a.type);
-    const hb = hashCode(seed + b.type);
-    return ha - hb;
-  });
+  let seedStr = date;
+  if (typeof date === 'string') {
+    seedStr = date.split('-').join('');
+  }
+  let seed = parseInt(seedStr, 10);
+  if (isNaN(seed)) seed = Date.now();
+  
+  const random = mulberry32(seed);
+  const shuffled = [...QUEST_TEMPLATES];
+  
+  // Deterministic Fisher-Yates shuffle
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
   return shuffled.slice(0, 3).map(q => ({
     date,
     type: q.type,
@@ -63,14 +86,4 @@ export function generateDailyQuests(date) {
     completed: false,
     xpReward: q.xpReward
   }));
-}
-
-function hashCode(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return hash;
 }

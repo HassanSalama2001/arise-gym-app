@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo, RANKS } from '../data/progression';
+import SessionDetailModal from '../components/SessionDetailModal';
 import './ProgressScreen.css';
 
 /* ── Animated Number ─────────── */
@@ -62,14 +63,16 @@ function VolumeBarChart({ weekData }) {
         const barH = d.vol > 0 ? Math.max(((d.vol / maxVol) * (H - PAD)), 4) : 0;
         const x = PAD + i * ((W - PAD * 2) / 7) + 2;
         const y = H - barH;
-        const isToday = i === new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+        const todayDay = new Date().getDay();
+        const todayIdx = todayDay === 0 ? 6 : todayDay - 1;
+        const isToday = i === todayIdx;
         return (
           <g key={i}>
             {barH > 0 && (
               <motion.rect
                 x={x} y={y} width={barW} height={barH} rx="3"
-                fill={d.vol > 0 ? 'var(--accent-blue)' : 'var(--bg-surface)'}
-                opacity={0.8}
+                fill={isToday ? 'var(--accent-gold)' : (d.vol > 0 ? 'var(--accent-blue)' : 'var(--bg-surface)')}
+                opacity={isToday ? 1.0 : 0.8}
                 initial={{ scaleY: 0, originY: 1 }}
                 animate={{ scaleY: 1 }}
                 transition={{ delay: i * 0.07, duration: 0.4 }}
@@ -77,9 +80,9 @@ function VolumeBarChart({ weekData }) {
               />
             )}
             {barH === 0 && (
-              <rect x={x} y={H - 3} width={barW} height={3} rx="2" fill="var(--bg-surface)" opacity="0.4"/>
+              <rect x={x} y={H - 3} width={barW} height={3} rx="2" fill={isToday ? 'var(--accent-gold)' : 'var(--bg-surface)'} opacity={isToday ? 0.6 : 0.4}/>
             )}
-            <text x={x + barW / 2} y={H + 14} textAnchor="middle" fontSize="10" fill="var(--text-muted)" fontFamily="var(--font-display)">{days[i]}</text>
+            <text x={x + barW / 2} y={H + 14} textAnchor="middle" fontSize="10" fill={isToday ? 'var(--accent-gold)' : 'var(--text-muted)'} fontWeight={isToday ? '700' : '600'} fontFamily="var(--font-display)">{days[i]}</text>
           </g>
         );
       })}
@@ -134,7 +137,7 @@ function RankTimeline({ achievements }) {
 }
 
 /* ── History Session Card ─────────────────────────── */
-function SessionCard({ session, onClick }) {
+function SessionCard({ session, onClick, unitPreference }) {
   const dur = session.endTime ? session.endTime - session.startTime : 0;
   const mins = Math.floor(dur / 60000);
   return (
@@ -145,7 +148,7 @@ function SessionCard({ session, onClick }) {
       </div>
       <div className="session-card-meta">
         <span className="section-label">{new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-        <span className="section-label">{mins}m · {session.volume || 0} kg</span>
+        <span className="section-label">{mins}m · {session.volume || 0} {unitPreference || 'kg'}</span>
       </div>
     </motion.div>
   );
@@ -156,6 +159,7 @@ export default function ProgressScreen() {
   const [historyFilter, setHistoryFilter] = useState('all');
   const [calendarView, setCalendarView] = useState('week');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
 
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const sessions = useLiveQuery(() => db.sessions.orderBy('startTime').reverse().toArray(), []);
@@ -209,16 +213,6 @@ export default function ProgressScreen() {
     });
   }, [sessions, sets]);
 
-  // Muscle frequency this week
-  const muscleData = useMemo(() => {
-    if (!sessions || !sets) return {};
-    const weekAgo = Date.now() - 7 * 86400000;
-    const weekSessions = (sessions || []).filter(s => s.startTime > weekAgo);
-    const weekSessionIds = new Set(weekSessions.map(s => s.id));
-    const weekSets = (sets || []).filter(s => weekSessionIds.has(s.sessionId));
-    // Need exercise data
-    return {};
-  }, [sessions, sets]);
 
   // History filter
   const filteredSessions = useMemo(() => {
@@ -311,7 +305,7 @@ export default function ProgressScreen() {
 
             {/* Weekly Volume */}
             <div className="chart-section">
-              <span className="section-label">WEEKLY VOLUME (KG)</span>
+              <span className="section-label">WEEKLY VOLUME ({(profile?.unitPreference || 'kg').toUpperCase()})</span>
               <div className="chart-card card mt-8">
                 <VolumeBarChart weekData={weekData} />
               </div>
@@ -319,7 +313,7 @@ export default function ProgressScreen() {
 
             {/* Estimated 1RM */}
             <div className="chart-section">
-              <span className="section-label">ESTIMATED 1RM (EPLEY)</span>
+              <span className="section-label">ESTIMATED 1RM (EPLEY, {(profile?.unitPreference || 'kg').toUpperCase()})</span>
               <div className="chart-card card mt-8">
                 <OneRepMaxChart sets={sets || []} sessions={sessions || []} exercises={exercises || []} />
               </div>
@@ -385,7 +379,7 @@ export default function ProgressScreen() {
             {filteredSessions.length > 0 ? (
               <div className="session-list">
                 {filteredSessions.map(s => (
-                  <SessionCard key={s.id} session={s} onClick={() => {}} />
+                  <SessionCard key={s.id} session={s} unitPreference={profile?.unitPreference} onClick={() => setSelectedSessionId(s.id)} />
                 ))}
               </div>
             ) : (
@@ -398,6 +392,12 @@ export default function ProgressScreen() {
           </motion.div>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedSessionId !== null && (
+          <SessionDetailModal sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -461,7 +461,7 @@ function OneRepMaxChart({ sets, sessions, exercises }) {
     }
   }, [loggedExercises, selectedEx]);
 
-  useMemo(() => {
+  React.useEffect(() => {
     if (!sets || !sessions || !exercises || !selectedEx) return;
     const ex = exercises.find(e => e.name === selectedEx);
     if (!ex) { setChartData([]); return; }
@@ -591,18 +591,18 @@ function WorkoutCalendar({ sessions, viewMode, selectedDate, onDateClick }) {
     <div className="workout-calendar">
       {viewMode === 'month' && (
         <div className="cal-month-nav">
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}>
+          <button onClick={() => setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <span>{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}</span>
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}>
+          <button onClick={() => setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
       )}
       
       <div className="cal-days-header">
-        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => <span key={d}>{d}</span>)}
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, idx) => <span key={idx}>{d}</span>)}
       </div>
 
       <div className={`cal-grid ${viewMode}`}>

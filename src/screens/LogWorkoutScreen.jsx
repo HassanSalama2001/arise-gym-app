@@ -9,15 +9,18 @@ import XPToast from '../components/XPToast';
 import { playSetCompleteSound } from '../utils/audio';
 import { hapticSetComplete } from '../utils/haptics';
 import { checkAndUnlockAchievement } from '../utils/achievements';
+import { useAlert } from '../context/AlertContext';
 import './LogWorkoutScreen.css';
 
 /* ── Elapsed Timer ─────────────────────────────── */
 function ElapsedTimer({ startTime }) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
+    if (!startTime) return;
     const iv = setInterval(() => setElapsed(Date.now() - startTime), 1000);
     return () => clearInterval(iv);
   }, [startTime]);
+  if (!startTime) return null;
   const s = Math.floor(elapsed / 1000);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -30,7 +33,8 @@ function ElapsedTimer({ startTime }) {
   );
 }
 
-function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
+function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDelete, unitPreference }) {
+  const { showAlert } = useAlert();
   const typeColors = { normal: 'var(--text-primary)', warmup: 'var(--accent-gold)', drop: 'var(--accent-red)' };
   const typeLabels = { normal: index + 1, warmup: 'W', drop: 'D' };
   
@@ -42,10 +46,8 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
   };
 
   return (
-    <motion.div
+    <div
       className={`set-row ${set.completed ? 'set-completed' : ''} ${isActive ? 'set-active' : ''}`}
-      layout
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
     >
       <button 
         className="set-number-badge" 
@@ -67,12 +69,11 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
             placeholder="0"
             value={set.weight || ''}
             onChange={e => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
-            onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
             disabled={set.completed}
             aria-label="Weight"
             id={`set-weight-${index}`}
           />
-          <span className="set-input-label">kg</span>
+          <span className="set-input-label">{unitPreference || 'kg'}</span>
           {onPlateCalc && (
             <button 
               className="plate-calc-btn" 
@@ -97,7 +98,6 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
             placeholder="0"
             value={set.reps || ''}
             onChange={e => onUpdate({ reps: parseInt(e.target.value) || 0 })}
-            onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
             disabled={set.completed}
             aria-label="Reps"
             id={`set-reps-${index}`}
@@ -112,16 +112,54 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
             onChange={e => onUpdate({ rpe: parseFloat(e.target.value) || 0 })}
             disabled={set.completed}
             id={`set-rpe-${index}`}
-            style={{ width: 54, padding: '0 4px', fontSize: 16 }}
+            style={{ width: 64, padding: '0 4px', fontSize: 14 }}
           >
             <option value="">-</option>
-            {[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5, 4].map(v => (
-              <option key={v} value={v}>{v}</option>
-            ))}
+            <option value="10">10 Max</option>
+            <option value="9.5">9.5</option>
+            <option value="9">9 (1 Left)</option>
+            <option value="8.5">8.5</option>
+            <option value="8">8 (2 Left)</option>
+            <option value="7.5">7.5</option>
+            <option value="7">7 (3 Left)</option>
+            <option value="6.5">6.5</option>
+            <option value="6">6</option>
+            <option value="5">5</option>
+            <option value="4">4</option>
           </select>
-          <span className="set-input-label" onClick={() => alert('RPE (Rate of Perceived Exertion):\n10: Max effort (0 reps left)\n9: 1 rep left\n8: 2 reps left\n7-6: Challenging\n<5: Warm-up')} style={{ cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: 'var(--text-muted)' }}>RPE</span>
+          <span className="set-input-label" onClick={() => showAlert('RPE (Rate of Perceived Exertion):\n\n10: Max effort (0 reps left)\n9: 1 rep left\n8: 2 reps left\n7-6: Challenging\n<5: Warm-up', 'What is RPE?')} style={{ cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: 'var(--text-muted)' }}>RPE</span>
         </div>
       </div>
+
+      {onDelete && (
+        <button
+          className="set-delete-btn"
+          onClick={onDelete}
+          disabled={set.completed}
+          title="Delete set"
+          aria-label="Delete set"
+          id={`delete-set-${index}`}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            background: 'none',
+            border: '1px solid rgba(255, 23, 68, 0.2)',
+            color: 'var(--accent-red)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            marginRight: 4,
+            opacity: set.completed ? 0.3 : 1
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+      )}
 
       <motion.button
         className={`set-complete-btn ${set.completed ? 'done' : ''}`}
@@ -145,12 +183,13 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc }) {
           </svg>
         )}
       </motion.button>
-    </motion.div>
+    </div>
   );
 }
 
 /* ── Log Setup (pick plan or quick start) ────────── */
 function LogSetupScreen({ onStart }) {
+  const { showAlert } = useAlert();
   const navigate = useNavigate();
   const plans = useLiveQuery(() => db.workoutPlans.toArray(), []);
   const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
@@ -169,7 +208,7 @@ function LogSetupScreen({ onStart }) {
 
   async function startWithPlan(plan) {
     const exs = getPlanExercises(plan.id);
-    if (exs.length === 0) { alert('This plan has no exercises. Add some first!'); return; }
+    if (exs.length === 0) { await showAlert('This plan has no exercises. Add some first!', 'Oops!'); return; }
     onStart({ planName: plan.name, exercises: exs });
   }
 
@@ -238,13 +277,14 @@ function LogSetupScreen({ onStart }) {
 
 /* ── Active Workout Screen (main) ─────────────────── */
 export default function LogWorkoutScreen() {
+  const { showAlert, showConfirm } = useAlert();
   const navigate = useNavigate();
   const [phase, setPhase] = useState('setup'); // 'setup' | 'active'
   const [workoutConfig, setWorkoutConfig] = useState(null);
 
   // Active workout state
   const [sessionId, setSessionId] = useState(null);
-  const [startTime] = useState(() => Date.now());
+  const [startTime, setStartTime] = useState(null);
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [sets, setSets] = useState({}); // { [exerciseId]: [{ weight, reps, completed }] }
   const [showJump, setShowJump] = useState(false);
@@ -258,6 +298,7 @@ export default function LogWorkoutScreen() {
   // For quick start — dynamic exercise list
   const [blocks, setBlocks] = useState([]); // Array of blocks. A block is an array of exercises: [ex1, ex2]
   const allExercises = useLiveQuery(() => db.exercises.toArray(), []);
+  const profile = useLiveQuery(() => db.playerProfile.get('profile'));
 
   function showXPToast(amount) {
     const id = Date.now();
@@ -265,7 +306,7 @@ export default function LogWorkoutScreen() {
     setTimeout(() => setXpToasts(t => t.filter(x => x.id !== id)), 2500);
   }
 
-  function getDefaultRestDuration() { return 60; }
+  function getDefaultRestDuration() { return profile?.defaultRestDuration ?? 60; }
 
   async function handleStart(config) {
     setWorkoutConfig(config);
@@ -273,11 +314,14 @@ export default function LogWorkoutScreen() {
     const initialBlocks = (config.exercises || []).map(ex => [ex]);
     setBlocks(initialBlocks);
     
+    const now = Date.now();
+    setStartTime(now);
+    
     // Create session record
     const sid = await db.sessions.add({
       planId: null,
       name: config.planName,
-      startTime: Date.now(),
+      startTime: now,
       endTime: null,
     });
     setSessionId(sid);
@@ -364,9 +408,57 @@ export default function LogWorkoutScreen() {
     });
   }
 
+  function deleteSet(exId, setIdx) {
+    setSets(prev => {
+      const next = { ...prev };
+      if (currentBlock.length > 1) {
+        // Superset block: delete this round (setIdx) for all exercises in the current block
+        currentBlock.forEach(ex => {
+          const exSets = [...(next[ex.id] || [])];
+          if (exSets.length > 1) {
+            exSets.splice(setIdx, 1);
+            next[ex.id] = exSets;
+          } else {
+            next[ex.id] = [{ weight: 0, reps: 0, type: 'normal', completed: false }];
+          }
+        });
+      } else {
+        // Single exercise block
+        const exSets = [...(next[exId] || [])];
+        if (exSets.length > 1) {
+          exSets.splice(setIdx, 1);
+          next[exId] = exSets;
+        } else {
+          next[exId] = [{ weight: 0, reps: 0, type: 'normal', completed: false }];
+        }
+      }
+      return next;
+    });
+  }
+
+  async function deleteBlock(blockIdx) {
+    const confirmed = await showConfirm("Are you sure you want to remove this exercise block?", "Remove Exercise?");
+    if (!confirmed) {
+      return;
+    }
+    const blockExs = blocks[blockIdx] || [];
+    setBlocks(prev => prev.filter((_, idx) => idx !== blockIdx));
+    setSets(prev => {
+      const next = { ...prev };
+      blockExs.forEach(ex => {
+        delete next[ex.id];
+      });
+      return next;
+    });
+    setCurrentExIdx(prev => Math.max(0, Math.min(blocks.length - 2, prev)));
+  }
+
   async function handleFinish() {
-    // Calc final XP with streak multiplier and completion bonus
     const profile = await db.playerProfile.get('profile');
+    const today = new Date().toISOString().split('T')[0];
+    const prevAchievements = await db.achievements.toArray();
+
+    // Calc final XP with streak multiplier and completion bonus
     const streakMult = Math.min(1.0 + (profile?.currentStreak || 0) * 0.1, 2.0);
     const finalXP = Math.round((totalXP + 50) * streakMult);
 
@@ -376,37 +468,159 @@ export default function LogWorkoutScreen() {
       for (let i = 0; i < exSets.length; i++) {
         const s = exSets[i];
         if (s.completed || (s.weight > 0 && s.reps > 0)) {
-          await db.sets.add({ sessionId, exerciseId: exId, setNumber: i + 1, weight: s.weight, reps: s.reps, completed: s.completed ? 1 : 0 });
+          await db.sets.add({ 
+            sessionId, 
+            exerciseId: exId, 
+            setNumber: i + 1, 
+            weight: s.weight, 
+            reps: s.reps, 
+            rpe: s.rpe || null,
+            type: s.type || 'normal',
+            completed: s.completed ? 1 : 0 
+          });
         }
       }
     }
 
-    // Update session end time
-    await db.sessions.update(sessionId, { endTime: Date.now() });
+    // Calculate total volume
+    const totalVol = Object.values(sets).flat().filter(s => s.completed).reduce((acc, s) => acc + (s.weight * s.reps), 0);
+
+    // Evaluate Daily Quests progress
+    const exercisesList = await db.exercises.toArray();
+    const exerciseMap = {};
+    exercisesList.forEach(e => { exerciseMap[e.id] = e; });
+
+    let legSetsCount = 0;
+    let backSetsCount = 0;
+    let shoulderSetsCount = 0;
+    let armSetsCount = 0;
+    let coreSetsCount = 0;
+    let totalCompletedSetsCount = 0;
+
+    for (const [exIdStr, exSets] of Object.entries(sets)) {
+      const exId = parseInt(exIdStr);
+      const ex = exerciseMap[exId];
+      if (!ex) continue;
+      
+      const compSets = exSets.filter(s => s.completed);
+      totalCompletedSetsCount += compSets.length;
+
+      if (ex.muscleGroup === 'Legs') legSetsCount += compSets.length;
+      if (ex.muscleGroup === 'Back') backSetsCount += compSets.length;
+      if (ex.muscleGroup === 'Shoulders') shoulderSetsCount += compSets.length;
+      if (ex.muscleGroup === 'Arms') armSetsCount += compSets.length;
+      if (ex.muscleGroup === 'Core') coreSetsCount += compSets.length;
+    }
+
+    // Check PRs
+    let newPRsCount = 0;
+    for (const exIdStr of Object.keys(sets)) {
+      const exId = parseInt(exIdStr);
+      const prRecord = await db.personalRecords.where('exerciseId').equals(exId).first();
+      if (prRecord && prRecord.date >= startTime) {
+        newPRsCount++;
+      }
+    }
+
+    const durationMinutes = (Date.now() - startTime) / 60000;
+
+    const todayQuests = await db.dailyQuests.where('date').equals(today).toArray();
+    const prevQuests = JSON.parse(JSON.stringify(todayQuests));
+    let questXPEarned = 0;
+
+    for (const quest of todayQuests) {
+      if (quest.completed) continue;
+
+      let progress = 0;
+      if (quest.type === 'workout_count') {
+        progress = 1;
+      } else if (quest.type === 'total_volume') {
+        progress = totalVol;
+      } else if (quest.type === 'new_pr') {
+        progress = newPRsCount;
+      } else if (quest.type === 'fast_workout') {
+        if (durationMinutes < 45) progress = 1;
+      } else if (quest.type === 'total_sets') {
+        progress = totalCompletedSetsCount;
+      } else if (quest.type === 'train_legs') {
+        if (legSetsCount > 0) progress = 1;
+      } else if (quest.type === 'back_sets') {
+        progress = backSetsCount;
+      } else if (quest.type === 'shoulder_sets') {
+        progress = shoulderSetsCount;
+      } else if (quest.type === 'arm_sets') {
+        progress = armSetsCount;
+      } else if (quest.type === 'core_work') {
+        progress = coreSetsCount;
+      }
+
+      const newCurrent = Math.min(quest.current + progress, quest.target);
+      const completed = newCurrent >= quest.target;
+      
+      await db.dailyQuests.update(quest.id, {
+        current: newCurrent,
+        completed
+      });
+
+      if (completed) {
+        questXPEarned += quest.xpReward;
+      }
+    }
+
+    // Update session stats
+    await db.sessions.update(sessionId, {
+      endTime: Date.now(),
+      volume: totalVol,
+      xpEarned: finalXP + questXPEarned
+    });
 
     // Update player profile
-    const totalVol = Object.values(sets).flat().filter(s => s.completed).reduce((acc, s) => acc + (s.weight * s.reps), 0);
-    const today = new Date().toISOString().split('T')[0];
     const lastDate = profile?.lastSessionDate;
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     const newStreak = lastDate === yesterday ? (profile.currentStreak || 0) + 1 : lastDate === today ? (profile.currentStreak || 0) : 1;
-    const newTotalXP = (profile?.totalXP || 0) + finalXP;
+    const newTotalXP = (profile?.totalXP || 0) + finalXP + questXPEarned;
+    const newTotalSessions = (profile?.totalSessions || 0) + 1;
 
     await db.playerProfile.update('profile', {
       totalXP: newTotalXP,
-      totalSessions: (profile?.totalSessions || 0) + 1,
+      totalSessions: newTotalSessions,
       totalVolume: (profile?.totalVolume || 0) + totalVol,
       currentStreak: newStreak,
       longestStreak: Math.max(profile?.longestStreak || 0, newStreak),
       lastSessionDate: today,
     });
 
+    // Check and Unlock Achievements
+    if (newTotalSessions >= 10) await checkAndUnlockAchievement('sessions_10');
+    if (newTotalSessions >= 50) await checkAndUnlockAchievement('sessions_50');
+    
+    if (newStreak >= 7) await checkAndUnlockAchievement('streak_7');
+    if (newStreak >= 30) await checkAndUnlockAchievement('streak_30');
+
+    if (newTotalXP >= 1000) await checkAndUnlockAchievement('rank_d');
+    if (newTotalXP >= 5000) await checkAndUnlockAchievement('rank_c');
+    if (newTotalXP >= 15000) await checkAndUnlockAchievement('rank_b');
+    if (newTotalXP >= 40000) await checkAndUnlockAchievement('rank_a');
+    if (newTotalXP >= 100000) await checkAndUnlockAchievement('rank_s');
+
     // Navigate to mission complete
-    navigate('/mission-complete', { state: { sessionId, finalXP, totalVol, duration: Date.now() - startTime, prevXP: profile?.totalXP || 0 } });
+    navigate('/mission-complete', { 
+      state: { 
+        sessionId, 
+        finalXP: finalXP + questXPEarned, 
+        totalVol, 
+        duration: Date.now() - startTime, 
+        prevXP: profile?.totalXP || 0, 
+        prevProfile: profile,
+        prevQuests,
+        prevAchievements
+      } 
+    });
   }
 
   async function handleDiscard() {
-    if (!window.confirm('Discard this workout? All progress will be lost.')) return;
+    const confirmed = await showConfirm('Discard this workout? All progress will be lost.', 'Discard Workout?', { danger: true });
+    if (!confirmed) return;
     if (sessionId) {
       await db.sets.where('sessionId').equals(sessionId).delete();
       await db.sessions.delete(sessionId);
@@ -471,8 +685,32 @@ export default function LogWorkoutScreen() {
         {/* Sets */}
         {currentBlock.length > 0 && (
           <div className="sets-section">
-            <div className="sets-header">
-              <span className="section-label">SETS</span>
+            <div className="sets-header" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="section-label">SETS</span>
+                <button 
+                  className="remove-block-btn" 
+                  onClick={() => deleteBlock(currentExIdx)} 
+                  title="Remove this exercise block"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent-red)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid rgba(255, 23, 68, 0.2)'
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  REMOVE BLOCK
+                </button>
+              </div>
               <button className="add-set-btn" onClick={addSetToBlock} id="add-set-btn">
                 + ADD SET
               </button>
@@ -497,6 +735,8 @@ export default function LogWorkoutScreen() {
                             onUpdate={changes => updateSet(ex.id, roundIdx, changes)}
                             onComplete={() => completeSet(ex.id, roundIdx)}
                             onPlateCalc={() => setPlateCalcWeight(s.weight)}
+                            onDelete={() => deleteSet(ex.id, roundIdx)}
+                            unitPreference={profile?.unitPreference || 'kg'}
                           />
                         </div>
                       );
@@ -584,7 +824,7 @@ export default function LogWorkoutScreen() {
       {/* Exercise Jump Sheet */}
       <AnimatePresence>
         {showJump && (
-          <ExerciseJumpSheet blocks={blocks} currentIdx={currentExIdx} onSelect={setCurrentExIdx} onClose={() => setShowJump(false)} />
+          <ExerciseJumpSheet blocks={blocks} currentIdx={currentExIdx} onSelect={setCurrentExIdx} onDeleteBlock={deleteBlock} onClose={() => setShowJump(false)} />
         )}
       </AnimatePresence>
 
@@ -601,7 +841,7 @@ export default function LogWorkoutScreen() {
       {/* Plate Calculator Sheet */}
       <AnimatePresence>
         {plateCalcWeight !== null && (
-          <PlateCalculatorSheet weight={plateCalcWeight} onClose={() => setPlateCalcWeight(null)} />
+          <PlateCalculatorSheet weight={plateCalcWeight} unitPreference={profile?.unitPreference || 'kg'} onClose={() => setPlateCalcWeight(null)} />
         )}
       </AnimatePresence>
 
@@ -649,23 +889,51 @@ function AddExerciseSheet({ allExercises, onAdd, onClose, hasCurrentBlock }) {
 }
 
 /* ── Exercise Jump Sheet ──────────────────────── */
-function ExerciseJumpSheet({ blocks, currentIdx, onSelect, onClose }) {
+function ExerciseJumpSheet({ blocks, currentIdx, onSelect, onDeleteBlock, onClose }) {
   if (!blocks) return null;
   return (
     <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
         <div className="bottom-sheet-handle" />
         <p className="section-label" style={{ marginBottom: 16 }}>JUMP TO BLOCK</p>
-        <div className="jump-list">
+        <div className="jump-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {blocks.map((block, i) => {
             const isSuperset = block.length > 1;
             const name = isSuperset ? `Superset (${block.length} exercises)` : (block[0]?.name || 'Unknown');
             return (
-              <button key={i} className={`jump-item ${i === currentIdx ? 'current' : ''}`} onClick={() => { onSelect(i); onClose(); }} id={`jump-to-${i}`}>
-                <span className="jump-num">{i + 1}</span>
-                <span className="jump-name">{name}</span>
-                {i === currentIdx && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
-              </button>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                <button 
+                  className={`jump-item ${i === currentIdx ? 'current' : ''}`} 
+                  onClick={() => { onSelect(i); onClose(); }} 
+                  id={`jump-to-${i}`}
+                  style={{ flex: 1, margin: 0 }}
+                >
+                  <span className="jump-num">{i + 1}</span>
+                  <span className="jump-name">{name}</span>
+                  {i === currentIdx && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                </button>
+                <button
+                  className="delete-jump-btn"
+                  onClick={(e) => { e.stopPropagation(); onDeleteBlock(i); }}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--accent-red-dim)',
+                    border: '1px solid rgba(255, 23, 68, 0.2)',
+                    color: 'var(--accent-red)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0
+                  }}
+                  title="Remove exercise block"
+                  id={`delete-block-${i}`}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
             );
           })}
         </div>
@@ -675,9 +943,11 @@ function ExerciseJumpSheet({ blocks, currentIdx, onSelect, onClose }) {
 }
 
 /* ── Plate Calculator Sheet ──────────────────────── */
-function PlateCalculatorSheet({ weight, onClose }) {
-  const barWeight = 20; // Assume 20kg bar
-  const platesAvailable = [25, 20, 15, 10, 5, 2.5, 1.25];
+function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
+  const isLbs = unitPreference === 'lbs';
+  const barWeight = isLbs ? 45 : 20;
+  const platesAvailable = isLbs ? [45, 35, 25, 10, 5, 2.5] : [25, 20, 15, 10, 5, 2.5, 1.25];
+  const unitLabel = isLbs ? 'lbs' : 'kg';
   
   let targetPerSide = (weight - barWeight) / 2;
   const platesToLoad = [];
@@ -700,20 +970,20 @@ function PlateCalculatorSheet({ weight, onClose }) {
         <p className="section-label" style={{ marginBottom: 16 }}>PLATE CALCULATOR</p>
         
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 36, fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--text-primary)' }}>{weight} kg</div>
+          <div style={{ fontSize: 36, fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--text-primary)' }}>{weight} {unitLabel}</div>
           <div className="section-label">TARGET WEIGHT</div>
         </div>
 
         {weight < barWeight ? (
           <div className="empty-state" style={{ padding: 20 }}>
             <span style={{ fontSize: 24 }}>⚠️</span>
-            <p style={{ marginTop: 8 }}>Weight is less than the bar ({barWeight}kg)</p>
+            <p style={{ marginTop: 8 }}>Weight is less than the bar ({barWeight}{unitLabel})</p>
           </div>
         ) : (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-card)', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
               <span style={{ fontWeight: 600 }}>Barbell</span>
-              <span style={{ color: 'var(--text-muted)' }}>{barWeight} kg</span>
+              <span style={{ color: 'var(--text-muted)' }}>{barWeight} {unitLabel}</span>
             </div>
             
             <p className="section-label" style={{ margin: '16px 0 8px' }}>LOAD ON EACH SIDE:</p>
@@ -728,7 +998,7 @@ function PlateCalculatorSheet({ weight, onClose }) {
                     <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-blue)' }} />
                     </div>
-                    <span style={{ fontWeight: 600 }}>{p} kg plate</span>
+                    <span style={{ fontWeight: 600 }}>{p} {unitLabel} plate</span>
                   </div>
                 ))}
               </div>

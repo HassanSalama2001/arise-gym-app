@@ -252,3 +252,92 @@
   color: var(--success);
   border-color: var(--success);
 }
+
+/* History Tab */
+.history-pr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.history-pr-card {
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-pr-val {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.history-pr-val.text-gold {
+  color: var(--accent-gold);
+}
+
+.history-log-title {
+  margin-top: 24px;
+}
+
+.history-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.history-session-card {
+  padding: 14px;
+}
+
+.history-session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.history-session-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.history-session-date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.history-sets-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-set-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 1fr 1fr;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.history-set-row span {
+  font-weight: 600;
+}
+
+.history-set-row.table-header {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+

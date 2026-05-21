@@ -38,6 +38,8 @@
   gap: 12px;
   cursor: pointer;
   margin-top: 4px;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .profile-name {
@@ -47,6 +49,10 @@
   color: var(--text-primary);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
 }
 
 .name-edit-row {

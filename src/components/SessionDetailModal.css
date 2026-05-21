@@ -1,0 +1,229 @@
+.detail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 11, 15, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.detail-modal {
+  width: 100%;
+  max-width: 600px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 24px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* On wider screens center the modal */
+@media (min-width: 768px) {
+  .detail-modal-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+  .detail-modal {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    max-height: 80vh;
+  }
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.detail-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.close-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.detail-stats-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.detail-stat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 8px;
+  text-align: center;
+}
+
+.detail-stat-val {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.text-gold {
+  color: var(--accent-gold);
+}
+
+.detail-exercises-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for exercise list */
+.detail-exercises-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.detail-exercises-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detail-exercises-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.detail-ex-group {
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+
+.detail-ex-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.detail-ex-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.detail-ex-muscle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-blue);
+  background: rgba(79, 195, 247, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.detail-sets-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-table-header {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr 1fr;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  padding-bottom: 4px;
+}
+
+.detail-table-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr 1fr;
+  font-size: 14px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.detail-table-row:last-child {
+  border-bottom: none;
+}
+
+.detail-set-num {
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.delete-session-btn {
+  width: 100%;
+  color: var(--accent-red);
+  border-color: rgba(255, 23, 68, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 12px;
+  min-height: 48px;
+}
+
+.delete-session-btn:hover {
+  background: rgba(255, 23, 68, 0.05);
+  border-color: var(--accent-red);
+}

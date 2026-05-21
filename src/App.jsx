@@ -1,10 +1,11 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { seedDatabase } from './db/seed';
 import BottomNav from './components/BottomNav';
 import SplashScreen from './components/SplashScreen';
 import AchievementPopup from './components/AchievementPopup';
+import { AlertProvider } from './context/AlertContext';
 
 const HomeScreen = lazy(() => import('./screens/HomeScreen'));
 const WorkoutsScreen = lazy(() => import('./screens/WorkoutsScreen'));
@@ -14,6 +15,7 @@ const MissionCompleteScreen = lazy(() => import('./screens/MissionCompleteScreen
 const ProgressScreen = lazy(() => import('./screens/ProgressScreen'));
 const ProfileScreen = lazy(() => import('./screens/ProfileScreen'));
 const LoginScreen = lazy(() => import('./screens/LoginScreen'));
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
 
 import { supabase } from './db/supabaseClient';
 import db from './db/db';
@@ -36,6 +38,7 @@ function PageWrapper({ children }) {
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const navigate = useNavigate();
   return (
     <AnimatePresence>
       <Suspense fallback={<div className="screen"><div className="screen-content loading-screen">Loading...</div></div>}>
@@ -47,7 +50,8 @@ function AnimatedRoutes() {
           <Route path="/mission-complete" element={<PageWrapper><MissionCompleteScreen /></PageWrapper>} />
           <Route path="/progress" element={<PageWrapper><ProgressScreen /></PageWrapper>} />
           <Route path="/profile" element={<PageWrapper><ProfileScreen /></PageWrapper>} />
-          <Route path="/login" element={<PageWrapper><LoginScreen onGuest={() => {}} onLogin={() => {}} /></PageWrapper>} />
+          <Route path="/settings" element={<PageWrapper><SettingsScreen /></PageWrapper>} />
+          <Route path="/login" element={<PageWrapper><LoginScreen onGuest={() => navigate('/profile')} onLogin={() => navigate('/profile')} /></PageWrapper>} />
         </Routes>
       </Suspense>
     </AnimatePresence>
@@ -60,59 +64,84 @@ export default function App() {
   const [authState, setAuthState] = useState('loading'); // 'loading' | 'authenticated' | 'guest' | 'unauthenticated'
 
   useEffect(() => {
-    async function init() {
-      // 1. Local-First: Initialize database from local files/defaults
-      await seedDatabase();
-      
-      // 2. Check if we have existing local user data (beyond the default profile)
-      const sessionCount = await db.sessions.count();
-      const isNewUser = sessionCount === 0;
+    let authSubscription = null;
+    let splashTimeout = null;
 
-      // 3. Conditional Cloud Sync: Only check network/auth if local data is empty or if we specifically need to
-      if (isNewUser && navigator.onLine) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setAuthState('authenticated');
-          // No local data, but user is logged in and online -> Try to restore
-          const restored = await restoreFromCloud();
-          if (restored) console.log('Data restored from cloud');
-        } else {
-          setAuthState('guest');
-        }
-      } else {
-        // We have local data, or we are offline -> Stick to local Source of Truth
-        const { data: { session } } = await supabase.auth.getSession();
-        setAuthState(session ? 'authenticated' : 'guest');
-      }
-
-      setReady(true);
-      setTimeout(() => setShowSplash(false), 1000);
-
-      // 4. Background Sync Guards: Only sync if online and signed in
-      const syncIfPossible = async () => {
-        if (!navigator.onLine) return;
+    const syncIfPossible = async () => {
+      if (!navigator.onLine) return;
+      try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           backupToCloud().catch(err => console.error('Auto-backup failed:', err));
         }
-      };
+      } catch (err) {
+        console.error('Session check failed during sync:', err);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        syncIfPossible();
+      }
+    };
+
+    async function init() {
+      // 1. Local-First: Initialize database from local files/defaults
+      try {
+        await seedDatabase();
+      } catch (err) {
+        console.error('Database seeding failed:', err);
+      }
+      
+      try {
+        // 2. Check if we have existing local user data
+        const sessionCount = await db.sessions.count();
+        const isNewUser = sessionCount === 0;
+
+        // 3. Conditional Cloud Sync
+        if (isNewUser && navigator.onLine) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            setAuthState('authenticated');
+            const restored = await restoreFromCloud();
+            if (restored && restored.success) console.log('Data restored from cloud');
+          } else {
+            setAuthState('guest');
+          }
+        } else {
+          // We have local data, or we are offline -> Stick to local Source of Truth
+          const { data: { session } } = await supabase.auth.getSession();
+          setAuthState(session ? 'authenticated' : 'guest');
+        }
+      } catch (err) {
+        console.error('Init auth check failed:', err);
+        setAuthState('guest'); // Fallback to guest mode
+      }
+
+      setReady(true);
+      splashTimeout = setTimeout(() => setShowSplash(false), 1000);
 
       // Listen for auth changes
-      supabase.auth.onAuthStateChange((_event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
         setAuthState(session ? 'authenticated' : 'guest');
       });
+      authSubscription = data.subscription;
       
       // Auto-sync when coming online
       window.addEventListener('online', syncIfPossible);
       
       // Auto-sync when app goes to background
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-          syncIfPossible();
-        }
-      });
+      document.addEventListener('visibilitychange', handleVisibilityChange);
     }
+    
     init();
+
+    return () => {
+      if (authSubscription) authSubscription.unsubscribe();
+      if (splashTimeout) clearTimeout(splashTimeout);
+      window.removeEventListener('online', syncIfPossible);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   if (showSplash || !ready || authState === 'loading') {
@@ -123,10 +152,12 @@ export default function App() {
   // but for now we just show the main app.
 
   return (
-    <HashRouter>
-      <AnimatedRoutes />
-      <BottomNav />
-      <AchievementPopup />
-    </HashRouter>
+    <AlertProvider>
+      <HashRouter>
+        <AnimatedRoutes />
+        <BottomNav />
+        <AchievementPopup />
+      </HashRouter>
+    </AlertProvider>
   );
 }

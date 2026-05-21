@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import templates from '../data/templates.json';
+import { useAlert } from '../context/AlertContext';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
@@ -17,11 +18,9 @@ const DIFFICULTY_MAP = {
 function ExerciseCard({ exercise, onClick }) {
   const diff = DIFFICULTY_MAP[exercise.difficulty] || DIFFICULTY_MAP.E;
   return (
-    <motion.div
+    <div
       className="exercise-card card"
       onClick={onClick}
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       id={`exercise-${exercise.id}`}
     >
       <div className="exercise-card-main">
@@ -41,11 +40,12 @@ function ExerciseCard({ exercise, onClick }) {
           <span className="section-label">Also: {exercise.secondaryMuscles.join(', ')}</span>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
 function PlanCard({ plan, exerciseCount, onDelete, onClick }) {
+  const { showConfirm } = useAlert();
   const [swipedLeft, setSwipedLeft] = useState(false);
   const [touchStartX, setTouchStartX] = useState(null);
 
@@ -82,13 +82,12 @@ function PlanCard({ plan, exerciseCount, onDelete, onClick }) {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            onClick={() => {
-              if (window.confirm(`Delete "${plan.name}"?`)) {
+            onClick={async () => {
+              const confirmed = await showConfirm(`Are you sure you want to delete "${plan.name}"?`, 'Delete Plan?', { danger: true });
+              if (confirmed) {
                 onDelete(plan.id);
-                setSwipedLeft(false);
-              } else {
-                setSwipedLeft(false);
               }
+              setSwipedLeft(false);
             }}
           >
             Delete
@@ -254,6 +253,7 @@ function CreateExerciseSheet({ onClose, onCreated }) {
 }
 
 export default function WorkoutsScreen() {
+  const { showConfirm, showAlert, showToast } = useAlert();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('exercises');
   const [search, setSearch] = useState('');
@@ -406,17 +406,16 @@ export default function WorkoutsScreen() {
                 ) : (
                   <>
                     {filtered.slice(0, visibleCount).map((ex, i) => (
-                      <motion.div
+                      <div
                         key={ex.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2 }}
+                        className="exercise-card-animate"
+                        style={{ animationDelay: `${Math.min(i * 0.015, 0.2)}s`, opacity: 0 }}
                       >
                         <ExerciseCard
                           exercise={ex}
                           onClick={() => navigate(`/exercise/${ex.id}`)}
                         />
-                      </motion.div>
+                      </div>
                     ))}
                     
                     {filtered.length > visibleCount && (
@@ -456,8 +455,9 @@ export default function WorkoutsScreen() {
                       plan={plan}
                       exerciseCount={planExerciseCount[plan.id] || 0}
                       onDelete={handleDeletePlan}
-                      onClick={() => {
-                        if (window.confirm(`Start training with "${plan.name}"?`)) {
+                      onClick={async () => {
+                        const confirmed = await showConfirm(`Start training with "${plan.name}"?`, 'Start Workout?');
+                        if (confirmed) {
                           navigate('/log', { state: { planId: plan.id } });
                         }
                       }}
@@ -505,7 +505,7 @@ export default function WorkoutsScreen() {
                           order: i
                         }));
                         await db.planExercises.bulkAdd(pes);
-                        alert(`Cloned "${tpl.name}" successfully!`);
+                        showToast(`Cloned "${tpl.name}" successfully!`);
                         setActiveTab('plans');
                       }}
                     >

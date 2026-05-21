@@ -325,7 +325,9 @@
 .filter-chips::-webkit-scrollbar { display: none; }
 
 .filter-chip {
-  padding: 8px 16px;
+  padding: 6px 14px;
+  min-height: 32px;
+  min-width: auto;
   border-radius: 20px;
   background: var(--bg-surface);
   border: 1px solid var(--border);

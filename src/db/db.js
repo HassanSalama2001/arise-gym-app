@@ -22,4 +22,10 @@ db.version(2).stores({
   measurements: '++id, date'
 });
 
+db.version(3).stores({
+  videoNotes: null, // delete dead table
+  sessions: '++id, planId, name, startTime, endTime, date', // added date index
+  sets: '++id, sessionId, exerciseId, [sessionId+exerciseId], setNumber, weight, reps, completed' // added compound index
+});
+
 export default db;

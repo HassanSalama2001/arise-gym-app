@@ -2,39 +2,61 @@ import db from './db';
 import { supabase } from './supabaseClient';
 
 export async function exportDataJSON() {
+  const [
+    profile, sessions, sets, bodyWeight, personalRecords, achievements,
+    workoutPlans, planExercises, inbodyScans, measurements, dailyQuests, settings
+  ] = await Promise.all([
+    db.playerProfile.toArray(),
+    db.sessions.toArray(),
+    db.sets.toArray(),
+    db.bodyWeight.toArray(),
+    db.personalRecords.toArray(),
+    db.achievements.toArray(),
+    db.workoutPlans.toArray(),
+    db.planExercises.toArray(),
+    db.inbodyScans.toArray(),
+    db.measurements.toArray(),
+    db.dailyQuests.toArray(),
+    db.settings.toArray()
+  ]);
+
   return {
-    profile: await db.playerProfile.toArray(),
-    sessions: await db.sessions.toArray(),
-    sets: await db.sets.toArray(),
-    bodyWeight: await db.bodyWeight.toArray(),
-    personalRecords: await db.personalRecords.toArray(),
-    achievements: await db.achievements.toArray(),
-    workoutPlans: await db.workoutPlans.toArray(),
-    planExercises: await db.planExercises.toArray(),
-    inbodyScans: await db.inbodyScans.toArray(),
-    measurements: await db.measurements.toArray(),
-    dailyQuests: await db.dailyQuests.toArray(),
+    profile, sessions, sets, bodyWeight, personalRecords, achievements,
+    workoutPlans, planExercises, inbodyScans, measurements, dailyQuests, settings,
     exportedAt: new Date().toISOString(),
   };
 }
 
 export async function importDataJSON(data) {
-  if (data.profile) await db.playerProfile.bulkPut(data.profile);
-  if (data.sessions) await db.sessions.bulkPut(data.sessions);
-  if (data.sets) await db.sets.bulkPut(data.sets);
-  if (data.achievements) await db.achievements.bulkPut(data.achievements);
-  if (data.workoutPlans) await db.workoutPlans.bulkPut(data.workoutPlans);
-  if (data.planExercises) await db.planExercises.bulkPut(data.planExercises);
-  if (data.bodyWeight) await db.bodyWeight.bulkPut(data.bodyWeight);
-  if (data.personalRecords) await db.personalRecords.bulkPut(data.personalRecords);
-  if (data.inbodyScans) await db.inbodyScans.bulkPut(data.inbodyScans);
-  if (data.measurements) await db.measurements.bulkPut(data.measurements);
-  if (data.dailyQuests) await db.dailyQuests.bulkPut(data.dailyQuests);
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid backup data format');
+  }
+
+  // Wrap everything in a single atomic transaction
+  await db.transaction('rw', [
+    db.playerProfile, db.sessions, db.sets, db.achievements,
+    db.workoutPlans, db.planExercises, db.bodyWeight,
+    db.personalRecords, db.inbodyScans, db.measurements, 
+    db.dailyQuests, db.settings
+  ], async () => {
+    if (data.profile) await db.playerProfile.bulkPut(data.profile);
+    if (data.sessions) await db.sessions.bulkPut(data.sessions);
+    if (data.sets) await db.sets.bulkPut(data.sets);
+    if (data.achievements) await db.achievements.bulkPut(data.achievements);
+    if (data.workoutPlans) await db.workoutPlans.bulkPut(data.workoutPlans);
+    if (data.planExercises) await db.planExercises.bulkPut(data.planExercises);
+    if (data.bodyWeight) await db.bodyWeight.bulkPut(data.bodyWeight);
+    if (data.personalRecords) await db.personalRecords.bulkPut(data.personalRecords);
+    if (data.inbodyScans) await db.inbodyScans.bulkPut(data.inbodyScans);
+    if (data.measurements) await db.measurements.bulkPut(data.measurements);
+    if (data.dailyQuests) await db.dailyQuests.bulkPut(data.dailyQuests);
+    if (data.settings) await db.settings.bulkPut(data.settings);
+  });
 }
 
 export async function backupToCloud() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return false;
+  if (!session) return { success: false, error: 'No active session' };
 
   try {
     const dataJSON = await exportDataJSON();
@@ -47,16 +69,16 @@ export async function backupToCloud() {
     }, { onConflict: 'user_id' });
 
     if (error) throw error;
-    return true;
+    return { success: true };
   } catch (error) {
     console.error('Failed to backup to cloud:', error);
-    return false;
+    return { success: false, error: error.message || String(error) };
   }
 }
 
 export async function restoreFromCloud() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return false;
+  if (!session) return { success: false, error: 'No active session' };
 
   try {
     const { data, error } = await supabase
@@ -69,11 +91,11 @@ export async function restoreFromCloud() {
     
     if (data && data.data) {
       await importDataJSON(data.data);
-      return true;
+      return { success: true };
     }
-    return false;
+    return { success: false, error: 'No cloud backup found' };
   } catch (error) {
     console.error('Failed to restore from cloud:', error);
-    return false;
+    return { success: false, error: error.message || String(error) };
   }
 }

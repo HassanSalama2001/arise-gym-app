@@ -309,3 +309,14 @@
   font-family: var(--font-display);
   font-size: 18px;
 }
+
+.notification-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent-red);
+  border: 1.5px solid var(--bg-surface);
+  border-radius: 50%;
+}

@@ -134,6 +134,79 @@ export default function HomeScreen() {
   }
 
   const [timeToMidnight, setTimeToMidnight] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const notifications = useMemo(() => {
+    const list = [];
+
+    // 1. Quests notifications
+    const pendingQuests = quests ? quests.filter(q => q.current < q.target) : [];
+    if (pendingQuests.length > 0) {
+      list.push({
+        id: 'quests',
+        title: 'Daily Quests Active',
+        desc: `You have ${pendingQuests.length} daily quest${pendingQuests.length > 1 ? 's' : ''} remaining for today. Finish them to claim XP!`,
+        icon: '🎯',
+        time: 'Today'
+      });
+    }
+
+    // 2. Streak warning / encouragement
+    if (profile) {
+      if (profile.streak > 0) {
+        list.push({
+          id: 'streak',
+          title: `${profile.streak}-Day Streak Active!`,
+          desc: 'Keep the momentum going. Log a workout today to preserve your streak.',
+          icon: '🔥',
+          time: 'Active'
+        });
+      } else {
+        list.push({
+          id: 'streak',
+          title: 'Start a Streak!',
+          desc: 'Complete your first workout to start your daily streak.',
+          icon: '⚡',
+          time: 'Encouragement'
+        });
+      }
+    }
+
+    // 3. Cloud / Offline mode status
+    if (profile) {
+      if (profile.guestMode) {
+        list.push({
+          id: 'sync',
+          title: 'Offline Guest Mode',
+          desc: 'Your workouts are saved locally on this device. Sign in to sync data across devices.',
+          icon: '📴',
+          time: 'Status'
+        });
+      } else {
+        list.push({
+          id: 'sync',
+          title: 'Cloud Sync Active',
+          desc: 'All your workout history, achievements, and stats are securely backed up to the cloud.',
+          icon: '☁️',
+          time: 'Status'
+        });
+      }
+    }
+
+    // 4. Latest Achievement
+    if (achievements && achievements.length > 0) {
+      const sorted = [...achievements].sort((a, b) => b.unlockedAt - a.unlockedAt);
+      list.push({
+        id: 'achievement',
+        title: 'Achievement Unlocked!',
+        desc: `You unlocked the "${sorted[0].title}" achievement!`,
+        icon: '🏆',
+        time: new Date(sorted[0].unlockedAt).toLocaleDateString()
+      });
+    }
+
+    return list;
+  }, [quests, profile, achievements]);
 
   if (!profile || !rankInfo) return <div className="screen"><div className="screen-content loading-screen">Loading...</div></div>;
 
@@ -148,11 +221,18 @@ export default function HomeScreen() {
           transition={{ duration: 0.4 }}
         >
           <h1 className="arise-wordmark">ARISE</h1>
-          <button className="icon-btn" aria-label="Notifications" id="notification-bell">
+          <button
+            className="icon-btn"
+            aria-label="Notifications"
+            id="notification-bell"
+            onClick={() => setShowNotifications(true)}
+            style={{ position: 'relative' }}
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 01-3.46 0"/>
             </svg>
+            {notifications.length > 0 && <span className="notification-badge" />}
           </button>
         </motion.div>
 
@@ -346,6 +426,64 @@ export default function HomeScreen() {
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </motion.button>
+
+      {/* Notifications Bottom Sheet */}
+      <AnimatePresence>
+        {showNotifications && (
+          <motion.div
+            className="bottom-sheet-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowNotifications(false)}
+            style={{ zIndex: 1100 }}
+          >
+            <motion.div
+              className="bottom-sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="bottom-sheet-handle" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <span className="section-label" style={{ fontSize: 13, letterSpacing: '0.1em' }}>SYSTEM NOTIFICATIONS</span>
+                <button
+                  className="icon-btn"
+                  onClick={() => setShowNotifications(false)}
+                  style={{ width: 36, height: 36, background: 'var(--bg-surface)' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {notifications.length > 0 ? (
+                  notifications.map(n => (
+                    <div key={n.id} className="card" style={{ display: 'flex', gap: 12, padding: 14, alignItems: 'center' }}>
+                      <span style={{ fontSize: 24, flexShrink: 0 }}>{n.icon}</span>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{n.title}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.desc}</span>
+                      </div>
+                      <span className="section-label" style={{ fontSize: 9, alignSelf: 'flex-start' }}>{n.time}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-state" style={{ padding: '40px 0' }}>
+                    <span style={{ fontSize: 32 }}>🔔</span>
+                    <p>All caught up!</p>
+                    <span className="section-label">No new notifications at this time</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

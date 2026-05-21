@@ -6,6 +6,7 @@ import db from '../db/db';
 import { getRankInfo, RANKS, calculateSetXP } from '../data/progression';
 import { supabase } from '../db/supabaseClient';
 import { backupToCloud, restoreFromCloud } from '../db/sync';
+import { useAlert } from '../context/AlertContext';
 import './ProfileScreen.css';
 
 const ALL_ACHIEVEMENTS = [
@@ -118,6 +119,7 @@ function ConfirmDeleteSheet({ onConfirm, onClose }) {
 }
 
 export default function ProfileScreen() {
+  const { showConfirm } = useAlert();
   const navigate = useNavigate();
   const location = useLocation();
   const [editingName, setEditingName] = useState(false);
@@ -212,7 +214,8 @@ export default function ProfileScreen() {
   }
 
   async function handleRestore() {
-    if (!window.confirm('This will OVERWRITE your local data with cloud data. Continue?')) return;
+    const confirmed = await showConfirm('This will OVERWRITE your local data with cloud data. Continue?', 'Restore from Cloud?', { danger: true });
+    if (!confirmed) return;
     setSyncing(true);
     setSyncStatus('Restoring...');
     const res = await restoreFromCloud();
@@ -268,7 +271,7 @@ export default function ProfileScreen() {
       <div className="screen-content">
         <div className="workouts-header">
           <h1 className="screen-title">PROFILE</h1>
-          <button className="icon-btn" onClick={() => navigate('/login')} id="settings-btn">
+          <button className="icon-btn" onClick={() => navigate('/settings')} id="settings-btn">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round">
               <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
               <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
@@ -366,7 +369,7 @@ export default function ProfileScreen() {
         </div>
 
         {/* Tracker Section */}
-        <InBodyTracker scans={inbodyScans} openSheet={showInbody} setOpenSheet={setShowInbody} />
+        <InBodyTracker scans={inbodyScans} openSheet={showInbody} setOpenSheet={setShowInbody} unitPreference={profile?.unitPreference || 'kg'} />
         <MeasurementsTracker measurements={measurements} openSheet={showMeasurement} setOpenSheet={setShowMeasurement} />
 
         {/* Achievements */}
@@ -417,7 +420,7 @@ export default function ProfileScreen() {
 }
 
 /* ── InBody Scan Tracker ────────────────────────── */
-function InBodyTracker({ scans, openSheet, setOpenSheet }) {
+function InBodyTracker({ scans, openSheet, setOpenSheet, unitPreference }) {
   const [formData, setFormData] = useState({ weight: '', smm: '', bf: '', score: '', photoUrl: '' });
   
   async function handleSave() {
@@ -457,11 +460,11 @@ function InBodyTracker({ scans, openSheet, setOpenSheet }) {
             </div>
             <div className="stat-overview-row" style={{ marginBottom: 0 }}>
               <div className="stat-overview-box">
-                <span className="stat-number">{latest.weight}kg</span>
+                <span className="stat-number">{latest.weight}{unitPreference}</span>
                 <span className="section-label">Weight</span>
               </div>
               <div className="stat-overview-box">
-                <span className="stat-number" style={{ color: 'var(--success)' }}>{latest.smm}kg</span>
+                <span className="stat-number" style={{ color: 'var(--success)' }}>{latest.smm}{unitPreference}</span>
                 <span className="section-label">Muscle</span>
               </div>
               <div className="stat-overview-box">
@@ -497,11 +500,11 @@ function InBodyTracker({ scans, openSheet, setOpenSheet }) {
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
-                  <label className="section-label">Weight (kg)</label>
+                  <label className="section-label">Weight ({unitPreference})</label>
                   <input type="number" inputMode="decimal" value={formData.weight} onChange={e => setFormData(p => ({ ...p, weight: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
                 </div>
                 <div>
-                  <label className="section-label">SMM - Muscle (kg)</label>
+                  <label className="section-label">SMM - Muscle ({unitPreference})</label>
                   <input type="number" inputMode="decimal" value={formData.smm} onChange={e => setFormData(p => ({ ...p, smm: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
                 </div>
                 <div>
