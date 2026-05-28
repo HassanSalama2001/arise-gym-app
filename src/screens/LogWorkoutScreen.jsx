@@ -73,18 +73,6 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
           aria-label="Weight"
           id={`set-weight-${index}`}
         />
-        {onPlateCalc && !set.completed && set.weight > 0 && (
-          <button 
-            className="plate-calc-btn" 
-            onClick={onPlateCalc}
-            title="Plate Calculator"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
-        )}
       </div>
 
       <input
@@ -984,7 +972,7 @@ export default function LogWorkoutScreen() {
           </div>
         </div>
 
-        <div style={{ padding: '24px 16px 48px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <div style={{ padding: '24px 16px 120px', display: 'flex', justifyContent: 'center', width: '100%' }}>
           <button className="btn-ghost" style={{ width: '100%', maxWidth: '360px', color: 'var(--accent-red)', margin: '0 auto' }} onClick={handleDiscard} id="discard-workout-btn">
             DISCARD WORKOUT
           </button>
