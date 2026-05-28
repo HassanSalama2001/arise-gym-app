@@ -288,11 +288,6 @@ export default function WorkoutsScreen() {
                 ))}
               </div>
 
-              {/* Exercise count */}
-              <div className="results-count">
-                <span className="section-label">{filtered.length} EXERCISES</span>
-              </div>
-
               <div style={{ marginTop: 16 }}>
                 <button 
                   className="btn-ghost" 
@@ -301,6 +296,11 @@ export default function WorkoutsScreen() {
                 >
                   + ADD CUSTOM EXERCISE
                 </button>
+              </div>
+
+              {/* Exercise count */}
+              <div className="section mt-16" style={{ marginBottom: 8 }}>
+                <span className="section-label">EXERCISE LIBRARY ({filtered.length})</span>
               </div>
 
               {/* Exercise list */}
