@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import db from '../db/db';
 import './PosturalIssueDetail.css';
@@ -39,7 +40,7 @@ export default function PosturalIssueDetail({ issue, onClose }) {
     }
   }
 
-  return (
+  return createPortal(
     <motion.div 
       className="bottom-sheet-overlay" 
       initial={{ opacity: 0 }} 
@@ -264,6 +265,7 @@ export default function PosturalIssueDetail({ issue, onClose }) {
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
