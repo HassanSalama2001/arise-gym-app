@@ -8,8 +8,9 @@ import { useAlert } from '../context/AlertContext';
 import posturalIssues, { categories as correctiveCategories } from '../data/posturalIssues';
 import PosturalIssueDetail from '../components/PosturalIssueDetail';
 import BottomSheet from '../components/BottomSheet';
-import CreatePlanSheet from '../components/CreatePlanSheet';
 import CreateCustomExerciseSheet from '../components/CreateCustomExerciseSheet';
+import CreateCorrectiveSheet from '../components/CreateCorrectiveSheet';
+import ConfirmDeleteSheet from '../components/ConfirmDeleteSheet';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
@@ -100,6 +101,53 @@ function PlanCard({ plan, exerciseCount, onDelete, onClick }) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function CreatePlanSheet({ onClose, onCreated }) {
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function handleCreate() {
+    if (!name.trim()) return;
+    setSaving(true);
+    await db.workoutPlans.add({ name: name.trim(), createdAt: Date.now() });
+    setSaving(false);
+    onCreated();
+    onClose();
+  }
+
+  return (
+    <BottomSheet
+      onClose={onClose}
+      title="CREATE PLAN"
+      footer={
+        <div className="sheet-actions" style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
+          <button
+            className="btn-primary"
+            onClick={handleCreate}
+            disabled={!name.trim() || saving}
+            style={{ flex: 2 }}
+          >
+            {saving ? 'SAVING...' : 'CREATE'}
+          </button>
+        </div>
+      }
+    >
+      <div className="sheet-field">
+        <label className="section-label" htmlFor="plan-name-input">PLAN NAME</label>
+        <input
+          id="plan-name-input"
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Push Day, Full Body..."
+          style={{ marginTop: 8 }}
+          autoFocus
+        />
+      </div>
+    </BottomSheet>
   );
 }
 
