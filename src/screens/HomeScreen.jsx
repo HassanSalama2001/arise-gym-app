@@ -462,7 +462,6 @@ export default function HomeScreen() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowNotifications(false)}
-            style={{ zIndex: 1100 }}
           >
             <motion.div
               className="bottom-sheet"

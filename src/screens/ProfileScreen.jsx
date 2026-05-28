@@ -27,7 +27,7 @@ function RankProgressionSheet({ currentXP, onClose }) {
   const currentRankInfo = getRankInfo(currentXP);
   
   return (
-    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} style={{ zIndex: 1100 }}>
+    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div 
         className="bottom-sheet" 
         drag="y"
@@ -482,7 +482,7 @@ function InBodyTracker({ scans, openSheet, setOpenSheet, unitPreference }) {
 
       <AnimatePresence>
         {openSheet && (
-          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)} style={{ zIndex: 1000 }}>
+          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)}>
             <motion.div 
               className="bottom-sheet" 
               drag="y"
@@ -588,7 +588,7 @@ function MeasurementsTracker({ measurements, openSheet, setOpenSheet }) {
 
       <AnimatePresence>
         {openSheet && (
-          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)} style={{ zIndex: 1000 }}>
+          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)}>
             <motion.div 
               className="bottom-sheet" 
               drag="y"

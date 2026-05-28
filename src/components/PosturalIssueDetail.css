@@ -6,8 +6,8 @@
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
   padding: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   position: relative;
-  z-index: 1200;
 }
 
 .postural-detail-header {

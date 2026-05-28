@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion } from 'framer-motion';
@@ -46,7 +46,6 @@ export default function PosturalIssueDetail({ issue, onClose }) {
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }} 
       onClick={onClose}
-      style={{ zIndex: 1200 }}
     >
       <motion.div 
         className="bottom-sheet postural-detail-sheet" 

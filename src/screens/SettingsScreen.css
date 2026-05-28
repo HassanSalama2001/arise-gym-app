@@ -186,34 +186,36 @@ input:checked + .toggle-slider:before {
   margin-bottom: 12px;
 }
 
-/* Backup and Restore Row styling */
-.data-action-row {
+/* Backup and Restore Block styling */
+.data-action-block {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .data-btn {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   color: var(--text-primary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.05em;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
-  padding: 8px 16px;
+  min-height: 44px;
+  padding: 10px 20px;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .data-btn:hover {
   border-color: var(--accent-blue);
   background: var(--accent-blue-dim);
   color: var(--accent-blue);
+  box-shadow: 0 0 12px var(--accent-blue-dim);
 }

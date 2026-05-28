@@ -1169,7 +1169,7 @@ function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
   }
 
   return (
-    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} style={{ zIndex: 300 }}>
+    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
         <div className="bottom-sheet-handle" />
         <p className="section-label" style={{ marginBottom: 16 }}>PLATE CALCULATOR</p>
