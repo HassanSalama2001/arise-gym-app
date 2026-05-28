@@ -7,6 +7,7 @@ import { getRankInfo, RANKS, calculateSetXP } from '../data/progression';
 import { supabase } from '../db/supabaseClient';
 import { backupToCloud, restoreFromCloud } from '../db/sync';
 import { useAlert } from '../context/AlertContext';
+import BottomSheet from '../components/BottomSheet';
 import './ProfileScreen.css';
 
 const ALL_ACHIEVEMENTS = [
@@ -27,81 +28,49 @@ function RankProgressionSheet({ currentXP, onClose }) {
   const currentRankInfo = getRankInfo(currentXP);
   
   return (
-    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div 
-        className="bottom-sheet" 
-        drag="y"
-        dragConstraints={{ top: 0 }}
-        dragElastic={0.2}
-        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
-        initial={{ y: '100%' }} 
-        animate={{ y: 0 }} 
-        exit={{ y: '100%' }} 
-        transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
-        onClick={e => e.stopPropagation()}
-        style={{ maxHeight: '85vh' }}
-      >
-        <div className="bottom-sheet-handle" />
-        <h3 className="sheet-title">RANK PROGRESSION</h3>
-        
-        <div className="rank-list mt-16">
-          {RANKS.map((rank, i) => {
-            const isUnlocked = currentXP >= rank.xpRequired;
-            const isCurrent = currentRankInfo.current.rank === rank.rank;
-            const xpToReach = rank.xpRequired - currentXP;
-            
-            return (
-              <div key={rank.rank} className={`rank-item ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`}>
-                <div className="rank-item-badge" style={{ borderColor: rank.color, color: rank.color }}>
-                  {rank.rank}
-                </div>
-                <div className="rank-item-info">
-                  <span className="rank-item-name">{rank.name}</span>
-                  <span className="section-label">
-                    {isUnlocked 
-                      ? (isCurrent ? 'CURRENT RANK' : 'UNLOCKED') 
-                      : `REACH AT: ${rank.xpRequired.toLocaleString()} XP (${xpToReach.toLocaleString()} REMAINING)`}
-                  </span>
-                </div>
-                {isUnlocked && <div className="rank-check">✓</div>}
+    <BottomSheet 
+      onClose={onClose} 
+      title="RANK PROGRESSION"
+      footer={
+        <button className="btn-primary w-full" onClick={onClose} style={{ marginBottom: 8 }}>GOT IT</button>
+      }
+    >
+      <div className="rank-list mt-16">
+        {RANKS.map((rank, i) => {
+          const isUnlocked = currentXP >= rank.xpRequired;
+          const isCurrent = currentRankInfo.current.rank === rank.rank;
+          const xpToReach = rank.xpRequired - currentXP;
+          
+          return (
+            <div key={rank.rank} className={`rank-item ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`}>
+              <div className="rank-item-badge" style={{ borderColor: rank.color, color: rank.color }}>
+                {rank.rank}
               </div>
-            );
-          })}
-        </div>
-        
-        <button className="btn-primary mt-24" onClick={onClose} style={{ marginBottom: 40 }}>GOT IT</button>
-      </motion.div>
-    </motion.div>
+              <div className="rank-item-info">
+                <span className="rank-item-name">{rank.name}</span>
+                <span className="section-label">
+                  {isUnlocked 
+                    ? (isCurrent ? 'CURRENT RANK' : 'UNLOCKED') 
+                    : `REACH AT: ${rank.xpRequired.toLocaleString()} XP (${xpToReach.toLocaleString()} REMAINING)`}
+                </span>
+              </div>
+              {isUnlocked && <div className="rank-check">✓</div>}
+            </div>
+          );
+        })}
+      </div>
+    </BottomSheet>
   );
 }
 
 function ConfirmDeleteSheet({ onConfirm, onClose }) {
   const [input, setInput] = useState('');
   return (
-    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div 
-        className="bottom-sheet" 
-        drag="y"
-        dragConstraints={{ top: 0 }}
-        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
-        initial={{ y: '100%' }} 
-        animate={{ y: 0 }} 
-        exit={{ y: '100%' }} 
-        transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="bottom-sheet-handle" />
-        <h3 className="sheet-title" style={{ color: 'var(--accent-red)' }}>DANGER ZONE</h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>This will permanently delete ALL your workout data, XP, and progress. Type <strong style={{ color: 'var(--text-primary)' }}>ARISE</strong> to confirm.</p>
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Type ARISE to confirm"
-          id="delete-confirm-input"
-          style={{ marginBottom: 16 }}
-        />
-        <div className="sheet-actions">
+    <BottomSheet 
+      onClose={onClose} 
+      title="DANGER ZONE"
+      footer={
+        <div className="sheet-actions" style={{ display: 'flex', gap: 8 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
           <button
             className="btn-primary"
@@ -113,8 +82,18 @@ function ConfirmDeleteSheet({ onConfirm, onClose }) {
             DELETE ALL
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      }
+    >
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>This will permanently delete ALL your workout data, XP, and progress. Type <strong style={{ color: 'var(--text-primary)' }}>ARISE</strong> to confirm.</p>
+      <input
+        type="text"
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        placeholder="Type ARISE to confirm"
+        id="delete-confirm-input"
+        style={{ marginBottom: 16 }}
+      />
+    </BottomSheet>
   );
 }
 
@@ -482,59 +461,47 @@ function InBodyTracker({ scans, openSheet, setOpenSheet, unitPreference }) {
 
       <AnimatePresence>
         {openSheet && (
-          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)}>
-            <motion.div 
-              className="bottom-sheet" 
-              drag="y"
-              dragConstraints={{ top: 0 }}
-              onDragEnd={(_, info) => { if (info.offset.y > 100) setOpenSheet(false); }}
-              initial={{ y: '100%' }} 
-              animate={{ y: 0 }} 
-              exit={{ y: '100%' }} 
-              transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
-              onClick={e => e.stopPropagation()}
-              style={{ maxHeight: '85vh' }}
-            >
-              <div className="bottom-sheet-handle" />
-              <p className="section-label" style={{ marginBottom: 16 }}>RECORD INBODY SCAN</p>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label className="section-label">Weight ({unitPreference})</label>
-                  <input type="number" inputMode="decimal" value={formData.weight} onChange={e => setFormData(p => ({ ...p, weight: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-                </div>
-                <div>
-                  <label className="section-label">SMM - Muscle ({unitPreference})</label>
-                  <input type="number" inputMode="decimal" value={formData.smm} onChange={e => setFormData(p => ({ ...p, smm: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-                </div>
-                <div>
-                  <label className="section-label">Body Fat (%)</label>
-                  <input type="number" inputMode="decimal" value={formData.bf} onChange={e => setFormData(p => ({ ...p, bf: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-                </div>
-                <div>
-                  <label className="section-label">InBody Score</label>
-                  <input type="number" inputMode="decimal" value={formData.score} onChange={e => setFormData(p => ({ ...p, score: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-                </div>
+          <BottomSheet 
+            onClose={() => setOpenSheet(false)} 
+            title="RECORD INBODY SCAN"
+            footer={
+              <button className="btn-primary w-full" onClick={handleSave} disabled={!formData.weight || !formData.smm || !formData.bf}>SAVE SCAN</button>
+            }
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label className="section-label">Weight ({unitPreference})</label>
+                <input type="number" inputMode="decimal" value={formData.weight} onChange={e => setFormData(p => ({ ...p, weight: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
               </div>
-
-              <div style={{ marginBottom: 24 }}>
-                <label className="section-label">Photo Proof (Optional)</label>
-                {formData.photoUrl ? (
-                  <div style={{ marginTop: 8, position: 'relative' }}>
-                    <img src={formData.photoUrl} alt="InBody Proof" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
-                    <button onClick={() => setFormData(p => ({ ...p, photoUrl: '' }))} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', padding: 4, borderRadius: '50%' }}>❌</button>
-                  </div>
-                ) : (
-                  <label style={{ display: 'block', marginTop: 8, padding: '16px', border: '1px solid var(--border)', borderStyle: 'dashed', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: 'var(--accent-blue)', cursor: 'pointer' }}>
-                    Tap to upload scan photo
-                    <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
-                  </label>
-                )}
+              <div>
+                <label className="section-label">SMM - Muscle ({unitPreference})</label>
+                <input type="number" inputMode="decimal" value={formData.smm} onChange={e => setFormData(p => ({ ...p, smm: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
               </div>
+              <div>
+                <label className="section-label">Body Fat (%)</label>
+                <input type="number" inputMode="decimal" value={formData.bf} onChange={e => setFormData(p => ({ ...p, bf: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
+              </div>
+              <div>
+                <label className="section-label">InBody Score</label>
+                <input type="number" inputMode="decimal" value={formData.score} onChange={e => setFormData(p => ({ ...p, score: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
+              </div>
+            </div>
 
-              <button className="btn-primary" onClick={handleSave} disabled={!formData.weight || !formData.smm || !formData.bf}>SAVE SCAN</button>
-            </motion.div>
-          </motion.div>
+            <div style={{ marginBottom: 24 }}>
+              <label className="section-label">Photo Proof (Optional)</label>
+              {formData.photoUrl ? (
+                <div style={{ marginTop: 8, position: 'relative' }}>
+                  <img src={formData.photoUrl} alt="InBody Proof" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                  <button onClick={() => setFormData(p => ({ ...p, photoUrl: '' }))} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', padding: 4, borderRadius: '50%' }}>❌</button>
+                </div>
+              ) : (
+                <label style={{ display: 'block', marginTop: 8, padding: '16px', border: '1px solid var(--border)', borderStyle: 'dashed', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: 'var(--accent-blue)', cursor: 'pointer' }}>
+                  Tap to upload scan photo
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                </label>
+              )}
+            </div>
+          </BottomSheet>
         )}
       </AnimatePresence>
     </div>
@@ -588,43 +555,32 @@ function MeasurementsTracker({ measurements, openSheet, setOpenSheet }) {
 
       <AnimatePresence>
         {openSheet && (
-          <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpenSheet(false)}>
-            <motion.div 
-              className="bottom-sheet" 
-              drag="y"
-              dragConstraints={{ top: 0 }}
-              onDragEnd={(_, info) => { if (info.offset.y > 100) setOpenSheet(false); }}
-              initial={{ y: '100%' }} 
-              animate={{ y: 0 }} 
-              exit={{ y: '100%' }} 
-              transition={{ type: 'spring', stiffness: 400, damping: 35 }} 
-              onClick={e => e.stopPropagation()}
-              style={{ maxHeight: '85vh' }}
-            >
-              <div className="bottom-sheet-handle" />
-              <p className="section-label" style={{ marginBottom: 16 }}>RECORD MEASUREMENTS</p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-                {['neck', 'chest', 'waist', 'arms'].map(k => (
-                  <div key={k}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="section-label" style={{ textTransform: 'capitalize' }}>{k} (cm)</label>
-                      <button className="guide-btn" onClick={() => setShowGuide(showGuide === k ? null : k)} style={{ background: 'var(--bg-void)', border: '1px solid var(--border)', width: 20, height: 20, borderRadius: '50%', fontSize: 10, color: 'var(--text-muted)' }}>?</button>
-                    </div>
-                    <input type="number" inputMode="decimal" value={formData[k]} onChange={e => setFormData(p => ({ ...p, [k]: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-                    <AnimatePresence>
-                      {showGuide === k && (
-                        <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ fontSize: 11, color: 'var(--accent-blue)', marginTop: 4, overflow: 'hidden' }}>
-                          {guides[k]}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
+          <BottomSheet 
+            onClose={() => setOpenSheet(false)} 
+            title="RECORD MEASUREMENTS"
+            footer={
+              <button className="btn-primary w-full" onClick={handleSave}>SAVE MEASUREMENTS</button>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+              {['neck', 'chest', 'waist', 'arms'].map(k => (
+                <div key={k}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="section-label" style={{ textTransform: 'capitalize' }}>{k} (cm)</label>
+                    <button className="guide-btn" onClick={() => setShowGuide(showGuide === k ? null : k)} style={{ background: 'var(--bg-void)', border: '1px solid var(--border)', width: 20, height: 20, borderRadius: '50%', fontSize: 10, color: 'var(--text-muted)' }}>?</button>
                   </div>
-                ))}
-              </div>
-              <button className="btn-primary" onClick={handleSave}>SAVE MEASUREMENTS</button>
-            </motion.div>
-          </motion.div>
+                  <input type="number" inputMode="decimal" value={formData[k]} onChange={e => setFormData(p => ({ ...p, [k]: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
+                  <AnimatePresence>
+                    {showGuide === k && (
+                      <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ fontSize: 11, color: 'var(--accent-blue)', marginTop: 4, overflow: 'hidden' }}>
+                        {guides[k]}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          </BottomSheet>
         )}
       </AnimatePresence>
     </div>

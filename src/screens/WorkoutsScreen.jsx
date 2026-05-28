@@ -7,6 +7,7 @@ import templates from '../data/templates.json';
 import { useAlert } from '../context/AlertContext';
 import posturalIssues, { categories as correctiveCategories } from '../data/posturalIssues';
 import PosturalIssueDetail from '../components/PosturalIssueDetail';
+import BottomSheet from '../components/BottomSheet';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
@@ -114,40 +115,11 @@ function CreatePlanSheet({ onClose, onCreated }) {
   }
 
   return (
-    <motion.div
-      className="bottom-sheet-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        className="bottom-sheet"
-        drag="y"
-        dragConstraints={{ top: 0 }}
-        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-        onClick={e => e.stopPropagation()}
-        style={{ maxHeight: '85vh' }}
-      >
-        <div className="bottom-sheet-handle" />
-        <h3 className="sheet-title">CREATE PLAN</h3>
-        <div className="sheet-field">
-          <label className="section-label" htmlFor="plan-name-input">PLAN NAME</label>
-          <input
-            id="plan-name-input"
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g. Push Day, Full Body..."
-            style={{ marginTop: 8 }}
-            autoFocus
-          />
-        </div>
-        <div className="sheet-actions" style={{ marginTop: 24, paddingBottom: 24 }}>
+    <BottomSheet
+      onClose={onClose}
+      title="CREATE PLAN"
+      footer={
+        <div className="sheet-actions" style={{ display: 'flex', gap: 8 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
           <button
             className="btn-primary"
@@ -158,8 +130,21 @@ function CreatePlanSheet({ onClose, onCreated }) {
             {saving ? 'SAVING...' : 'CREATE'}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      }
+    >
+      <div className="sheet-field">
+        <label className="section-label" htmlFor="plan-name-input">PLAN NAME</label>
+        <input
+          id="plan-name-input"
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Push Day, Full Body..."
+          style={{ marginTop: 8 }}
+          autoFocus
+        />
+      </div>
+    </BottomSheet>
   );
 }
 
@@ -187,58 +172,11 @@ function CreateExerciseSheet({ onClose, onCreated }) {
   }
 
   return (
-    <motion.div
-      className="bottom-sheet-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        className="bottom-sheet"
-        drag="y"
-        dragConstraints={{ top: 0 }}
-        onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-        onClick={e => e.stopPropagation()}
-        style={{ maxHeight: '85vh' }}
-      >
-        <div className="bottom-sheet-handle" />
-        <h3 className="sheet-title">CREATE EXERCISE</h3>
-        <div className="sheet-field">
-          <label className="section-label" htmlFor="ex-name-input">EXERCISE NAME</label>
-          <input
-            id="ex-name-input"
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g. Weighted Pull-Up"
-            style={{ marginTop: 8 }}
-            autoFocus
-          />
-        </div>
-        <div className="sheet-field" style={{ marginTop: 16 }}>
-          <label className="section-label" htmlFor="ex-muscle-select">MUSCLE GROUP</label>
-          <select 
-            id="ex-muscle-select"
-            value={muscleGroup}
-            onChange={e => setMuscleGroup(e.target.value)}
-            style={{ 
-              marginTop: 8, width: '100%', padding: '12px', 
-              background: 'var(--bg-void)', border: '1px solid var(--border)', 
-              color: 'var(--text-primary)', borderRadius: 'var(--radius-sm)',
-              fontFamily: 'var(--font-display)', fontWeight: 700
-            }}
-          >
-            {MUSCLE_GROUPS.filter(g => g !== 'All').map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-        </div>
-        <div className="sheet-actions" style={{ marginTop: 24, paddingBottom: 24 }}>
+    <BottomSheet
+      onClose={onClose}
+      title="CREATE EXERCISE"
+      footer={
+        <div className="sheet-actions" style={{ display: 'flex', gap: 8 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
           <button
             className="btn-primary"
@@ -249,8 +187,39 @@ function CreateExerciseSheet({ onClose, onCreated }) {
             {saving ? 'SAVING...' : 'CREATE'}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      }
+    >
+      <div className="sheet-field">
+        <label className="section-label" htmlFor="ex-name-input">EXERCISE NAME</label>
+        <input
+          id="ex-name-input"
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Weighted Pull-Up"
+          style={{ marginTop: 8 }}
+          autoFocus
+        />
+      </div>
+      <div className="sheet-field" style={{ marginTop: 16 }}>
+        <label className="section-label" htmlFor="ex-muscle-select">MUSCLE GROUP</label>
+        <select 
+          id="ex-muscle-select"
+          value={muscleGroup}
+          onChange={e => setMuscleGroup(e.target.value)}
+          style={{ 
+            marginTop: 8, width: '100%', padding: '12px', 
+            background: 'var(--bg-void)', border: '1px solid var(--border)', 
+            color: 'var(--text-primary)', borderRadius: 'var(--radius-sm)',
+            fontFamily: 'var(--font-display)', fontWeight: 700
+          }}
+        >
+          {MUSCLE_GROUPS.filter(g => g !== 'All').map(g => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+      </div>
+    </BottomSheet>
   );
 }
 

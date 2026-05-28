@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo, getRankColor, generateDailyQuests } from '../data/progression';
 import { getToday } from '../utils/date';
+import BottomSheet from '../components/BottomSheet';
 import './HomeScreen.css';
 
 function AnimatedNumber({ value, duration = 800 }) {
@@ -456,57 +457,31 @@ export default function HomeScreen() {
       {/* Notifications Bottom Sheet */}
       <AnimatePresence>
         {showNotifications && (
-          <motion.div
-            className="bottom-sheet-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowNotifications(false)}
+          <BottomSheet
+            onClose={() => setShowNotifications(false)}
+            title="SYSTEM NOTIFICATIONS"
           >
-            <motion.div
-              className="bottom-sheet"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="bottom-sheet-handle" />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <span className="section-label" style={{ fontSize: 13, letterSpacing: '0.1em' }}>SYSTEM NOTIFICATIONS</span>
-                <button
-                  className="icon-btn"
-                  onClick={() => setShowNotifications(false)}
-                  style={{ width: 36, height: 36, background: 'var(--bg-surface)' }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {notifications.length > 0 ? (
-                  notifications.map(n => (
-                    <div key={n.id} className="card" style={{ display: 'flex', gap: 12, padding: 14, alignItems: 'center' }}>
-                      <span style={{ fontSize: 24, flexShrink: 0 }}>{n.icon}</span>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{n.title}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.desc}</span>
-                      </div>
-                      <span className="section-label" style={{ fontSize: 9, alignSelf: 'flex-start' }}>{n.time}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {notifications.length > 0 ? (
+                notifications.map(n => (
+                  <div key={n.id} className="card" style={{ display: 'flex', gap: 12, padding: 14, alignItems: 'center' }}>
+                    <span style={{ fontSize: 24, flexShrink: 0 }}>{n.icon}</span>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{n.title}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.desc}</span>
                     </div>
-                  ))
-                ) : (
-                  <div className="empty-state" style={{ padding: '40px 0' }}>
-                    <span style={{ fontSize: 32 }}>🔔</span>
-                    <p>All caught up!</p>
-                    <span className="section-label">No new notifications at this time</span>
+                    <span className="section-label" style={{ fontSize: 9, alignSelf: 'flex-start' }}>{n.time}</span>
                   </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
+                ))
+              ) : (
+                <div className="empty-state" style={{ padding: '40px 0' }}>
+                  <span style={{ fontSize: 32 }}>🔔</span>
+                  <p>All caught up!</p>
+                  <span className="section-label">No new notifications at this time</span>
+                </div>
+              )}
+            </div>
+          </BottomSheet>
         )}
       </AnimatePresence>
     </div>

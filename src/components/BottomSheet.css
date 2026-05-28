@@ -1,0 +1,89 @@
+.bottom-sheet.standard-sheet {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 92vh;
+  padding: 20px 24px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 20px));
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+  border-top: 1px solid var(--border);
+}
+
+.bottom-sheet-header-wrapper {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.bottom-sheet-header {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sheet-close-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: unset;
+  min-height: unset;
+  padding: 0;
+}
+
+.sheet-close-btn:active {
+  transform: scale(0.9);
+  background: var(--accent-blue-dim);
+}
+
+.sheet-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bottom-sheet-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-right: -12px;
+  padding-right: 12px;
+}
+
+/* Custom scrollbar style for content area */
+.bottom-sheet-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.bottom-sheet-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bottom-sheet-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.bottom-sheet-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.bottom-sheet-footer {
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(79, 195, 247, 0.1);
+}

@@ -11,6 +11,7 @@ import { playSetCompleteSound } from '../utils/audio';
 import { hapticSetComplete } from '../utils/haptics';
 import { checkAndUnlockAchievement } from '../utils/achievements';
 import { useAlert } from '../context/AlertContext';
+import BottomSheet from '../components/BottomSheet';
 import './LogWorkoutScreen.css';
 
 /* ── Elapsed Timer ─────────────────────────────── */
@@ -1067,29 +1068,27 @@ function AddExerciseSheet({ allExercises, onAdd, onClose, hasCurrentBlock }) {
   const filtered = allExercises.filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
-        <div className="bottom-sheet-handle" />
-        <p className="section-label" style={{ marginBottom: 12 }}>ADD EXERCISE</p>
-        
-        {hasCurrentBlock && (
-          <div className="tab-pills" style={{ marginBottom: 16 }}>
-            <button className={`tab-pill ${addMode === 'new' ? 'active' : ''}`} onClick={() => setAddMode('new')}>NEW EXERCISE</button>
-            <button className={`tab-pill ${addMode === 'superset' ? 'active' : ''}`} onClick={() => setAddMode('superset')}>SUPERSET</button>
-          </div>
-        )}
-
-        <input className="search-input" type="search" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ marginBottom: 12 }} />
-        <div style={{ overflowY: 'auto', maxHeight: '50vh' }}>
-          {filtered.map(ex => (
-            <button key={ex.id} className="jump-item" onClick={() => onAdd(ex, addMode === 'superset')} id={`add-ex-${ex.id}`}>
-              <span className="jump-name">{ex.name}</span>
-              <span className="chip chip-blue" style={{ fontSize: 10 }}>{ex.muscleGroup}</span>
-            </button>
-          ))}
+    <BottomSheet
+      onClose={onClose}
+      title="ADD EXERCISE"
+    >
+      {hasCurrentBlock && (
+        <div className="tab-pills" style={{ marginBottom: 16 }}>
+          <button className={`tab-pill ${addMode === 'new' ? 'active' : ''}`} onClick={() => setAddMode('new')}>NEW EXERCISE</button>
+          <button className={`tab-pill ${addMode === 'superset' ? 'active' : ''}`} onClick={() => setAddMode('superset')}>SUPERSET</button>
         </div>
-      </motion.div>
-    </motion.div>
+      )}
+
+      <input className="search-input" type="search" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ marginBottom: 12 }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {filtered.map(ex => (
+          <button key={ex.id} className="jump-item" onClick={() => onAdd(ex, addMode === 'superset')} id={`add-ex-${ex.id}`}>
+            <span className="jump-name">{ex.name}</span>
+            <span className="chip chip-blue" style={{ fontSize: 10 }}>{ex.muscleGroup}</span>
+          </button>
+        ))}
+      </div>
+    </BottomSheet>
   );
 }
 
@@ -1097,53 +1096,52 @@ function AddExerciseSheet({ allExercises, onAdd, onClose, hasCurrentBlock }) {
 function ExerciseJumpSheet({ blocks, currentIdx, onSelect, onDeleteBlock, onClose }) {
   if (!blocks) return null;
   return (
-    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
-        <div className="bottom-sheet-handle" />
-        <p className="section-label" style={{ marginBottom: 16 }}>JUMP TO BLOCK</p>
-        <div className="jump-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {blocks.map((block, i) => {
-            const isSuperset = block.length > 1;
-            const name = isSuperset ? `Superset (${block.length} exercises)` : (block[0]?.name || 'Unknown');
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                <button 
-                  className={`jump-item ${i === currentIdx ? 'current' : ''}`} 
-                  onClick={() => { onSelect(i); onClose(); }} 
-                  id={`jump-to-${i}`}
-                  style={{ flex: 1, margin: 0 }}
-                >
-                  <span className="jump-num">{i + 1}</span>
-                  <span className="jump-name">{name}</span>
-                  {i === currentIdx && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
-                </button>
-                <button
-                  className="delete-jump-btn"
-                  onClick={(e) => { e.stopPropagation(); onDeleteBlock(i); }}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--accent-red-dim)',
-                    border: '1px solid rgba(255, 23, 68, 0.2)',
-                    color: 'var(--accent-red)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    flexShrink: 0
-                  }}
-                  title="Remove exercise block"
-                  id={`delete-block-${i}`}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </motion.div>
-    </motion.div>
+    <BottomSheet
+      onClose={onClose}
+      title="JUMP TO BLOCK"
+    >
+      <div className="jump-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {blocks.map((block, i) => {
+          const isSuperset = block.length > 1;
+          const name = isSuperset ? `Superset (${block.length} exercises)` : (block[0]?.name || 'Unknown');
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+              <button 
+                className={`jump-item ${i === currentIdx ? 'current' : ''}`} 
+                onClick={() => { onSelect(i); onClose(); }} 
+                id={`jump-to-${i}`}
+                style={{ flex: 1, margin: 0 }}
+              >
+                <span className="jump-num">{i + 1}</span>
+                <span className="jump-name">{name}</span>
+                {i === currentIdx && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>
+              <button
+                className="delete-jump-btn"
+                onClick={(e) => { e.stopPropagation(); onDeleteBlock(i); }}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--accent-red-dim)',
+                  border: '1px solid rgba(255, 23, 68, 0.2)',
+                  color: 'var(--accent-red)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+                title="Remove exercise block"
+                id={`delete-block-${i}`}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </BottomSheet>
   );
 }
 
@@ -1169,48 +1167,46 @@ function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
   }
 
   return (
-    <motion.div className="bottom-sheet-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div className="bottom-sheet" style={{ maxHeight: '85vh' }} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 400, damping: 35 }} onClick={e => e.stopPropagation()}>
-        <div className="bottom-sheet-handle" />
-        <p className="section-label" style={{ marginBottom: 16 }}>PLATE CALCULATOR</p>
-        
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 36, fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--text-primary)' }}>{weight} {unitLabel}</div>
-          <div className="section-label">TARGET WEIGHT</div>
-        </div>
+    <BottomSheet
+      onClose={onClose}
+      title="PLATE CALCULATOR"
+    >
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <div style={{ fontSize: 36, fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--text-primary)' }}>{weight} {unitLabel}</div>
+        <div className="section-label">TARGET WEIGHT</div>
+      </div>
 
-        {weight < barWeight ? (
-          <div className="empty-state" style={{ padding: 20 }}>
-            <span style={{ fontSize: 24 }}>⚠️</span>
-            <p style={{ marginTop: 8 }}>Weight is less than the bar ({barWeight}{unitLabel})</p>
+      {weight < barWeight ? (
+        <div className="empty-state" style={{ padding: 20 }}>
+          <span style={{ fontSize: 24 }}>⚠️</span>
+          <p style={{ marginTop: 8 }}>Weight is less than the bar ({barWeight}{unitLabel})</p>
+        </div>
+      ) : (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-card)', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
+            <span style={{ fontWeight: 600 }}>Barbell</span>
+            <span style={{ color: 'var(--text-muted)' }}>{barWeight} {unitLabel}</span>
           </div>
-        ) : (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-card)', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
-              <span style={{ fontWeight: 600 }}>Barbell</span>
-              <span style={{ color: 'var(--text-muted)' }}>{barWeight} {unitLabel}</span>
+          
+          <p className="section-label" style={{ margin: '16px 0 8px' }}>LOAD ON EACH SIDE:</p>
+          {platesToLoad.length === 0 ? (
+            <div style={{ padding: '12px 16px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', textAlign: 'center' }}>
+              Just the bar!
             </div>
-            
-            <p className="section-label" style={{ margin: '16px 0 8px' }}>LOAD ON EACH SIDE:</p>
-            {platesToLoad.length === 0 ? (
-              <div style={{ padding: '12px 16px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', textAlign: 'center' }}>
-                Just the bar!
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '40vh', overflowY: 'auto' }}>
-                {platesToLoad.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)' }}>
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-blue)' }} />
-                    </div>
-                    <span style={{ fontWeight: 600 }}>{p} {unitLabel} plate</span>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {platesToLoad.map((p, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-blue)' }} />
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </motion.div>
-    </motion.div>
+                  <span style={{ fontWeight: 600 }}>{p} {unitLabel} plate</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </BottomSheet>
   );
 }
