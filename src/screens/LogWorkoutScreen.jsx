@@ -87,8 +87,6 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
         )}
       </div>
 
-      <span className="set-x">×</span>
-
       <input
         type="number"
         inputMode="decimal"
@@ -101,8 +99,6 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
         id={`set-reps-${index}`}
       />
 
-      <span className="set-x" style={{ color: 'var(--text-muted)' }}>|</span>
-
       <button
         className={`set-rpe-badge-btn ${set.completed ? 'completed' : ''}`}
         onClick={onRpeClick}
@@ -111,45 +107,6 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
       >
         {set.completed ? (set.rpe || '-') : '-'}
       </button>
-
-      <motion.button
-        className={`set-complete-btn ${set.completed ? 'done' : ''}`}
-        onClick={() => !set.completed && onComplete()}
-        whileTap={!set.completed ? { scale: 0.85 } : {}}
-        aria-label={set.completed ? 'Completed' : 'Complete set'}
-        id={`complete-set-${index}`}
-      >
-        {set.completed ? (
-          <motion.svg
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-            width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12"/>
-          </motion.svg>
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-        )}
-      </motion.button>
-
-      {onDelete && (
-        <button
-          className="set-delete-btn"
-          onClick={onDelete}
-          disabled={set.completed}
-          title="Delete set"
-          aria-label="Delete set"
-          id={`delete-set-${index}`}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-        </button>
-      )}
 
       <motion.button
         className={`set-complete-btn ${set.completed ? 'done' : ''}`}
@@ -173,6 +130,22 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
           </svg>
         )}
       </motion.button>
+
+      {onDelete && (
+        <button
+          className="set-delete-btn"
+          onClick={onDelete}
+          disabled={set.completed}
+          title="Delete set"
+          aria-label="Delete set"
+          id={`delete-set-${index}`}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -904,9 +877,7 @@ export default function LogWorkoutScreen() {
             <div className="set-row-header">
               <span className="header-label">SET</span>
               <span className="header-label">WEIGHT</span>
-              <span className="header-label"></span>
               <span className="header-label">REPS</span>
-              <span className="header-label"></span>
               <span className="header-label">RPE</span>
               <span className="header-label" style={{ textAlign: 'center' }}>DONE</span>
               <span className="header-label"></span>
