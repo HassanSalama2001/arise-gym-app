@@ -32,4 +32,8 @@ db.version(4).stores({
   userPosturalIssues: '++id, issueId, addedAt, status, targetSessions, completedSessions, position'
 });
 
+db.version(5).stores({
+  customPosturalIssues: 'id, name, category, icon, severity, timeline, targetSessionsDefault'
+});
+
 export default db;

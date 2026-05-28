@@ -8,6 +8,7 @@ import { useAlert } from '../context/AlertContext';
 import posturalIssues, { categories as correctiveCategories } from '../data/posturalIssues';
 import PosturalIssueDetail from '../components/PosturalIssueDetail';
 import BottomSheet from '../components/BottomSheet';
+import CreateCorrectiveSheet from '../components/CreateCorrectiveSheet';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
@@ -231,10 +232,15 @@ export default function WorkoutsScreen() {
   const [filter, setFilter] = useState('All');
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
+  const [showCreateCorrective, setShowCreateCorrective] = useState(false);
   const [visibleCount, setVisibleCount] = useState(30);
   const [correctiveFilter, setCorrectiveFilter] = useState('All');
   const [selectedIssue, setSelectedIssue] = useState(null);
+  
   const trackedIssues = useLiveQuery(() => db.userPosturalIssues.toArray(), []);
+  const customIssues = useLiveQuery(() => db.customPosturalIssues.toArray(), []) || [];
+  
+  const allPosturalIssues = useMemo(() => [...posturalIssues, ...customIssues], [customIssues]);
 
   // Reset pagination when searching or filtering
   React.useEffect(() => {
@@ -477,13 +483,23 @@ export default function WorkoutsScreen() {
                 ))}
               </div>
 
+              <div style={{ marginTop: 16 }}>
+                <button 
+                  className="btn-ghost" 
+                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  onClick={() => setShowCreateCorrective(true)}
+                >
+                  + ADD CUSTOM CORRECTIVE
+                </button>
+              </div>
+
               {/* Tracked Plans Section */}
               {trackedIssues && trackedIssues.length > 0 && (
                 <div className="section mt-16">
                   <span className="section-label">MY ACTIVE CORRECTIVE PLANS</span>
                   <div className="plans-list mt-8">
                     {trackedIssues.map(record => {
-                      const issueData = posturalIssues.find(p => p.id === record.issueId);
+                      const issueData = allPosturalIssues.find(p => p.id === record.issueId);
                       if (!issueData) return null;
                       const progress = Math.min(100, (record.completedSessions / record.targetSessions) * 100);
                       const isCompleted = record.status === 'resolved';
@@ -530,7 +546,7 @@ export default function WorkoutsScreen() {
               <div className="section mt-24">
                 <span className="section-label">POSTURAL LIBRARY</span>
                 <div className="plans-list mt-8">
-                  {posturalIssues
+                  {allPosturalIssues
                     .filter(issue => correctiveFilter === 'All' || issue.category === correctiveFilter)
                     .map(issue => {
                       const isTracked = trackedIssues && trackedIssues.some(ti => ti.issueId === issue.id && ti.status === 'active');
@@ -626,6 +642,16 @@ export default function WorkoutsScreen() {
           <PosturalIssueDetail
             issue={selectedIssue}
             onClose={() => setSelectedIssue(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Create Corrective Sheet */}
+      <AnimatePresence>
+        {showCreateCorrective && (
+          <CreateCorrectiveSheet
+            onClose={() => setShowCreateCorrective(false)}
+            onCreated={() => {}}
           />
         )}
       </AnimatePresence>

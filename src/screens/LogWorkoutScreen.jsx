@@ -275,6 +275,8 @@ export default function LogWorkoutScreen() {
     
     // Fetch active corrective protocols
     const activeCorrectives = await db.userPosturalIssues.where('status').equals('active').toArray();
+    const customIssues = await db.customPosturalIssues.toArray() || [];
+    const allPosturalIssues = [...posturalIssues, ...customIssues];
     const allExsList = await db.exercises.toArray();
     
     const warmupCorrectiveExs = [];
@@ -283,7 +285,7 @@ export default function LogWorkoutScreen() {
     
     if (activeCorrectives && activeCorrectives.length > 0) {
       activeCorrectives.forEach(record => {
-        const issueData = posturalIssues.find(p => p.id === record.issueId);
+        const issueData = allPosturalIssues.find(p => p.id === record.issueId);
         if (!issueData) return;
         
         issueData.correctiveProtocol.forEach(protoEx => {
@@ -728,13 +730,16 @@ export default function LogWorkoutScreen() {
     // ── Corrective Exercises Session Logging ───
     try {
       const activeCorrectives = await db.userPosturalIssues.where('status').equals('active').toArray();
+      const customIssues = await db.customPosturalIssues.toArray() || [];
+      const allPosturalIssues = [...posturalIssues, ...customIssues];
+
       if (activeCorrectives && activeCorrectives.length > 0) {
         const completedExIds = Object.entries(sets)
           .filter(([_, exSets]) => exSets.some(s => s.completed))
           .map(([exIdStr]) => parseInt(exIdStr));
 
         for (const record of activeCorrectives) {
-          const issueData = posturalIssues.find(p => p.id === record.issueId);
+          const issueData = allPosturalIssues.find(p => p.id === record.issueId);
           if (!issueData) continue;
 
           // Check if any exercise in the protocol was completed
