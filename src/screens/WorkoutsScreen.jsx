@@ -10,7 +10,6 @@ import PosturalIssueDetail from '../components/PosturalIssueDetail';
 import BottomSheet from '../components/BottomSheet';
 import CreateCustomExerciseSheet from '../components/CreateCustomExerciseSheet';
 import CreateCorrectiveSheet from '../components/CreateCorrectiveSheet';
-import ConfirmDeleteSheet from '../components/ConfirmDeleteSheet';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
