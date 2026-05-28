@@ -35,8 +35,7 @@ function ElapsedTimer({ startTime }) {
   );
 }
 
-function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDelete, unitPreference }) {
-  const { showAlert } = useAlert();
+function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDelete, unitPreference, onRpeClick }) {
   const typeColors = { normal: 'var(--text-primary)', warmup: 'var(--accent-gold)', drop: 'var(--accent-red)' };
   const typeLabels = { normal: index + 1, warmup: 'W', drop: 'D' };
   
@@ -62,76 +61,79 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
         {typeLabels[set.type || 'normal']}
       </button>
 
-      <div className="set-inputs">
-        <div className="set-input-group">
-          <input
-            type="number"
-            inputMode="decimal"
-            className="set-input"
-            placeholder="0"
-            value={set.weight || ''}
-            onChange={e => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
-            disabled={set.completed}
-            aria-label="Weight"
-            id={`set-weight-${index}`}
-          />
-          <span className="set-input-label">{unitPreference || 'kg'}</span>
-          {onPlateCalc && (
-            <button 
-              className="plate-calc-btn" 
-              onClick={onPlateCalc}
-              disabled={set.completed || !set.weight}
-              title="Plate Calculator"
-              style={{ padding: 4, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: 2 }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
-          )}
-        </div>
-        <span className="set-x">×</span>
-        <div className="set-input-group">
-          <input
-            type="number"
-            inputMode="decimal"
-            className="set-input"
-            placeholder="0"
-            value={set.reps || ''}
-            onChange={e => onUpdate({ reps: parseInt(e.target.value) || 0 })}
-            disabled={set.completed}
-            aria-label="Reps"
-            id={`set-reps-${index}`}
-          />
-          <span className="set-input-label">reps</span>
-        </div>
-        <span className="set-x" style={{ color: 'var(--text-muted)' }}>|</span>
-        <div className="set-input-group">
-          <select
-            className="set-input"
-            value={set.rpe || ''}
-            onChange={e => onUpdate({ rpe: parseFloat(e.target.value) || 0 })}
-            disabled={set.completed}
-            id={`set-rpe-${index}`}
-            style={{ width: 64, padding: '0 4px', fontSize: 14 }}
+      <div className="weight-input-wrapper">
+        <input
+          type="number"
+          inputMode="decimal"
+          className="set-input weight-input"
+          placeholder="0"
+          value={set.weight || ''}
+          onChange={e => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
+          disabled={set.completed}
+          aria-label="Weight"
+          id={`set-weight-${index}`}
+        />
+        {onPlateCalc && !set.completed && set.weight > 0 && (
+          <button 
+            className="plate-calc-btn" 
+            onClick={onPlateCalc}
+            title="Plate Calculator"
           >
-            <option value="">-</option>
-            <option value="10">10 Max</option>
-            <option value="9.5">9.5</option>
-            <option value="9">9 (1 Left)</option>
-            <option value="8.5">8.5</option>
-            <option value="8">8 (2 Left)</option>
-            <option value="7.5">7.5</option>
-            <option value="7">7 (3 Left)</option>
-            <option value="6.5">6.5</option>
-            <option value="6">6</option>
-            <option value="5">5</option>
-            <option value="4">4</option>
-          </select>
-          <span className="set-input-label" onClick={() => showAlert('RPE (Rate of Perceived Exertion):\n\n10: Max effort (0 reps left)\n9: 1 rep left\n8: 2 reps left\n7-6: Challenging\n<5: Warm-up', 'What is RPE?')} style={{ cursor: 'pointer', textDecoration: 'underline dotted', textDecorationColor: 'var(--text-muted)' }}>RPE</span>
-        </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        )}
       </div>
+
+      <span className="set-x">×</span>
+
+      <input
+        type="number"
+        inputMode="decimal"
+        className="set-input reps-input"
+        placeholder="0"
+        value={set.reps || ''}
+        onChange={e => onUpdate({ reps: parseInt(e.target.value) || 0 })}
+        disabled={set.completed}
+        aria-label="Reps"
+        id={`set-reps-${index}`}
+      />
+
+      <span className="set-x" style={{ color: 'var(--text-muted)' }}>|</span>
+
+      <button
+        className={`set-rpe-badge-btn ${set.completed ? 'completed' : ''}`}
+        onClick={onRpeClick}
+        disabled={!set.completed}
+        title={set.completed ? "Edit RPE" : "Mark set done to rate RPE"}
+      >
+        {set.completed ? (set.rpe || '-') : '-'}
+      </button>
+
+      <motion.button
+        className={`set-complete-btn ${set.completed ? 'done' : ''}`}
+        onClick={() => !set.completed && onComplete()}
+        whileTap={!set.completed ? { scale: 0.85 } : {}}
+        aria-label={set.completed ? 'Completed' : 'Complete set'}
+        id={`complete-set-${index}`}
+      >
+        {set.completed ? (
+          <motion.svg
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+            width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12"/>
+          </motion.svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        )}
+      </motion.button>
 
       {onDelete && (
         <button
@@ -141,22 +143,8 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
           title="Delete set"
           aria-label="Delete set"
           id={`delete-set-${index}`}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'none',
-            border: '1px solid rgba(255, 23, 68, 0.2)',
-            color: 'var(--accent-red)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            marginRight: 4,
-            opacity: set.completed ? 0.3 : 1
-          }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
@@ -297,6 +285,7 @@ export default function LogWorkoutScreen() {
   const [xpToasts, setXpToasts] = useState([]);
   const [totalXP, setTotalXP] = useState(0);
   const [addExSheet, setAddExSheet] = useState(false);
+  const [rpePrompt, setRpePrompt] = useState(null); // { exId, setIdx }
 
   // For quick start — dynamic exercise list
   // For quick start — dynamic exercise list
@@ -420,7 +409,23 @@ export default function LogWorkoutScreen() {
     });
   }
 
-  async function completeSet(exId, setIdx) {
+  const handleSelectRpe = async (rpeVal) => {
+    if (!rpePrompt) return;
+    const { exId, setIdx } = rpePrompt;
+    
+    const exSets = getExSets(exId);
+    const s = exSets[setIdx];
+    
+    if (s.completed) {
+      updateSet(exId, setIdx, { rpe: rpeVal });
+    } else {
+      await completeSet(exId, setIdx, rpeVal);
+    }
+    
+    setRpePrompt(null);
+  };
+
+  async function completeSet(exId, setIdx, rpeValue) {
     const exSets = getExSets(exId);
     const s = exSets[setIdx];
     if (s.completed) return;
@@ -456,7 +461,7 @@ export default function LogWorkoutScreen() {
       checkAndUnlockAchievement('pr_first');
     }
 
-    updateSet(exId, setIdx, { completed: true });
+    updateSet(exId, setIdx, { completed: true, ...(rpeValue !== undefined ? { rpe: rpeValue } : {}) });
 
     // Evaluate quest completions for mid-workout toasts
     try {
@@ -473,7 +478,7 @@ export default function LogWorkoutScreen() {
 
       const updatedSets = { ...sets };
       const currentExSets = [...(sets[exId] || [])];
-      currentExSets[setIdx] = { ...currentExSets[setIdx], completed: true };
+      currentExSets[setIdx] = { ...currentExSets[setIdx], completed: true, ...(rpeValue !== undefined ? { rpe: rpeValue } : {}) };
       updatedSets[exId] = currentExSets;
 
       for (const [eIdStr, exSets] of Object.entries(updatedSets)) {
@@ -891,35 +896,20 @@ export default function LogWorkoutScreen() {
         {/* Sets */}
         {currentBlock.length > 0 && (
           <div className="sets-section">
-            <div className="sets-header" style={{ justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span className="section-label">SETS</span>
-                <button 
-                  className="remove-block-btn" 
-                  onClick={() => deleteBlock(currentExIdx)} 
-                  title="Remove this exercise block"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--accent-red)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 6px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid rgba(255, 23, 68, 0.2)'
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  REMOVE BLOCK
-                </button>
-              </div>
-              <button className="add-set-btn" onClick={addSetToBlock} id="add-set-btn">
-                + ADD SET
-              </button>
+            <div className="sets-header">
+              <span className="section-label">SETS</span>
+            </div>
+
+            {/* Set Grid Headers */}
+            <div className="set-row-header">
+              <span className="header-label">SET</span>
+              <span className="header-label">WEIGHT</span>
+              <span className="header-label"></span>
+              <span className="header-label">REPS</span>
+              <span className="header-label"></span>
+              <span className="header-label">RPE</span>
+              <span className="header-label" style={{ textAlign: 'center' }}>DONE</span>
+              <span className="header-label"></span>
             </div>
 
             <div className="sets-list">
@@ -939,7 +929,8 @@ export default function LogWorkoutScreen() {
                             index={roundIdx}
                             isActive={!s.completed && exSets.slice(0, roundIdx).every(prev => prev.completed)}
                             onUpdate={changes => updateSet(ex.id, roundIdx, changes)}
-                            onComplete={() => completeSet(ex.id, roundIdx)}
+                            onComplete={() => setRpePrompt({ exId: ex.id, setIdx: roundIdx })}
+                            onRpeClick={() => setRpePrompt({ exId: ex.id, setIdx: roundIdx })}
                             onPlateCalc={() => setPlateCalcWeight(s.weight)}
                             onDelete={() => deleteSet(ex.id, roundIdx)}
                             unitPreference={profile?.unitPreference || 'kg'}
@@ -950,6 +941,37 @@ export default function LogWorkoutScreen() {
                   </AnimatePresence>
                 </div>
               ))}
+            </div>
+
+            <div className="sets-actions-bar" style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <button className="add-set-btn" onClick={addSetToBlock} id="add-set-btn" style={{ flex: 1 }}>
+                + ADD SET
+              </button>
+              <button 
+                className="remove-block-btn" 
+                onClick={() => deleteBlock(currentExIdx)} 
+                title="Remove this exercise block"
+                style={{
+                  flex: 1,
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-red)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(255, 23, 68, 0.2)',
+                  height: 40
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                REMOVE BLOCK
+              </button>
             </div>
 
             {/* XP Preview */}
@@ -1048,6 +1070,18 @@ export default function LogWorkoutScreen() {
       <AnimatePresence>
         {plateCalcWeight !== null && (
           <PlateCalculatorSheet weight={plateCalcWeight} unitPreference={profile?.unitPreference || 'kg'} onClose={() => setPlateCalcWeight(null)} />
+        )}
+      </AnimatePresence>
+
+      {/* RPE Selection Sheet */}
+      <AnimatePresence>
+        {rpePrompt !== null && (
+          <RPESelectionSheet
+            exId={rpePrompt.exId}
+            setIdx={rpePrompt.setIdx}
+            onSelect={handleSelectRpe}
+            onClose={() => setRpePrompt(null)}
+          />
         )}
       </AnimatePresence>
 
@@ -1210,3 +1244,54 @@ function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
     </BottomSheet>
   );
 }
+
+/* ── RPE Selection Sheet ──────────────────────── */
+function RPESelectionSheet({ exId, setIdx, onSelect, onClose }) {
+  const options = [
+    { value: 10, label: '10', desc: 'Max Effort / 0 reps left' },
+    { value: 9.5, label: '9.5', desc: 'Maybe 1 rep left' },
+    { value: 9, label: '9', desc: '1 rep left' },
+    { value: 8.5, label: '8.5', desc: 'Maybe 2 reps left' },
+    { value: 8, label: '8', desc: '2 reps left' },
+    { value: 7.5, label: '7.5', desc: 'Maybe 3 reps left' },
+    { value: 7, label: '7', desc: '3 reps left' },
+    { value: 6, label: '6', desc: 'Challenging' },
+    { value: 5, label: '5', desc: 'Easy / Warm-up' }
+  ];
+
+  return (
+    <BottomSheet
+      onClose={onClose}
+      title="RATE YOUR EFFORT (RPE)"
+    >
+      <div className="rpe-prompt-info" style={{ textAlign: 'center', marginBottom: 20 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+          How hard was that set? Rate the intensity of your effort.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '60vh', overflowY: 'auto' }}>
+        {options.map(opt => (
+          <button
+            key={opt.value}
+            className="jump-item"
+            onClick={() => onSelect(opt.value)}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px' }}
+          >
+            <span style={{ fontSize: 16, fontWeight: '700', color: 'var(--accent-blue)' }}>RPE {opt.label}</span>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{opt.desc}</span>
+          </button>
+        ))}
+        
+        <button
+          className="jump-item"
+          onClick={() => onSelect(null)}
+          style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '14px 16px', border: '1px dashed var(--border)', background: 'transparent', marginTop: 8 }}
+        >
+          <span style={{ fontSize: 15, fontWeight: '600', color: 'var(--text-secondary)' }}>Skip / No RPE</span>
+        </button>
+      </div>
+    </BottomSheet>
+  );
+}
+
