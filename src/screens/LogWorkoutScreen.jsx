@@ -12,6 +12,7 @@ import { hapticSetComplete } from '../utils/haptics';
 import { checkAndUnlockAchievement } from '../utils/achievements';
 import { useAlert } from '../context/AlertContext';
 import BottomSheet from '../components/BottomSheet';
+import ExerciseDetailsSheet from '../components/ExerciseDetailsSheet';
 import './LogWorkoutScreen.css';
 
 /* ── Elapsed Timer ─────────────────────────────── */
@@ -247,6 +248,7 @@ export default function LogWorkoutScreen() {
   const [totalXP, setTotalXP] = useState(0);
   const [addExSheet, setAddExSheet] = useState(false);
   const [rpePrompt, setRpePrompt] = useState(null); // { exId, setIdx }
+  const [selectedExerciseDetails, setSelectedExerciseDetails] = useState(null);
 
   // For quick start — dynamic exercise list
   // For quick start — dynamic exercise list
@@ -805,11 +807,25 @@ export default function LogWorkoutScreen() {
       <div className="workout-topbar">
         <div className="workout-topbar-left">
           <span className="mission-label section-label">MISSION IN PROGRESS</span>
-          <h2 className="current-ex-name">
-            {currentBlock.length > 0 
-              ? isSuperset ? `SUPERSET (${currentBlock.length})` : currentBlock[0].name 
-              : 'Quick Workout'}
-          </h2>
+          {currentBlock.length > 0 && !isSuperset ? (
+            <button 
+              className="current-ex-name" 
+              onClick={() => setSelectedExerciseDetails(currentBlock[0])} 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', appearance: 'none', color: 'inherit', font: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}
+              title="View Exercise Details"
+            >
+              {currentBlock[0].name}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.8}}>
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+              </svg>
+            </button>
+          ) : (
+            <h2 className="current-ex-name">
+              {currentBlock.length > 0 
+                ? isSuperset ? `SUPERSET (${currentBlock.length})` : currentBlock[0].name 
+                : 'Quick Workout'}
+            </h2>
+          )}
           <ElapsedTimer startTime={startTime} />
         </div>
         <button className="complete-workout-btn" onClick={handleFinish} id="finish-workout-btn">
@@ -882,7 +898,19 @@ export default function LogWorkoutScreen() {
                       if (!s) return null;
                       return (
                         <div key={`ex-${ex.id}-set-${roundIdx}`}>
-                          {isSuperset && <div className="ex-sub-label" style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4, marginTop: 8 }}>{ex.name}</div>}
+                          {isSuperset && (
+                            <button 
+                              className="ex-sub-label" 
+                              onClick={() => setSelectedExerciseDetails(ex)}
+                              style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', marginBottom: 4, marginTop: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}
+                              title="View Exercise Details"
+                            >
+                              {ex.name}
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+                              </svg>
+                            </button>
+                          )}
                           <SetRow
                             set={s}
                             index={roundIdx}
@@ -1040,6 +1068,16 @@ export default function LogWorkoutScreen() {
             setIdx={rpePrompt.setIdx}
             onSelect={handleSelectRpe}
             onClose={() => setRpePrompt(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Exercise Details Sheet */}
+      <AnimatePresence>
+        {selectedExerciseDetails !== null && (
+          <ExerciseDetailsSheet
+            exercise={selectedExerciseDetails}
+            onClose={() => setSelectedExerciseDetails(null)}
           />
         )}
       </AnimatePresence>
