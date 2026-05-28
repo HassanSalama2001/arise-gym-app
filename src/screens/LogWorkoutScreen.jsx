@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { calculateSetXP } from '../data/progression';
+import posturalIssues from '../data/posturalIssues';
 import RestTimerOverlay from '../components/RestTimerOverlay';
 import XPToast from '../components/XPToast';
 import { playSetCompleteSound } from '../utils/audio';
@@ -277,10 +278,12 @@ function LogSetupScreen({ onStart }) {
 
 /* ── Active Workout Screen (main) ─────────────────── */
 export default function LogWorkoutScreen() {
-  const { showAlert, showConfirm } = useAlert();
+  const { showAlert, showConfirm, showToast } = useAlert();
   const navigate = useNavigate();
   const [phase, setPhase] = useState('setup'); // 'setup' | 'active'
   const [workoutConfig, setWorkoutConfig] = useState(null);
+  const [initialQuests, setInitialQuests] = useState([]);
+  const toastedQuests = useRef(new Set());
 
   // Active workout state
   const [sessionId, setSessionId] = useState(null);
@@ -310,8 +313,73 @@ export default function LogWorkoutScreen() {
 
   async function handleStart(config) {
     setWorkoutConfig(config);
+    
+    // Load initial daily quests for mid-workout progress tracking
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayQuests = await db.dailyQuests.where('date').equals(todayStr).toArray();
+    setInitialQuests(todayQuests);
+    toastedQuests.current = new Set();
+    
+    // Fetch active corrective protocols
+    const activeCorrectives = await db.userPosturalIssues.where('status').equals('active').toArray();
+    const allExsList = await db.exercises.toArray();
+    
+    const warmupCorrectiveExs = [];
+    const cooldownCorrectiveExs = [];
+    const correctiveSets = {};
+    
+    if (activeCorrectives && activeCorrectives.length > 0) {
+      activeCorrectives.forEach(record => {
+        const issueData = posturalIssues.find(p => p.id === record.issueId);
+        if (!issueData) return;
+        
+        issueData.correctiveProtocol.forEach(protoEx => {
+          const matchedEx = allExsList.find(e => e.id === protoEx.exerciseId);
+          if (!matchedEx) return;
+          
+          // Mark exercise object in-memory with issue context
+          const exCopy = { 
+            ...matchedEx, 
+            isCorrective: true, 
+            issueId: record.issueId,
+            protoNote: protoEx.notes 
+          };
+          
+          // Determine placement
+          if (record.position === 'warmup' || record.position === 'both') {
+            if (!warmupCorrectiveExs.some(e => e.id === exCopy.id)) {
+              warmupCorrectiveExs.push(exCopy);
+            }
+          }
+          if (record.position === 'cooldown' || record.position === 'both') {
+            if (!cooldownCorrectiveExs.some(e => e.id === exCopy.id)) {
+              cooldownCorrectiveExs.push(exCopy);
+            }
+          }
+          
+          // Initialize correct number of sets
+          const setsCount = parseInt(protoEx.sets) || 2;
+          const repsMatch = protoEx.reps.match(/\d+/);
+          const defaultReps = repsMatch ? parseInt(repsMatch[0]) : 10;
+          
+          correctiveSets[matchedEx.id] = Array.from({ length: setsCount }, () => ({
+            weight: 0,
+            reps: defaultReps,
+            type: 'normal',
+            completed: false
+          }));
+        });
+      });
+    }
+
     // Convert flat exercises list into single-exercise blocks
-    const initialBlocks = (config.exercises || []).map(ex => [ex]);
+    const planBlocks = (config.exercises || []).map(ex => [ex]);
+    
+    // Combine: Warmups + Plan + Cooldowns
+    const warmupBlocks = warmupCorrectiveExs.map(ex => [ex]);
+    const cooldownBlocks = cooldownCorrectiveExs.map(ex => [ex]);
+    const initialBlocks = [...warmupBlocks, ...planBlocks, ...cooldownBlocks];
+    
     setBlocks(initialBlocks);
     
     const now = Date.now();
@@ -325,10 +393,17 @@ export default function LogWorkoutScreen() {
       endTime: null,
     });
     setSessionId(sid);
+    
     // Init sets for all exercises
     const initSets = {};
-    config.exercises.forEach(ex => { initSets[ex.id] = [{ weight: 0, reps: 0, type: 'normal', completed: false }]; });
-    setSets(initSets);
+    (config.exercises || []).forEach(ex => { 
+      initSets[ex.id] = [{ weight: 0, reps: 0, type: 'normal', completed: false }]; 
+    });
+    
+    // Merge corrective sets
+    const finalSets = { ...initSets, ...correctiveSets };
+    setSets(finalSets);
+    
     setPhase('active');
   }
 
@@ -350,8 +425,10 @@ export default function LogWorkoutScreen() {
     if (s.completed) return;
     const w = s.weight || 0;
     const r = s.reps || 0;
+    const matchedEx = allExercises?.find(e => e.id === exId);
+    const isCorrectiveEx = matchedEx?.isCorrective || matchedEx?.muscleGroup === 'Corrective';
     const isWarmup = s.type === 'warmup';
-    const xp = isWarmup ? 0 : calculateSetXP(w, r);
+    const xp = isWarmup ? 0 : isCorrectiveEx ? 5 : calculateSetXP(w, r);
 
     // Check PR
     const prRecord = await db.personalRecords.where('exerciseId').equals(exId).first();
@@ -379,6 +456,82 @@ export default function LogWorkoutScreen() {
     }
 
     updateSet(exId, setIdx, { completed: true });
+
+    // Evaluate quest completions for mid-workout toasts
+    try {
+      const exerciseMap = {};
+      allExercises?.forEach(e => { exerciseMap[e.id] = e; });
+
+      let legSetsCount = 0;
+      let backSetsCount = 0;
+      let shoulderSetsCount = 0;
+      let armSetsCount = 0;
+      let coreSetsCount = 0;
+      let totalCompletedSetsCount = 0;
+      let totalVol = 0;
+
+      const updatedSets = { ...sets };
+      const currentExSets = [...(sets[exId] || [])];
+      currentExSets[setIdx] = { ...currentExSets[setIdx], completed: true };
+      updatedSets[exId] = currentExSets;
+
+      for (const [eIdStr, exSets] of Object.entries(updatedSets)) {
+        const eId = parseInt(eIdStr);
+        const ex = exerciseMap[eId];
+        if (!ex) continue;
+        
+        const compSets = exSets.filter(s => s.completed);
+        totalCompletedSetsCount += compSets.length;
+        totalVol += compSets.reduce((acc, s) => acc + ((s.weight || 0) * (s.reps || 0)), 0);
+
+        if (ex.muscleGroup === 'Legs') legSetsCount += compSets.length;
+        if (ex.muscleGroup === 'Back') backSetsCount += compSets.length;
+        if (ex.muscleGroup === 'Shoulders') shoulderSetsCount += compSets.length;
+        if (ex.muscleGroup === 'Arms') armSetsCount += compSets.length;
+        if (ex.muscleGroup === 'Core') coreSetsCount += compSets.length;
+      }
+
+      let newPRsCount = 0;
+      for (const eIdStr of Object.keys(updatedSets)) {
+        const eId = parseInt(eIdStr);
+        const prRecord = await db.personalRecords.where('exerciseId').equals(eId).first();
+        if (prRecord && prRecord.date >= startTime) {
+          newPRsCount++;
+        } else if (eId === exId && isPR) {
+          newPRsCount++;
+        }
+      }
+
+      for (const quest of initialQuests) {
+        if (quest.completed || toastedQuests.current.has(quest.id)) continue;
+
+        let progress = 0;
+        if (quest.type === 'total_volume') {
+          progress = totalVol;
+        } else if (quest.type === 'new_pr') {
+          progress = newPRsCount;
+        } else if (quest.type === 'total_sets') {
+          progress = totalCompletedSetsCount;
+        } else if (quest.type === 'train_legs') {
+          if (legSetsCount > 0) progress = 1;
+        } else if (quest.type === 'back_sets') {
+          progress = backSetsCount;
+        } else if (quest.type === 'shoulder_sets') {
+          progress = shoulderSetsCount;
+        } else if (quest.type === 'arm_sets') {
+          progress = armSetsCount;
+        } else if (quest.type === 'core_work') {
+          progress = coreSetsCount;
+        }
+
+        if (quest.current + progress >= quest.target) {
+          toastedQuests.current.add(quest.id);
+          showToast(`🎯 QUEST COMPLETE: ${quest.target} ${quest.type.replace('_', ' ').toUpperCase()} (+${quest.xpReward} XP)`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check mid-workout quest progress:', err);
+    }
     
     // Auto-start rest timer
     setShowRest(true);
@@ -603,6 +756,47 @@ export default function LogWorkoutScreen() {
     if (newTotalXP >= 40000) await checkAndUnlockAchievement('rank_a');
     if (newTotalXP >= 100000) await checkAndUnlockAchievement('rank_s');
 
+    // ── Corrective Exercises Session Logging ───
+    try {
+      const activeCorrectives = await db.userPosturalIssues.where('status').equals('active').toArray();
+      if (activeCorrectives && activeCorrectives.length > 0) {
+        const completedExIds = Object.entries(sets)
+          .filter(([_, exSets]) => exSets.some(s => s.completed))
+          .map(([exIdStr]) => parseInt(exIdStr));
+
+        for (const record of activeCorrectives) {
+          const issueData = posturalIssues.find(p => p.id === record.issueId);
+          if (!issueData) continue;
+
+          // Check if any exercise in the protocol was completed
+          const hasDoneCorrective = issueData.correctiveProtocol.some(protoEx => 
+            completedExIds.includes(protoEx.exerciseId)
+          );
+
+          if (hasDoneCorrective) {
+            const nextCompleted = record.completedSessions + 1;
+            const isNowResolved = nextCompleted >= record.targetSessions;
+            
+            await db.userPosturalIssues.update(record.id, {
+              completedSessions: nextCompleted,
+              status: isNowResolved ? 'resolved' : 'active'
+            });
+
+            if (isNowResolved) {
+              const currentProfile = await db.playerProfile.get('profile');
+              if (currentProfile) {
+                await db.playerProfile.update('profile', {
+                  totalXP: currentProfile.totalXP + 200
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to log corrective progress:', err);
+    }
+
     // Navigate to mission complete
     navigate('/mission-complete', { 
       state: { 
@@ -679,6 +873,17 @@ export default function LogWorkoutScreen() {
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
+          </div>
+        )}
+        {/* Corrective Warning/Tip */}
+        {currentBlock.length === 1 && (currentBlock[0]?.isCorrective || currentBlock[0]?.muscleGroup === 'Corrective') && (
+          <div className="card" style={{ margin: '12px 16px 0', border: '1px dashed var(--accent-gold)', background: 'rgba(255, 179, 0, 0.05)', padding: 12 }}>
+            <span style={{ color: 'var(--accent-gold)', fontWeight: 'bold', fontSize: 12, fontFamily: 'var(--font-display)', display: 'block', letterSpacing: '0.05em' }}>🩺 CORRECTIVE EXERCISE</span>
+            {currentBlock[0].protoNote && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 4, lineHeight: 1.4 }}>
+                <strong>Goal:</strong> {currentBlock[0].protoNote}
+              </p>
+            )}
           </div>
         )}
 

@@ -1,0 +1,279 @@
+.postural-detail-sheet {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-top: 2px solid var(--accent-gold);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  padding: 24px;
+  position: relative;
+  z-index: 1200;
+}
+
+.postural-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.postural-detail-icon {
+  font-size: 32px;
+  background: var(--bg-void);
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  box-shadow: 0 0 15px rgba(255, 179, 0, 0.1);
+}
+
+.postural-detail-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.postural-detail-chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Tracking progress card */
+.tracking-progress-card {
+  padding: 16px;
+  background: rgba(255, 179, 0, 0.05);
+  border: 1px solid rgba(255, 179, 0, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.resolved-status-card {
+  padding: 16px;
+  background: rgba(76, 175, 80, 0.08);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.resolved-badge {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 13px;
+  color: #4caf50;
+  letter-spacing: 0.05em;
+  display: block;
+}
+
+.resolved-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.progress-text-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-fraction {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--accent-gold);
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-void);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-gold), #ffc107);
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(255, 179, 0, 0.4);
+}
+
+.position-cue-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Diagnostic styling */
+.diagnostic-card {
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.diagnostic-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text-primary);
+  letter-spacing: 0.03em;
+}
+
+.diagnostic-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.diagnostic-steps {
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.diagnostic-steps li {
+  margin-bottom: 4px;
+}
+
+.diagnostic-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--accent-blue);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent-blue);
+  padding-bottom: 2px;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.diagnostic-link:hover {
+  color: #64b5f6;
+  border-bottom-color: #64b5f6;
+}
+
+/* Protocol Styling */
+.protocol-summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: var(--bg-void);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.protocol-meta-value {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+
+.protocol-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.protocol-exercise-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-left: 3px solid var(--accent-gold);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.protocol-exercise-card:hover {
+  transform: translateX(4px);
+  border-left-color: #ffc107;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.protocol-exercise-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.protocol-exercise-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.protocol-exercise-sets {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.protocol-exercise-notes {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Info tab causes */
+.info-causes-list {
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.info-causes-list li {
+  margin-bottom: 6px;
+}
+
+.nasm-principles li {
+  margin-bottom: 6px;
+}
+
+/* Config panel */
+.configuration-panel {
+  padding: 16px;
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.config-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 11px;
+  color: var(--accent-gold);
+  letter-spacing: 0.05em;
+}
+
+.config-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.config-select:focus {
+  border-color: var(--accent-gold);
+}

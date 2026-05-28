@@ -46,6 +46,12 @@ export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
   const [minimized, setMinimized] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(err => console.error('Notification permission request failed:', err));
+    }
+  }, []);
+
+  useEffect(() => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startRef.current) / 1000;
@@ -56,6 +62,19 @@ export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
         setRunning(false);
         playChime();
         vibrate();
+
+        // Send local PWA notification
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('Rest Time Finished!', {
+              body: 'Time to begin the next set, Hunter.',
+              icon: '/favicon.ico',
+              silent: true
+            });
+          } catch (e) {
+            console.error('Failed to show notification:', e);
+          }
+        }
       }
     }, 100);
     return () => clearInterval(intervalRef.current);

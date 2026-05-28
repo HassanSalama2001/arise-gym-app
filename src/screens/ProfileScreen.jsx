@@ -46,9 +46,9 @@ function RankProgressionSheet({ currentXP, onClose }) {
         
         <div className="rank-list mt-16">
           {RANKS.map((rank, i) => {
-            const isUnlocked = currentXP >= rank.minXP;
+            const isUnlocked = currentXP >= rank.xpRequired;
             const isCurrent = currentRankInfo.current.rank === rank.rank;
-            const xpToReach = rank.minXP - currentXP;
+            const xpToReach = rank.xpRequired - currentXP;
             
             return (
               <div key={rank.rank} className={`rank-item ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`}>
@@ -60,7 +60,7 @@ function RankProgressionSheet({ currentXP, onClose }) {
                   <span className="section-label">
                     {isUnlocked 
                       ? (isCurrent ? 'CURRENT RANK' : 'UNLOCKED') 
-                      : `REACH AT: ${rank.minXP.toLocaleString()} XP (${xpToReach.toLocaleString()} REMAINING)`}
+                      : `REACH AT: ${rank.xpRequired.toLocaleString()} XP (${xpToReach.toLocaleString()} REMAINING)`}
                   </span>
                 </div>
                 {isUnlocked && <div className="rank-check">✓</div>}

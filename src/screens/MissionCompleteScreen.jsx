@@ -9,6 +9,7 @@ import RankUpCinematic from '../components/RankUpCinematic';
 import { playLevelUpSound } from '../utils/audio';
 import { hapticLevelUp } from '../utils/haptics';
 import { useAlert } from '../context/AlertContext';
+import { getToday } from '../utils/date';
 import './MissionCompleteScreen.css';
 
 function FloatingParticle({ style }) {
@@ -143,7 +144,7 @@ export default function MissionCompleteScreen() {
         >
           {[
             { label: 'DURATION', value: dStr, icon: '⏱' },
-            { label: 'VOLUME', value: `${Math.round(totalVol).toLocaleString()} kg`, icon: '🏋️' },
+            { label: 'VOLUME', value: `${Math.round(totalVol).toLocaleString()} ${profile?.unitPreference || 'kg'}`, icon: '🏋️' },
             { label: 'SETS DONE', value: completedSets.length, icon: '✅' },
             { label: 'EXERCISES', value: exerciseIds.length, icon: '💪' },
           ].map((stat, i) => (
@@ -239,9 +240,4 @@ export default function MissionCompleteScreen() {
       </AnimatePresence>
     </div>
   );
-}
-
-function getToday() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

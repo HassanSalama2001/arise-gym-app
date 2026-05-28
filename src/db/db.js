@@ -28,4 +28,8 @@ db.version(3).stores({
   sets: '++id, sessionId, exerciseId, [sessionId+exerciseId], setNumber, weight, reps, completed' // added compound index
 });
 
+db.version(4).stores({
+  userPosturalIssues: '++id, issueId, addedAt, status, targetSessions, completedSessions, position'
+});
+
 export default db;

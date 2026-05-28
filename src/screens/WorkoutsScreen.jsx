@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import templates from '../data/templates.json';
 import { useAlert } from '../context/AlertContext';
+import posturalIssues, { categories as correctiveCategories } from '../data/posturalIssues';
+import PosturalIssueDetail from '../components/PosturalIssueDetail';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
@@ -253,7 +255,7 @@ function CreateExerciseSheet({ onClose, onCreated }) {
 }
 
 export default function WorkoutsScreen() {
-  const { showConfirm, showAlert, showToast } = useAlert();
+  const { showConfirm, showToast } = useAlert();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('exercises');
   const [search, setSearch] = useState('');
@@ -261,6 +263,9 @@ export default function WorkoutsScreen() {
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showCreateExercise, setShowCreateExercise] = useState(false);
   const [visibleCount, setVisibleCount] = useState(30);
+  const [correctiveFilter, setCorrectiveFilter] = useState('All');
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  const trackedIssues = useLiveQuery(() => db.userPosturalIssues.toArray(), []);
 
   // Reset pagination when searching or filtering
   React.useEffect(() => {
@@ -345,6 +350,11 @@ export default function WorkoutsScreen() {
             onClick={() => setActiveTab('plans')}
             id="tab-plans"
           >MY PLANS</button>
+          <button
+            className={`tab-pill ${activeTab === 'corrective' ? 'active' : ''}`}
+            onClick={() => setActiveTab('corrective')}
+            id="tab-corrective"
+          >CORRECTIVE</button>
           <button
             className={`tab-pill ${activeTab === 'discover' ? 'active' : ''}`}
             onClick={() => setActiveTab('discover')}
@@ -478,6 +488,108 @@ export default function WorkoutsScreen() {
                 </div>
               )}
             </motion.div>
+          ) : activeTab === 'corrective' ? (
+            <motion.div
+              key="corrective"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* Category Filters */}
+              <div className="filter-chips" id="corrective-filters">
+                {correctiveCategories.map(cat => (
+                  <button
+                    key={cat}
+                    className={`filter-chip ${correctiveFilter === cat ? 'active' : ''}`}
+                    onClick={() => setCorrectiveFilter(cat)}
+                    id={`corrective-filter-${cat.toLowerCase().replace(' ', '-')}`}
+                  >{cat}</button>
+                ))}
+              </div>
+
+              {/* Tracked Plans Section */}
+              {trackedIssues && trackedIssues.length > 0 && (
+                <div className="section mt-16">
+                  <span className="section-label">MY ACTIVE CORRECTIVE PLANS</span>
+                  <div className="plans-list mt-8">
+                    {trackedIssues.map(record => {
+                      const issueData = posturalIssues.find(p => p.id === record.issueId);
+                      if (!issueData) return null;
+                      const progress = Math.min(100, (record.completedSessions / record.targetSessions) * 100);
+                      const isCompleted = record.status === 'resolved';
+
+                      return (
+                        <div
+                          key={record.id}
+                          className="plan-card card"
+                          onClick={() => setSelectedIssue(issueData)}
+                          style={{ borderLeft: isCompleted ? '3px solid #4caf50' : '3px solid var(--accent-gold)' }}
+                        >
+                          <div className="plan-card-top">
+                            <span className="plan-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span>{issueData.icon}</span> {issueData.name}
+                            </span>
+                            <span className="chip chip-gold" style={{ fontSize: 11 }}>
+                              {record.completedSessions} / {record.targetSessions} SESSIONS
+                            </span>
+                          </div>
+                          
+                          <div className="progress-bar-bg mt-8">
+                            <div 
+                              className="progress-bar-fill" 
+                              style={{ 
+                                width: `${progress}%`,
+                                background: isCompleted ? '#4caf50' : 'linear-gradient(90deg, var(--accent-gold), #ffc107)' 
+                              }}
+                            />
+                          </div>
+                          <div className="plan-card-meta mt-8" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                            <span className="section-label">Timing: {record.position === 'both' ? 'Warm-up & Cool-down' : record.position === 'warmup' ? 'Warm-up' : 'Cool-down'}</span>
+                            <span className="section-label" style={{ color: isCompleted ? '#4caf50' : 'var(--text-secondary)' }}>
+                              {isCompleted ? 'RESOLVED' : `${record.targetSessions - record.completedSessions} sessions left`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* All Issues Library */}
+              <div className="section mt-24">
+                <span className="section-label">POSTURAL LIBRARY</span>
+                <div className="plans-list mt-8">
+                  {posturalIssues
+                    .filter(issue => correctiveFilter === 'All' || issue.category === correctiveFilter)
+                    .map(issue => {
+                      const isTracked = trackedIssues && trackedIssues.some(ti => ti.issueId === issue.id && ti.status === 'active');
+                      return (
+                        <div
+                          key={issue.id}
+                          className="plan-card card"
+                          onClick={() => setSelectedIssue(issue)}
+                          style={{ opacity: isTracked ? 0.7 : 1 }}
+                        >
+                          <div className="plan-card-top">
+                            <span className="plan-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 20 }}>{issue.icon}</span>
+                              {issue.name}
+                            </span>
+                            {isTracked && <span className="chip chip-gold" style={{ fontSize: 10 }}>ACTIVE</span>}
+                          </div>
+                          <div className="plan-card-meta" style={{ display: 'flex', gap: 12 }}>
+                            <span className="section-label">{issue.category}</span>
+                            <span className="section-label">•</span>
+                            <span className="section-label">{issue.timeline} duration</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </motion.div>
           ) : (
             <motion.div
               key="discover"
@@ -535,6 +647,16 @@ export default function WorkoutsScreen() {
           <CreateExerciseSheet
             onClose={() => setShowCreateExercise(false)}
             onCreated={() => {}}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Postural Issue Detail Sheet */}
+      <AnimatePresence>
+        {selectedIssue && (
+          <PosturalIssueDetail
+            issue={selectedIssue}
+            onClose={() => setSelectedIssue(null)}
           />
         )}
       </AnimatePresence>

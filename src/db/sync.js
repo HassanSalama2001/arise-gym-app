@@ -4,7 +4,8 @@ import { supabase } from './supabaseClient';
 export async function exportDataJSON() {
   const [
     profile, sessions, sets, bodyWeight, personalRecords, achievements,
-    workoutPlans, planExercises, inbodyScans, measurements, dailyQuests, settings
+    workoutPlans, planExercises, inbodyScans, measurements, dailyQuests, settings,
+    userPosturalIssues
   ] = await Promise.all([
     db.playerProfile.toArray(),
     db.sessions.toArray(),
@@ -17,12 +18,14 @@ export async function exportDataJSON() {
     db.inbodyScans.toArray(),
     db.measurements.toArray(),
     db.dailyQuests.toArray(),
-    db.settings.toArray()
+    db.settings.toArray(),
+    db.userPosturalIssues.toArray()
   ]);
 
   return {
     profile, sessions, sets, bodyWeight, personalRecords, achievements,
     workoutPlans, planExercises, inbodyScans, measurements, dailyQuests, settings,
+    userPosturalIssues,
     exportedAt: new Date().toISOString(),
   };
 }
@@ -37,7 +40,7 @@ export async function importDataJSON(data) {
     db.playerProfile, db.sessions, db.sets, db.achievements,
     db.workoutPlans, db.planExercises, db.bodyWeight,
     db.personalRecords, db.inbodyScans, db.measurements, 
-    db.dailyQuests, db.settings
+    db.dailyQuests, db.settings, db.userPosturalIssues
   ], async () => {
     if (data.profile) await db.playerProfile.bulkPut(data.profile);
     if (data.sessions) await db.sessions.bulkPut(data.sessions);
@@ -51,15 +54,39 @@ export async function importDataJSON(data) {
     if (data.measurements) await db.measurements.bulkPut(data.measurements);
     if (data.dailyQuests) await db.dailyQuests.bulkPut(data.dailyQuests);
     if (data.settings) await db.settings.bulkPut(data.settings);
+    if (data.userPosturalIssues) await db.userPosturalIssues.bulkPut(data.userPosturalIssues);
   });
 }
 
-export async function backupToCloud() {
+export async function backupToCloud(force = false) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { success: false, error: 'No active session' };
 
   try {
     const dataJSON = await exportDataJSON();
+    
+    // Check for conflicts if not forced
+    if (!force) {
+      const { data: existing, error: fetchError } = await supabase
+        .from('backups')
+        .select('data')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (!fetchError && existing && existing.data && existing.data.exportedAt) {
+        const lastSyncSetting = await db.settings.get('last_sync_time');
+        const lastSyncTime = lastSyncSetting ? lastSyncSetting.value : null;
+
+        if (lastSyncTime && new Date(existing.data.exportedAt) > new Date(lastSyncTime)) {
+          return {
+            success: false,
+            conflict: true,
+            cloudTime: existing.data.exportedAt,
+            localTime: lastSyncTime
+          };
+        }
+      }
+    }
     
     // Upsert into Supabase backups table
     const { error } = await supabase.from('backups').upsert({
@@ -69,6 +96,10 @@ export async function backupToCloud() {
     }, { onConflict: 'user_id' });
 
     if (error) throw error;
+
+    // Record last sync time locally
+    await db.settings.put({ key: 'last_sync_time', value: dataJSON.exportedAt });
+
     return { success: true };
   } catch (error) {
     console.error('Failed to backup to cloud:', error);
@@ -91,6 +122,12 @@ export async function restoreFromCloud() {
     
     if (data && data.data) {
       await importDataJSON(data.data);
+      
+      // Update local last sync time
+      if (data.data.exportedAt) {
+        await db.settings.put({ key: 'last_sync_time', value: data.data.exportedAt });
+      }
+      
       return { success: true };
     }
     return { success: false, error: 'No cloud backup found' };

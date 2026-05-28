@@ -225,6 +225,36 @@ export default function ProgressScreen() {
 
   const rankInfo = useMemo(() => profile ? getRankInfo(profile.totalXP) : null, [profile?.totalXP]);
 
+  if (profile === undefined || sessions === undefined) {
+    return (
+      <div className="screen" id="progress-screen">
+        <div className="screen-content" style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: 16 }}>
+          <div className="workouts-header">
+            <h1 className="screen-title">PROGRESS</h1>
+          </div>
+          <div className="tab-pills" id="progress-tabs">
+            <button className="tab-pill active" style={{ flex: 1 }}>STATS</button>
+            <button className="tab-pill" style={{ flex: 1 }}>HISTORY</button>
+          </div>
+          {/* Stats boxes shimmer */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div className="shimmer card" style={{ height: 60 }} />
+            <div className="shimmer card" style={{ height: 60 }} />
+            <div className="shimmer card" style={{ height: 60 }} />
+          </div>
+          {/* Chart Section Shimmers */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="shimmer" style={{ width: '40%', height: 16, borderRadius: 4 }} />
+            <div className="shimmer card" style={{ height: 140 }} />
+            
+            <div className="shimmer" style={{ width: '40%', height: 16, borderRadius: 4 }} />
+            <div className="shimmer card" style={{ height: 120 }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="screen" id="progress-screen">
       <div className="screen-content">

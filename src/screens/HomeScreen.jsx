@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo, getRankColor, generateDailyQuests } from '../data/progression';
+import { getToday } from '../utils/date';
 import './HomeScreen.css';
 
 function AnimatedNumber({ value, duration = 800 }) {
@@ -208,7 +209,32 @@ export default function HomeScreen() {
     return list;
   }, [quests, profile, achievements]);
 
-  if (!profile || !rankInfo) return <div className="screen"><div className="screen-content loading-screen">Loading...</div></div>;
+  if (!profile || !rankInfo) {
+    return (
+      <div className="screen">
+        <div className="screen-content" style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: 16 }}>
+          {/* Header Shimmer */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div className="shimmer" style={{ width: 64, height: 64, borderRadius: '50%' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+              <div className="shimmer" style={{ width: '60%', height: 20, borderRadius: 4 }} />
+              <div className="shimmer" style={{ width: '40%', height: 14, borderRadius: 4 }} />
+            </div>
+          </div>
+          {/* XP Bar Shimmer */}
+          <div className="shimmer" style={{ width: '100%', height: 16, borderRadius: 8 }} />
+          {/* Action Card Shimmer */}
+          <div className="shimmer" style={{ width: '100%', height: 90, borderRadius: 'var(--radius-md)' }} />
+          {/* Quests Shimmer */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="shimmer" style={{ width: '30%', height: 16, borderRadius: 4 }} />
+            <div className="shimmer" style={{ width: '100%', height: 70, borderRadius: 'var(--radius-md)' }} />
+            <div className="shimmer" style={{ width: '100%', height: 70, borderRadius: 'var(--radius-md)' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="screen" id="home-screen">
@@ -486,9 +512,4 @@ export default function HomeScreen() {
       </AnimatePresence>
     </div>
   );
-}
-
-function getToday() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

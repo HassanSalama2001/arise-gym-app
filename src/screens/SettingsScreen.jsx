@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { motion } from 'framer-motion';
 import db from '../db/db';
 import { supabase } from '../db/supabaseClient';
 import { backupToCloud, restoreFromCloud } from '../db/sync';
@@ -9,7 +8,7 @@ import { useAlert } from '../context/AlertContext';
 import './SettingsScreen.css';
 
 export default function SettingsScreen() {
-  const { showAlert, showConfirm, showPrompt, showToast } = useAlert();
+  const { showAlert, showConfirm, showPrompt } = useAlert();
   const navigate = useNavigate();
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const [session, setSession] = useState(null);
@@ -86,6 +85,24 @@ export default function SettingsScreen() {
       const res = await backupToCloud();
       if (res.success) {
         setSyncStatus('Backup complete!');
+      } else if (res.conflict) {
+        setSyncStatus('Conflict detected!');
+        const force = await showConfirm(
+          `A newer backup from ${new Date(res.cloudTime).toLocaleString()} exists on the cloud.\n\nYour last sync on this device was ${res.localTime ? new Date(res.localTime).toLocaleString() : 'never'}.\n\nDo you want to FORCE overwrite the cloud with your local data?`,
+          "Sync Conflict Detected",
+          { okText: 'FORCE BACKUP', cancelText: 'CANCEL' }
+        );
+        if (force) {
+          setSyncStatus('Forcing backup...');
+          const forceRes = await backupToCloud(true);
+          if (forceRes.success) {
+            setSyncStatus('Backup complete!');
+          } else {
+            setSyncStatus('Backup failed: ' + forceRes.error);
+          }
+        } else {
+          setSyncStatus('Backup cancelled.');
+        }
       } else {
         setSyncStatus('Backup failed: ' + res.error);
       }

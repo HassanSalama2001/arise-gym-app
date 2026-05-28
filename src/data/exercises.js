@@ -304,4 +304,326 @@ more.forEach(m => {
   });
 });
 
+// --- CORRECTIVE EXERCISES ---
+const correctiveExercises = [
+  {
+    id: 10001,
+    name: 'Wall Angel',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Stand with back, head, and hips flat against a wall.',
+      'Place arms on the wall in a W shape (elbows bent 90 degrees).',
+      'Slide your arms up the wall until they are straight overhead.',
+      'Keep your elbows and hands in contact with the wall at all times.',
+      'Slowly return to the starting W shape and repeat.'
+    ],
+    secondaryMuscles: ['Shoulders', 'Upper Back'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/posture-exercises#wall-angels'
+  },
+  {
+    id: 10002,
+    name: 'Chin Tuck',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Sit up straight and look straight ahead.',
+      'Place a finger on your chin.',
+      'Without tilting your head, pull your chin back (create a double chin) away from your finger.',
+      'Hold the position for 5 seconds.',
+      'Relax your chin forward and repeat.'
+    ],
+    secondaryMuscles: ['Neck'],
+    isCorrective: true,
+    externalLink: 'https://www.medicalnewstoday.com/articles/chin-tucks'
+  },
+  {
+    id: 10003,
+    name: 'Doorway Pec Stretch',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Stand in an open doorway.',
+      'Raise your arms up to the sides, bent at 90-degree angles with your forearms resting on the doorframe.',
+      'Slowly step forward with one foot until you feel a stretch in your chest.',
+      'Hold the stretch for 30 seconds.',
+      'Step back, relax, and repeat.'
+    ],
+    secondaryMuscles: ['Chest', 'Shoulders'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/doorway-stretch'
+  },
+  {
+    id: 10004,
+    name: 'Kneeling Hip Flexor Stretch',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Kneel on your right knee, with your left foot flat on the floor in front of you (90-degree angles).',
+      'Keep your back straight and squeeze your right glute.',
+      'Gently shift your weight forward until you feel a stretch in the front of your right hip.',
+      'Hold for 30 seconds.',
+      'Switch sides and repeat.'
+    ],
+    secondaryMuscles: ['Legs'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/hip-flexor-stretches'
+  },
+  {
+    id: 10005,
+    name: 'Clamshell',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Lie on your side with hips and knees bent to 90 degrees, feet stacked.',
+      'Keep your feet glued together as you slowly raise your top knee toward the ceiling.',
+      'Do not rotate your hips or lower back; use your glute to lift.',
+      'Hold for 1 second at the top, then slowly lower your knee.',
+      'Perform all reps, then switch sides.'
+    ],
+    secondaryMuscles: ['Glutes'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/clamshell-exercise'
+  },
+  {
+    id: 10006,
+    name: 'Couch Stretch',
+    muscleGroup: 'Corrective',
+    difficulty: 'D',
+    instructions: [
+      'Place your back knee against a wall or couch, pointing your shin straight up.',
+      'Step your opposite leg forward into a lunge stance with your foot flat.',
+      'Slowly bring your torso upright, squeezing your glutes to stretch the hip flexors/quad.',
+      'Hold for 30-60 seconds while breathing deeply.',
+      'Switch legs and repeat.'
+    ],
+    secondaryMuscles: ['Legs', 'Quads'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/couch-stretch'
+  },
+  {
+    id: 10007,
+    name: 'Serratus Push-Up+',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Get into a push-up or forearm plank position, keeping your body in a straight line.',
+      'Without bending your elbows, let your chest sink down toward the floor, pinching your shoulder blades together.',
+      'Push through your hands/forearms to raise your upper back as high as possible, rounding the upper back slightly at the top.',
+      'Hold the top position for 2 seconds.',
+      'Repeat with slow, controlled movements.'
+    ],
+    secondaryMuscles: ['Chest', 'Shoulders'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/serratus-anterior-exercises'
+  },
+  {
+    id: 10008,
+    name: 'Deep Neck Flexor Hold',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Lie on your back on a flat surface without a pillow.',
+      'Perform a chin tuck (pull chin straight down toward floor).',
+      'Lift your head slightly (about 1 inch) off the floor while maintaining the chin tuck.',
+      'Hold this position for 10-15 seconds, focusing on front neck muscles.',
+      'Lower head slowly and relax.'
+    ],
+    secondaryMuscles: ['Neck'],
+    isCorrective: true,
+    externalLink: 'https://www.spine-health.com/wellness/ergonomics/chin-tuck-exercise-neck-pain'
+  },
+  {
+    id: 10009,
+    name: 'Levator Scapulae Stretch',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Sit upright and place your right hand behind your head.',
+      'Place your left hand behind your back or hold onto the bottom of your chair.',
+      'Gently pull your head down and look diagonally toward your right armpit.',
+      'Hold the stretch for 30 seconds when you feel it in the back/side of your neck.',
+      'Repeat on the opposite side.'
+    ],
+    secondaryMuscles: ['Neck', 'Shoulders'],
+    isCorrective: true,
+    externalLink: 'https://www.spine-health.com/wellness/exercise/easy-levator-scapulae-stretches'
+  },
+  {
+    id: 10010,
+    name: 'Standing Hamstring Stretch',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Place one heel on a slightly elevated surface (like a low step).',
+      'Keep your leg straight, foot flexed toward the ceiling.',
+      'Keep your back straight and hinge forward at your hips until you feel a stretch behind your thigh.',
+      'Hold the stretch for 30 seconds.',
+      'Switch sides and repeat.'
+    ],
+    secondaryMuscles: ['Legs'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/hamstring-stretches'
+  },
+  {
+    id: 10011,
+    name: 'Lateral Band Walk',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Place a mini resistance band around your ankles or just above your knees.',
+      'Step your feet out to shoulder-width, creating tension on the band, and lower into a half-squat.',
+      'Take a controlled step sideways with one foot, then follow with the other foot (keep band tense).',
+      'Repeat steps in one direction, then walk back the other way.'
+    ],
+    secondaryMuscles: ['Glutes', 'Legs'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/lateral-band-walk'
+  },
+  {
+    id: 10012,
+    name: 'IT Band Foam Roll',
+    muscleGroup: 'Corrective',
+    difficulty: 'D',
+    instructions: [
+      'Lie on your side with a foam roller positioned under your bottom hip.',
+      'Cross your top leg over and place your top foot flat on the floor for support.',
+      'Slowly roll your outer thigh from just below your hip to just above your knee.',
+      'Pause on tender spots for 20-30 seconds.',
+      'Switch sides and repeat.'
+    ],
+    secondaryMuscles: ['Legs'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/foam-roller-it-band'
+  },
+  {
+    id: 10013,
+    name: 'Side-Lying Leg Raise',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Lie on your side with legs straight and stacked.',
+      'Slowly raise your top leg upward (about 45 degrees), keeping your heel slightly back and foot flexed.',
+      'Hold for 1 second at the top, then slowly lower your leg.',
+      'Focus on using your side hip/glute muscles.',
+      'Perform reps, then switch sides.'
+    ],
+    secondaryMuscles: ['Glutes'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/side-lying-leg-lift'
+  },
+  {
+    id: 10014,
+    name: 'Towel Foot Scrunch',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Sit on a chair with your feet flat on the floor, on top of a flat towel.',
+      'Using only your toes, scrunch the towel up toward your heels.',
+      'Hold the scrunch for 2 seconds, then release your toes.',
+      'Repeat until you have scrunched the length of the towel.',
+      'Switch feet and repeat.'
+    ],
+    secondaryMuscles: ['Feet'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/flat-feet-exercises'
+  },
+  {
+    id: 10015,
+    name: 'Short Foot Arch Lift',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Sit or stand with feet flat on the floor.',
+      'Without curling your toes, attempt to pull the ball of your foot toward your heel.',
+      'Your foot arch should lift off the floor as your foot gets shorter.',
+      'Hold the contraction for 5 seconds.',
+      'Relax and repeat.'
+    ],
+    secondaryMuscles: ['Feet'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/short-foot-exercise'
+  },
+  {
+    id: 10016,
+    name: 'Thoracic Roller Extension',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Lie on your back with a foam roller placed under your mid-back (thoracic spine).',
+      'Support your head with your hands, keeping your hips flat on the floor.',
+      'Gently lean backward over the roller, extending your upper back.',
+      'Hold the extension for 5-10 seconds, then lift up slightly.',
+      'Move the roller slightly up/down and repeat.'
+    ],
+    secondaryMuscles: ['Back', 'Shoulders'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/foam-roller-back-extension'
+  },
+  {
+    id: 10017,
+    name: 'Single-Leg Balance',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Stand with feet hip-width apart, arms at your sides.',
+      'Shift your weight to one foot and lift the opposite foot off the floor.',
+      'Maintain your balance, keeping your hips level and core braced.',
+      'Hold for 30-60 seconds.',
+      'Switch sides and repeat. Close eyes for added difficulty.'
+    ],
+    secondaryMuscles: ['Legs', 'Core'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/balance-exercises'
+  },
+  {
+    id: 10018,
+    name: 'Band Pull-Apart',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Stand upright, holding a resistance band in front of you at shoulder height.',
+      'Keep your arms straight and pull the band apart, squeezing your shoulder blades together.',
+      'The band should touch your chest at the end of the movement.',
+      'Slowly return to the start position with control.'
+    ],
+    secondaryMuscles: ['Shoulders', 'Upper Back'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/band-pull-apart'
+  },
+  {
+    id: 10019,
+    name: 'Band External Rotation',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Hold a resistance band with both hands, palms up, elbows bent to 90 degrees by your sides.',
+      'Keep your elbows pinned to your ribs and rotate your hands outward.',
+      'Squeeze the back of your shoulders at the outer limit.',
+      'Slowly return to the starting position.'
+    ],
+    secondaryMuscles: ['Shoulders'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/shoulder-external-rotation'
+  },
+  {
+    id: 10020,
+    name: 'Scapular Wall Slide',
+    muscleGroup: 'Corrective',
+    difficulty: 'E',
+    instructions: [
+      'Stand with your back, head, and elbows against a wall.',
+      'Slide your shoulder blades down and back, squeezing them together.',
+      'Slide your forearms up the wall slightly, keeping contact.',
+      'Slowly pull elbows down, focusing on lower trap activation.'
+    ],
+    secondaryMuscles: ['Upper Back', 'Shoulders'],
+    isCorrective: true,
+    externalLink: 'https://www.healthline.com/health/scapular-wall-slides'
+  }
+];
+
+exercises.push(...correctiveExercises);
+
 export default exercises;
