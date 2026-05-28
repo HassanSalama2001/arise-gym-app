@@ -8,7 +8,8 @@ import { useAlert } from '../context/AlertContext';
 import posturalIssues, { categories as correctiveCategories } from '../data/posturalIssues';
 import PosturalIssueDetail from '../components/PosturalIssueDetail';
 import BottomSheet from '../components/BottomSheet';
-import CreateCorrectiveSheet from '../components/CreateCorrectiveSheet';
+import CreatePlanSheet from '../components/CreatePlanSheet';
+import CreateCustomExerciseSheet from '../components/CreateCustomExerciseSheet';
 import './WorkoutsScreen.css';
 
 const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
@@ -102,128 +103,6 @@ function PlanCard({ plan, exerciseCount, onDelete, onClick }) {
   );
 }
 
-function CreatePlanSheet({ onClose, onCreated }) {
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  async function handleCreate() {
-    if (!name.trim()) return;
-    setSaving(true);
-    await db.workoutPlans.add({ name: name.trim(), createdAt: Date.now() });
-    setSaving(false);
-    onCreated();
-    onClose();
-  }
-
-  return (
-    <BottomSheet
-      onClose={onClose}
-      title="CREATE PLAN"
-      footer={
-        <div className="sheet-actions" style={{ display: 'flex', gap: 8 }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
-          <button
-            className="btn-primary"
-            onClick={handleCreate}
-            disabled={!name.trim() || saving}
-            style={{ flex: 2 }}
-          >
-            {saving ? 'SAVING...' : 'CREATE'}
-          </button>
-        </div>
-      }
-    >
-      <div className="sheet-field">
-        <label className="section-label" htmlFor="plan-name-input">PLAN NAME</label>
-        <input
-          id="plan-name-input"
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="e.g. Push Day, Full Body..."
-          style={{ marginTop: 8 }}
-          autoFocus
-        />
-      </div>
-    </BottomSheet>
-  );
-}
-
-function CreateExerciseSheet({ onClose, onCreated }) {
-  const [name, setName] = useState('');
-  const [muscleGroup, setMuscleGroup] = useState('Chest');
-  const [saving, setSaving] = useState(false);
-
-  async function handleCreate() {
-    if (!name.trim()) return;
-    setSaving(true);
-    await db.exercises.add({
-      name: name.trim(),
-      muscleGroup,
-      difficulty: 'E',
-      equipment: 'Any',
-      instructions: ['Custom exercise.'],
-      mistakes: [],
-      tips: [],
-      secondaryMuscles: []
-    });
-    setSaving(false);
-    onCreated();
-    onClose();
-  }
-
-  return (
-    <BottomSheet
-      onClose={onClose}
-      title="CREATE EXERCISE"
-      footer={
-        <div className="sheet-actions" style={{ display: 'flex', gap: 8 }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
-          <button
-            className="btn-primary"
-            onClick={handleCreate}
-            disabled={!name.trim() || saving}
-            style={{ flex: 2 }}
-          >
-            {saving ? 'SAVING...' : 'CREATE'}
-          </button>
-        </div>
-      }
-    >
-      <div className="sheet-field">
-        <label className="section-label" htmlFor="ex-name-input">EXERCISE NAME</label>
-        <input
-          id="ex-name-input"
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="e.g. Weighted Pull-Up"
-          style={{ marginTop: 8 }}
-          autoFocus
-        />
-      </div>
-      <div className="sheet-field" style={{ marginTop: 16 }}>
-        <label className="section-label" htmlFor="ex-muscle-select">MUSCLE GROUP</label>
-        <select 
-          id="ex-muscle-select"
-          value={muscleGroup}
-          onChange={e => setMuscleGroup(e.target.value)}
-          style={{ 
-            marginTop: 8, width: '100%', padding: '12px', 
-            background: 'var(--bg-void)', border: '1px solid var(--border)', 
-            color: 'var(--text-primary)', borderRadius: 'var(--radius-sm)',
-            fontFamily: 'var(--font-display)', fontWeight: 700
-          }}
-        >
-          {MUSCLE_GROUPS.filter(g => g !== 'All').map(g => (
-            <option key={g} value={g}>{g}</option>
-          ))}
-        </select>
-      </div>
-    </BottomSheet>
-  );
-}
-
 export default function WorkoutsScreen() {
   const { showConfirm, showToast } = useAlert();
   const navigate = useNavigate();
@@ -299,18 +178,6 @@ export default function WorkoutsScreen() {
               </svg>
             </button>
           )}
-          {activeTab === 'exercises' && (
-            <button
-              className="icon-btn"
-              onClick={() => setShowCreateExercise(true)}
-              aria-label="Create Exercise"
-              id="create-exercise-btn"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
-          )}
         </div>
 
         {/* Tab Pills */}
@@ -377,6 +244,16 @@ export default function WorkoutsScreen() {
               {/* Exercise count */}
               <div className="results-count">
                 <span className="section-label">{filtered.length} EXERCISES</span>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <button 
+                  className="btn-ghost" 
+                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  onClick={() => setShowCreateExercise(true)}
+                >
+                  + ADD CUSTOM EXERCISE
+                </button>
               </div>
 
               {/* Exercise list */}
@@ -629,7 +506,7 @@ export default function WorkoutsScreen() {
       {/* Create Exercise Sheet */}
       <AnimatePresence>
         {showCreateExercise && (
-          <CreateExerciseSheet
+          <CreateCustomExerciseSheet
             onClose={() => setShowCreateExercise(false)}
             onCreated={() => {}}
           />
