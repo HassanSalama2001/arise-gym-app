@@ -465,7 +465,7 @@ export default function WorkoutsScreen() {
 
               {/* All Issues Library */}
               <div className="section mt-24">
-                <span className="section-label">POSTURAL LIBRARY</span>
+                <span className="section-label">POSTURAL LIBRARY ({allPosturalIssues.filter(issue => correctiveFilter === 'All' || issue.category === correctiveFilter).length})</span>
                 <div className="plans-list mt-8">
                   {allPosturalIssues
                     .filter(issue => correctiveFilter === 'All' || issue.category === correctiveFilter)
@@ -504,7 +504,10 @@ export default function WorkoutsScreen() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="plans-list mt-8">
+              <div className="section mt-16" style={{ marginBottom: 8 }}>
+                <span className="section-label">DISCOVER TEMPLATES ({templates.length})</span>
+              </div>
+              <div className="plans-list">
                 {templates.map(tpl => (
                   <div key={tpl.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div>
