@@ -213,18 +213,6 @@ export default function WorkoutsScreen() {
         {/* Header */}
         <div className="workouts-header">
           <h1 className="screen-title">WORKOUTS</h1>
-          {activeTab === 'plans' && (
-            <button
-              className="icon-btn"
-              onClick={() => setShowCreatePlan(true)}
-              aria-label="Create Plan"
-              id="create-plan-btn"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
-          )}
         </div>
 
         {/* Tab Pills */}
@@ -356,34 +344,43 @@ export default function WorkoutsScreen() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
+              <div style={{ marginBottom: 16 }}>
+                <button 
+                  className="btn-ghost" 
+                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  onClick={() => setShowCreatePlan(true)}
+                >
+                  + CREATE NEW PLAN
+                </button>
+              </div>
+
               {plans && plans.length > 0 ? (
-                <div className="plans-list">
-                  {plans.map(plan => (
-                    <PlanCard
-                      key={plan.id}
-                      plan={plan}
-                      exerciseCount={planExerciseCount[plan.id] || 0}
-                      onDelete={handleDeletePlan}
-                      onClick={async () => {
-                        const confirmed = await showConfirm(`Start training with "${plan.name}"?`, 'Start Workout?');
-                        if (confirmed) {
-                          navigate('/log', { state: { planId: plan.id } });
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="section mt-16" style={{ marginBottom: 8 }}>
+                    <span className="section-label">MY TRAINING PLANS ({plans.length})</span>
+                  </div>
+                  <div className="plans-list">
+                    {plans.map(plan => (
+                      <PlanCard
+                        key={plan.id}
+                        plan={plan}
+                        exerciseCount={planExerciseCount[plan.id] || 0}
+                        onDelete={handleDeletePlan}
+                        onClick={async () => {
+                          const confirmed = await showConfirm(`Start training with "${plan.name}"?`, 'Start Workout?');
+                          if (confirmed) {
+                            navigate('/log', { state: { planId: plan.id } });
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="empty-state">
                   <span style={{ fontSize: 40 }}>📋</span>
                   <p>No plans yet</p>
-                  <span className="section-label">Tap + to create your first plan</span>
-                  <button
-                    className="btn-primary"
-                    style={{ marginTop: 16, width: 'auto', padding: '12px 32px' }}
-                    onClick={() => setShowCreatePlan(true)}
-                    id="create-first-plan-btn"
-                  >CREATE PLAN</button>
+                  <span className="section-label">Create your first custom training plan above</span>
                 </div>
               )}
             </motion.div>
