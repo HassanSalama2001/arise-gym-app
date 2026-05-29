@@ -178,7 +178,12 @@ export default function WorkoutsScreen() {
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
   const plans = useLiveQuery(async () => {
     const list = await db.workoutPlans.toArray();
-    return list.sort((a, b) => a.name.localeCompare(b.name));
+    return list.sort((a, b) => {
+      const timeA = a.createdAt || 0;
+      const timeB = b.createdAt || 0;
+      if (timeB !== timeA) return timeB - timeA;
+      return a.name.localeCompare(b.name);
+    });
   }, []);
   const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
 
