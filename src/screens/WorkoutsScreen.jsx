@@ -166,7 +166,9 @@ export default function WorkoutsScreen() {
   const trackedIssues = useLiveQuery(() => db.userPosturalIssues.toArray(), []);
   const customIssues = useLiveQuery(() => db.customPosturalIssues.toArray(), []) || [];
   
-  const allPosturalIssues = useMemo(() => [...posturalIssues, ...customIssues], [customIssues]);
+  const allPosturalIssues = useMemo(() => {
+    return [...posturalIssues, ...customIssues].sort((a, b) => a.name.localeCompare(b.name));
+  }, [customIssues]);
 
   // Reset pagination when searching or filtering
   React.useEffect(() => {
@@ -174,7 +176,10 @@ export default function WorkoutsScreen() {
   }, [search, filter]);
 
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
-  const plans = useLiveQuery(() => db.workoutPlans.orderBy('createdAt').reverse().toArray(), []);
+  const plans = useLiveQuery(async () => {
+    const list = await db.workoutPlans.toArray();
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
   const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
 
   const isLoading = exercises === undefined;
@@ -188,6 +193,7 @@ export default function WorkoutsScreen() {
         const matchFilter = filter === 'All' || ex.muscleGroup === filter;
         return matchSearch && matchFilter;
       });
+      return res.sort((a, b) => a.name.localeCompare(b.name));
     } catch (e) {
       console.error('Filter error:', e);
       return [];
@@ -508,7 +514,7 @@ export default function WorkoutsScreen() {
                 <span className="section-label">DISCOVER TEMPLATES ({templates.length})</span>
               </div>
               <div className="plans-list">
-                {templates.map(tpl => (
+                {templates.slice().sort((a, b) => a.name.localeCompare(b.name)).map(tpl => (
                   <div key={tpl.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div>
                       <h3 style={{ fontSize: 18, color: 'var(--text-primary)' }}>{tpl.name}</h3>
