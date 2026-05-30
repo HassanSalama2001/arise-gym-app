@@ -113,3 +113,32 @@ export function playAchievementSound() {
     console.error('Audio play failed', e);
   }
 }
+
+// Bright alert chord for reminders (water, meals, etc.)
+export function playNotificationSound() {
+  try {
+    const ctx = getAudioContext();
+    const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5 major triad
+    const now = ctx.currentTime;
+    
+    frequencies.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + idx * 0.05 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.8);
+      
+      osc.start(now);
+      osc.stop(now + idx * 0.05 + 0.8);
+    });
+  } catch (e) {
+    console.error('Audio play failed', e);
+  }
+}

@@ -2,10 +2,15 @@ import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { seedDatabase } from './db/seed';
+import { syncMealSuggestions } from './utils/nutritionApi';
+import { startNotificationScheduler, stopNotificationScheduler } from './utils/notifications';
 import BottomNav from './components/BottomNav';
 import SplashScreen from './components/SplashScreen';
 import AchievementPopup from './components/AchievementPopup';
 import { AlertProvider } from './context/AlertContext';
+import { WorkoutProvider } from './context/WorkoutContext';
+import ActiveWorkoutFAB from './components/ActiveWorkoutFAB';
+
 
 const HomeScreen = lazy(() => import('./screens/HomeScreen'));
 const WorkoutsScreen = lazy(() => import('./screens/WorkoutsScreen'));
@@ -16,6 +21,7 @@ const ProgressScreen = lazy(() => import('./screens/ProgressScreen'));
 const ProfileScreen = lazy(() => import('./screens/ProfileScreen'));
 const LoginScreen = lazy(() => import('./screens/LoginScreen'));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
+const MealTrackerScreen = lazy(() => import('./screens/MealTrackerScreen'));
 
 import { supabase } from './db/supabaseClient';
 import db from './db/db';
@@ -51,6 +57,7 @@ function AnimatedRoutes() {
           <Route path="/progress" element={<PageWrapper><ProgressScreen /></PageWrapper>} />
           <Route path="/profile" element={<PageWrapper><ProfileScreen /></PageWrapper>} />
           <Route path="/settings" element={<PageWrapper><SettingsScreen /></PageWrapper>} />
+          <Route path="/meals" element={<PageWrapper><MealTrackerScreen /></PageWrapper>} />
           <Route path="/login" element={<PageWrapper><LoginScreen onGuest={() => navigate('/profile')} onLogin={() => navigate('/profile')} /></PageWrapper>} />
         </Routes>
       </Suspense>
@@ -89,6 +96,7 @@ export default function App() {
       // 1. Local-First: Initialize database from local files/defaults
       try {
         await seedDatabase();
+        await syncMealSuggestions();
       } catch (err) {
         console.error('Database seeding failed:', err);
       }
@@ -132,6 +140,8 @@ export default function App() {
       
       // Auto-sync when app goes to background
       document.addEventListener('visibilitychange', handleVisibilityChange);
+      // Start the notification scheduler for water and meals
+      startNotificationScheduler();
     }
     
     init();
@@ -139,6 +149,7 @@ export default function App() {
     return () => {
       if (authSubscription) authSubscription.unsubscribe();
       if (splashTimeout) clearTimeout(splashTimeout);
+      stopNotificationScheduler();
       window.removeEventListener('online', syncIfPossible);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -153,11 +164,14 @@ export default function App() {
 
   return (
     <AlertProvider>
-      <HashRouter>
-        <AnimatedRoutes />
-        <BottomNav />
-        <AchievementPopup />
-      </HashRouter>
+      <WorkoutProvider>
+        <HashRouter>
+          <AnimatedRoutes />
+          <ActiveWorkoutFAB />
+          <BottomNav />
+          <AchievementPopup />
+        </HashRouter>
+      </WorkoutProvider>
     </AlertProvider>
   );
 }

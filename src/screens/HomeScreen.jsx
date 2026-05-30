@@ -57,28 +57,69 @@ function StreakRing({ streak }) {
   );
 }
 
+let isCheckingQuests = false;
+
 export default function HomeScreen() {
   const navigate = useNavigate();
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const achievements = useLiveQuery(() => db.achievements.orderBy('id').reverse().limit(3).toArray(), []);
   const quests = useLiveQuery(() => db.dailyQuests.where('date').equals(getToday()).toArray(), []);
 
+  const todayStr = getToday();
+  const loggedMeals = useLiveQuery(() => db.meals.where('date').equals(todayStr).toArray(), [todayStr]);
+  const loggedHydration = useLiveQuery(() => db.hydration.where('date').equals(todayStr).toArray(), [todayStr]);
+
+  const totalCalories = useMemo(() => {
+    if (!loggedMeals) return 0;
+    return loggedMeals.reduce((acc, m) => acc + (parseFloat(m.calories) || 0), 0);
+  }, [loggedMeals]);
+
+  const totalWater = useMemo(() => {
+    if (!loggedHydration) return 0;
+    return loggedHydration.reduce((acc, h) => acc + (parseInt(h.amountMl) || 0), 0);
+  }, [loggedHydration]);
+
   useEffect(() => {
     let cancelled = false;
     async function checkQuests() {
+      if (isCheckingQuests) return;
       const today = getToday();
+
+      // Self-healing: Deduplicate existing quests if any duplicates exist in DB
+      try {
+        const todayQuests = await db.dailyQuests.where('date').equals(today).toArray();
+        const uniqueTypes = new Set();
+        const duplicatesToDelete = [];
+        for (const q of todayQuests) {
+          if (uniqueTypes.has(q.type)) {
+            duplicatesToDelete.push(q.id);
+          } else {
+            uniqueTypes.add(q.type);
+          }
+        }
+        if (duplicatesToDelete.length > 0) {
+          await db.dailyQuests.bulkDelete(duplicatesToDelete);
+        }
+      } catch (err) {
+        console.error('Failed to deduplicate daily quests:', err);
+      }
+
       const existing = await db.dailyQuests.where('date').equals(today).count();
       if (existing === 0 && !cancelled) {
-        const newQuests = generateDailyQuests(today);
-        const recheck = await db.dailyQuests.where('date').equals(today).count();
-        if (recheck === 0 && !cancelled) {
-          await db.dailyQuests.bulkAdd(newQuests);
+        isCheckingQuests = true;
+        try {
+          const newQuests = generateDailyQuests(today);
+          const recheck = await db.dailyQuests.where('date').equals(today).count();
+          if (recheck === 0 && !cancelled) {
+            await db.dailyQuests.bulkAdd(newQuests);
+          }
+        } catch (err) {
+          console.error('Failed to generate daily quests:', err);
+        } finally {
+          isCheckingQuests = false;
         }
       }
     }
-    
-    // Initial check
-    checkQuests();
 
     // Setup midnight countdown and periodic check
     function update() {
@@ -339,6 +380,38 @@ export default function HomeScreen() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Nutrition Chamber Card */}
+        <motion.div
+          className="nutrition-card card mt-24"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <div className="nutrition-card-header">
+            <h3 className="nutrition-card-title">NUTRITION CHAMBER</h3>
+            <span style={{ fontSize: 20 }}>🍎</span>
+          </div>
+
+          <div className="nutrition-card-stats">
+            <div className="nutrition-stat-pill">
+              <span className="nutrition-stat-label section-label">CALORIES LOGGED</span>
+              <div className="nutrition-stat-value">
+                {Math.round(totalCalories)} <span className="nutrition-stat-unit">kcal</span>
+              </div>
+            </div>
+            <div className="nutrition-stat-pill">
+              <span className="nutrition-stat-label section-label">WATER INTAKE</span>
+              <div className="nutrition-stat-value">
+                {totalWater} <span className="nutrition-stat-unit">/ 3000 ml</span>
+              </div>
+            </div>
+          </div>
+
+          <button className="btn-ghost mt-8" onClick={() => navigate('/meals')} style={{ minHeight: 40, width: '100%' }}>
+            ACCESS CHAMBER
+          </button>
+        </motion.div>
 
         {/* Daily Quests */}
         <motion.div

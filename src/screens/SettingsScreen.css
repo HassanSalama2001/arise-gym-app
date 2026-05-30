@@ -219,3 +219,91 @@ input:checked + .toggle-slider:before {
   color: var(--accent-blue);
   box-shadow: 0 0 12px var(--accent-blue-dim);
 }
+
+/* Custom Input and Select for Settings */
+.settings-input, .settings-select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.settings-input:focus, .settings-select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 8px var(--accent-blue-dim);
+}
+
+/* Recommendation Banner */
+.recommendation-banner {
+  background: rgba(79, 195, 247, 0.1);
+  border: 1px solid rgba(79, 195, 247, 0.3);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recommendation-banner.warning {
+  background: rgba(255, 68, 68, 0.05);
+  border-color: rgba(255, 68, 68, 0.2);
+}
+
+.recommendation-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.recommendation-text strong {
+  color: var(--accent-blue);
+}
+
+.recommendation-banner.warning .recommendation-text {
+  color: var(--text-secondary);
+}
+
+/* Goals Grid */
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.goal-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goal-input-box.full-width {
+  grid-column: span 2;
+}
+
+.goal-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.goal-input-unit {
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.goal-input-wrapper .settings-input {
+  padding-right: 48px;
+}
+

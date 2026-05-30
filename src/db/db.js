@@ -36,4 +36,10 @@ db.version(5).stores({
   customPosturalIssues: 'id, name, category, icon, severity, timeline, targetSessionsDefault'
 });
 
+db.version(6).stores({
+  meals: '++id, date, type',
+  hydration: '++id, date',
+  mealSuggestions: '++id, mealType'
+});
+
 export default db;

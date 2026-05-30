@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useWorkout } from '../context/WorkoutContext';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
@@ -36,7 +37,7 @@ function ElapsedTimer({ startTime }) {
   );
 }
 
-function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDelete, unitPreference, onRpeClick }) {
+function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDelete, unitPreference, onRpeClick, lastSetData }) {
   const typeColors = { normal: 'var(--text-primary)', warmup: 'var(--accent-gold)', drop: 'var(--accent-red)' };
   const typeLabels = { normal: index + 1, warmup: 'W', drop: 'D' };
   
@@ -67,7 +68,7 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
           type="number"
           inputMode="decimal"
           className="set-input weight-input"
-          placeholder="0"
+          placeholder={lastSetData ? `${lastSetData.weight}` : "0"}
           value={set.weight || ''}
           onChange={e => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
           disabled={set.completed}
@@ -80,7 +81,7 @@ function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDel
         type="number"
         inputMode="decimal"
         className="set-input reps-input"
-        placeholder="0"
+        placeholder={lastSetData ? `${lastSetData.reps}` : "0"}
         value={set.reps || ''}
         onChange={e => onUpdate({ reps: parseInt(e.target.value) || 0 })}
         disabled={set.completed}
@@ -231,28 +232,83 @@ function LogSetupScreen({ onStart }) {
 export default function LogWorkoutScreen() {
   const { showAlert, showConfirm, showToast } = useAlert();
   const navigate = useNavigate();
-  const [phase, setPhase] = useState('setup'); // 'setup' | 'active'
+  
+  // Use global workout context for state persistence
+  const { workoutState, startWorkout, updateSets, updateBlocks, setCurrentExIdx, endWorkout, updateTotalXP } = useWorkout();
+  const { phase, sessionId, startTime, currentExIdx, sets, blocks, totalXP } = workoutState;
+
   const [workoutConfig, setWorkoutConfig] = useState(null);
   const [initialQuests, setInitialQuests] = useState([]);
   const toastedQuests = useRef(new Set());
 
-  // Active workout state
-  const [sessionId, setSessionId] = useState(null);
-  const [startTime, setStartTime] = useState(null);
-  const [currentExIdx, setCurrentExIdx] = useState(0);
-  const [sets, setSets] = useState({}); // { [exerciseId]: [{ weight, reps, completed }] }
+  // Active workout UI state
   const [showJump, setShowJump] = useState(false);
   const [showRest, setShowRest] = useState(false);
   const [plateCalcWeight, setPlateCalcWeight] = useState(null);
   const [xpToasts, setXpToasts] = useState([]);
-  const [totalXP, setTotalXP] = useState(0);
   const [addExSheet, setAddExSheet] = useState(false);
   const [rpePrompt, setRpePrompt] = useState(null); // { exId, setIdx }
   const [selectedExerciseDetails, setSelectedExerciseDetails] = useState(null);
 
-  // For quick start — dynamic exercise list
-  // For quick start — dynamic exercise list
-  const [blocks, setBlocks] = useState([]); // Array of blocks. A block is an array of exercises: [ex1, ex2]
+  // Sync initialQuests on mount if active workout is running
+  useEffect(() => {
+    if (phase === 'active' && initialQuests.length === 0) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      db.dailyQuests.where('date').equals(todayStr).toArray().then(quests => {
+        setInitialQuests(quests);
+      }).catch(err => console.error('Failed to load initial quests on reload:', err));
+    }
+  }, [phase, initialQuests.length]);
+
+  const [lastWorkoutSets, setLastWorkoutSets] = useState({}); // { [exerciseId]: [{ weight, reps }] }
+
+  // Fetch last completed session's sets for exercises in the current block
+  useEffect(() => {
+    if (!blocks || blocks.length === 0 || !blocks[currentExIdx]) return;
+    
+    const currentBlockExs = blocks[currentExIdx];
+    let active = true;
+
+    async function fetchLastSets() {
+      const results = {};
+      try {
+        for (const ex of currentBlockExs) {
+          // Find completed sets for this exercise, excluding current session
+          const allCompletedSets = await db.sets
+            .where('exerciseId')
+            .equals(ex.id)
+            .filter(s => s.completed === 1 && s.sessionId !== sessionId)
+            .toArray();
+
+          if (allCompletedSets.length > 0) {
+            // Group by sessionId to find the most recent session
+            const maxSessionId = Math.max(...allCompletedSets.map(s => s.sessionId));
+            
+            const lastSets = allCompletedSets
+              .filter(s => s.sessionId === maxSessionId)
+              .sort((a, b) => a.setNumber - b.setNumber);
+
+            results[ex.id] = lastSets.map(s => ({
+              weight: s.weight,
+              reps: s.reps
+            }));
+          }
+        }
+        if (active) {
+          setLastWorkoutSets(prev => ({ ...prev, ...results }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch last workout sets:', err);
+      }
+    }
+
+    fetchLastSets();
+
+    return () => {
+      active = false;
+    };
+  }, [blocks, currentExIdx, sessionId]);
+
   const allExercises = useLiveQuery(() => db.exercises.toArray(), []);
   const profile = useLiveQuery(() => db.playerProfile.get('profile'));
 
@@ -335,10 +391,7 @@ export default function LogWorkoutScreen() {
     const cooldownBlocks = cooldownCorrectiveExs.map(ex => [ex]);
     const initialBlocks = [...warmupBlocks, ...planBlocks, ...cooldownBlocks];
     
-    setBlocks(initialBlocks);
-    
     const now = Date.now();
-    setStartTime(now);
     
     // Create session record
     const sid = await db.sessions.add({
@@ -347,7 +400,6 @@ export default function LogWorkoutScreen() {
       startTime: now,
       endTime: null,
     });
-    setSessionId(sid);
     
     // Init sets for all exercises
     const initSets = {};
@@ -357,9 +409,14 @@ export default function LogWorkoutScreen() {
     
     // Merge corrective sets
     const finalSets = { ...initSets, ...correctiveSets };
-    setSets(finalSets);
     
-    setPhase('active');
+    startWorkout({
+      planName: config.planName,
+      sessionId: sid,
+      startTime: now,
+      blocks: initialBlocks,
+      sets: finalSets
+    });
   }
 
   const currentBlock = blocks[currentExIdx] || [];
@@ -367,7 +424,7 @@ export default function LogWorkoutScreen() {
   function getExSets(exId) { return sets[exId] || [{ weight: 0, reps: 0, type: 'normal', completed: false }]; }
 
   function updateSet(exId, setIdx, changes) {
-    setSets(prev => {
+    updateSets(prev => {
       const exSets = [...(prev[exId] || [])];
       exSets[setIdx] = { ...exSets[setIdx], ...changes };
       return { ...prev, [exId]: exSets };
@@ -414,7 +471,7 @@ export default function LogWorkoutScreen() {
     const bonus = isPR ? 100 : 0;
     const earned = xp + bonus;
     if (earned > 0) {
-      setTotalXP(prev => prev + earned);
+      updateTotalXP(prev => prev + earned);
       showXPToast(earned);
     }
 
@@ -509,7 +566,7 @@ export default function LogWorkoutScreen() {
 
     // Auto-add next set row
     setTimeout(() => {
-      setSets(prev => {
+      updateSets(prev => {
         const exSets = [...(prev[exId] || [])];
         const allDone = exSets.every(s => s.completed);
         if (allDone) {
@@ -521,7 +578,7 @@ export default function LogWorkoutScreen() {
   }
 
   function addSetToBlock() {
-    setSets(prev => {
+    updateSets(prev => {
       const next = { ...prev };
       currentBlock.forEach(ex => {
         const exSets = next[ex.id] || [];
@@ -533,7 +590,7 @@ export default function LogWorkoutScreen() {
   }
 
   function deleteSet(exId, setIdx) {
-    setSets(prev => {
+    updateSets(prev => {
       const next = { ...prev };
       if (currentBlock.length > 1) {
         // Superset block: delete this round (setIdx) for all exercises in the current block
@@ -566,8 +623,8 @@ export default function LogWorkoutScreen() {
       return;
     }
     const blockExs = blocks[blockIdx] || [];
-    setBlocks(prev => prev.filter((_, idx) => idx !== blockIdx));
-    setSets(prev => {
+    updateBlocks(prev => prev.filter((_, idx) => idx !== blockIdx));
+    updateSets(prev => {
       const next = { ...prev };
       blockExs.forEach(ex => {
         delete next[ex.id];
@@ -771,13 +828,19 @@ export default function LogWorkoutScreen() {
       console.error('Failed to log corrective progress:', err);
     }
 
+    const finalXPApplied = finalXP + questXPEarned;
+    const finalDuration = Date.now() - startTime;
+
+    // Reset global workout state
+    endWorkout();
+
     // Navigate to mission complete
     navigate('/mission-complete', { 
       state: { 
         sessionId, 
-        finalXP: finalXP + questXPEarned, 
+        finalXP: finalXPApplied, 
         totalVol, 
-        duration: Date.now() - startTime, 
+        duration: finalDuration, 
         prevXP: profile?.totalXP || 0, 
         prevProfile: profile,
         prevQuests,
@@ -793,6 +856,7 @@ export default function LogWorkoutScreen() {
       await db.sets.where('sessionId').equals(sessionId).delete();
       await db.sessions.delete(sessionId);
     }
+    endWorkout();
     navigate('/');
   }
 
@@ -816,7 +880,7 @@ export default function LogWorkoutScreen() {
             <button 
               className="current-ex-name" 
               onClick={() => setSelectedExerciseDetails(currentBlock[0])} 
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', appearance: 'none', color: 'inherit', font: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', appearance: 'none', color: 'inherit', font: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 6 }}
               title="View Exercise Details"
             >
               {currentBlock[0].name}
@@ -926,6 +990,7 @@ export default function LogWorkoutScreen() {
                             onPlateCalc={() => setPlateCalcWeight(s.weight)}
                             onDelete={() => deleteSet(ex.id, roundIdx)}
                             unitPreference={profile?.unitPreference || 'kg'}
+                            lastSetData={lastWorkoutSets[ex.id] ? (lastWorkoutSets[ex.id][roundIdx] || lastWorkoutSets[ex.id][lastWorkoutSets[ex.id].length - 1]) : null}
                           />
                         </div>
                       );

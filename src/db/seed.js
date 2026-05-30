@@ -32,7 +32,17 @@ export async function seedDatabase() {
           lastSessionDate: null,
           unitPreference: 'kg',
           defaultRestDuration: 60,
-          hapticEnabled: true
+          hapticEnabled: true,
+          gender: null,
+          dob: null,
+          height: null,
+          activityLevel: null,
+          calorieGoal: null,
+          proteinGoal: null,
+          carbsGoal: null,
+          fatGoal: null,
+          waterGoal: 3000,
+          nutritionGoalType: null
         });
       }
     } catch (error) {

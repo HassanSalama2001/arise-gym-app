@@ -346,3 +346,84 @@
   color: var(--accent-blue);
   box-shadow: 0 0 12px var(--accent-blue-glow);
 }
+
+/* InBody progression section */
+.inbody-progression-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.inbody-delta-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.delta-badge {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.delta-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+.delta-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.delta-diff {
+  font-size: 10px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.delta-badge.positive .delta-diff {
+  color: var(--success);
+}
+
+.delta-badge.negative .delta-diff {
+  color: var(--accent-red);
+}
+
+.inbody-chart-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.chart-selector-dropdown {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.chart-selector-dropdown:focus {
+  border-color: var(--accent-blue);
+}
+

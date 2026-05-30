@@ -6,6 +6,15 @@ import { supabase } from '../db/supabaseClient';
 import { backupToCloud, restoreFromCloud } from '../db/sync';
 import { useAlert } from '../context/AlertContext';
 import './SettingsScreen.css';
+import { 
+  calculateBMR, 
+  calculateTDEE, 
+  determineGoal, 
+  calculateCalorieTarget, 
+  calculateMacroTargets, 
+  lbsToKg,
+  calculateAge 
+} from '../utils/calorieEngine';
 
 export default function SettingsScreen() {
   const { showAlert, showConfirm, showPrompt } = useAlert();
@@ -15,6 +24,122 @@ export default function SettingsScreen() {
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
   const [exportMsg, setExportMsg] = useState('');
+
+  const [autoActivity, setAutoActivity] = useState('sedentary');
+  const [latestWeight, setLatestWeight] = useState(null);
+  const [latestBf, setLatestBf] = useState(null);
+  const [heightFt, setHeightFt] = useState('');
+  const [heightIn, setHeightIn] = useState('');
+  const [heightCm, setHeightCm] = useState('');
+
+  // 1. Fetch recent sessions to auto-detect activity level
+  useEffect(() => {
+    const detectActivity = async () => {
+      try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentSessions = await db.sessions
+          .where('date')
+          .above(thirtyDaysAgo.toISOString().split('T')[0])
+          .toArray();
+        const count = recentSessions.length;
+        if (count >= 6) setAutoActivity('active');
+        else if (count >= 4) setAutoActivity('moderate');
+        else if (count >= 2) setAutoActivity('light');
+        else setAutoActivity('sedentary');
+      } catch (e) {
+        console.error("Failed to detect activity level:", e);
+      }
+    };
+    detectActivity();
+  }, [profile]);
+
+  // 2. Fetch latest InBody scan or bodyWeight for weight & fat%
+  useEffect(() => {
+    const fetchBiometrics = async () => {
+      try {
+        const scan = await db.inbodyScans.orderBy('date').reverse().first();
+        if (scan?.weight) {
+          setLatestWeight({ val: scan.weight, source: 'inbody' });
+          if (scan.bf) {
+            setLatestBf(scan.bf);
+          } else {
+            setLatestBf(null);
+          }
+          return;
+        }
+        const bw = await db.bodyWeight.orderBy('date').reverse().first();
+        if (bw?.weight) {
+          setLatestWeight({ val: bw.weight, source: 'weight' });
+          setLatestBf(null);
+          return;
+        }
+        setLatestWeight(null);
+        setLatestBf(null);
+      } catch (e) {
+        console.error("Failed to fetch biometrics:", e);
+      }
+    };
+    fetchBiometrics();
+  }, [profile]);
+
+  // 3. Keep height inputs sync'd with database value
+  useEffect(() => {
+    if (profile && profile.height) {
+      setHeightCm(profile.height);
+      const totalInches = profile.height / 2.54;
+      const ft = Math.floor(totalInches / 12);
+      const inch = Math.round(totalInches % 12);
+      setHeightFt(ft);
+      setHeightIn(inch);
+    } else {
+      setHeightCm('');
+      setHeightFt('');
+      setHeightIn('');
+    }
+  }, [profile?.height]);
+
+  // 4. Recommendation derivation
+  const isProfileComplete = profile?.gender && profile?.dob && profile?.height && latestWeight;
+  let recommendedGoal = 'maintain';
+  let recommendedCalories = 2000;
+  let recommendedMacros = { protein: 120, carbs: 200, fat: 60 };
+
+  if (isProfileComplete) {
+    const age = calculateAge(profile.dob);
+    const weightKg = profile.unitPreference === 'lbs' ? lbsToKg(latestWeight.val) : latestWeight.val;
+    const bmr = calculateBMR(weightKg, profile.height, age, profile.gender);
+    const actLevel = profile.activityLevel || autoActivity;
+    const tdee = calculateTDEE(bmr, actLevel);
+    recommendedGoal = latestBf ? determineGoal(latestBf, profile.gender) : 'maintain';
+    recommendedCalories = calculateCalorieTarget(tdee, recommendedGoal);
+    recommendedMacros = calculateMacroTargets(recommendedCalories, weightKg, recommendedGoal);
+  }
+
+  async function applyRecommendation() {
+    if (!isProfileComplete) return;
+    await db.playerProfile.update('profile', {
+      calorieGoal: recommendedCalories,
+      proteinGoal: recommendedMacros.protein,
+      carbsGoal: recommendedMacros.carbs,
+      fatGoal: recommendedMacros.fat,
+      waterGoal: 3000,
+      nutritionGoalType: recommendedGoal
+    });
+    showAlert(`Successfully set targets to recommended: ${recommendedCalories} kcal (${recommendedGoal.toUpperCase()})`, "Targets Applied");
+  }
+
+  async function resetGoals() {
+    await db.playerProfile.update('profile', {
+      calorieGoal: null,
+      proteinGoal: null,
+      carbsGoal: null,
+      fatGoal: null,
+      waterGoal: 3000,
+      nutritionGoalType: null
+    });
+    showAlert("Nutrition goals reset to default.", "Goals Reset");
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -341,6 +466,288 @@ export default function SettingsScreen() {
                 <span className="toggle-slider"></span>
               </label>
             </div>
+          </div>
+        </div>
+
+        {/* Section: Body Profile */}
+        <div className="settings-section mt-24">
+          <span className="section-label">BODY PROFILE</span>
+          <div className="settings-card card mt-8" style={{ gap: 16 }}>
+            {/* Gender */}
+            <div className="settings-row">
+              <div className="settings-info">
+                <span className="settings-title">Gender</span>
+                <span className="settings-desc">Used for biological BMR & score calculations</span>
+              </div>
+              <div className="tab-pills" style={{ margin: 0 }}>
+                <button 
+                  className={`tab-pill ${profile.gender === 'male' ? 'active' : ''}`}
+                  onClick={() => updateSetting('gender', 'male')}
+                >
+                  MALE
+                </button>
+                <button 
+                  className={`tab-pill ${profile.gender === 'female' ? 'active' : ''}`}
+                  onClick={() => updateSetting('gender', 'female')}
+                >
+                  FEMALE
+                </button>
+              </div>
+            </div>
+
+            {/* Date of Birth */}
+            <div className="settings-row">
+              <div className="settings-info">
+                <span className="settings-title">Date of Birth</span>
+                <span className="settings-desc">Used to determine age</span>
+              </div>
+              <div style={{ width: '150px' }}>
+                <input 
+                  type="date"
+                  className="settings-input"
+                  value={profile.dob || ''}
+                  onChange={(e) => updateSetting('dob', e.target.value || null)}
+                />
+              </div>
+            </div>
+
+            {/* Height */}
+            <div className="settings-row">
+              <div className="settings-info">
+                <span className="settings-title">Height</span>
+                <span className="settings-desc">Stored in cm: {profile.height ? `${profile.height} cm` : 'Not set'}</span>
+              </div>
+              <div style={{ width: '150px' }}>
+                {profile.unitPreference === 'lbs' ? (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <input 
+                        type="number"
+                        placeholder="ft"
+                        className="settings-input"
+                        style={{ paddingRight: '16px' }}
+                        value={heightFt}
+                        onChange={e => {
+                          const ft = parseInt(e.target.value) || 0;
+                          setHeightFt(e.target.value);
+                          const cm = Math.round(((ft * 12) + (parseInt(heightIn) || 0)) * 2.54);
+                          setHeightCm(cm);
+                          updateSetting('height', cm > 0 ? cm : null);
+                        }}
+                      />
+                    </div>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <input 
+                        type="number"
+                        placeholder="in"
+                        className="settings-input"
+                        style={{ paddingRight: '16px' }}
+                        value={heightIn}
+                        onChange={e => {
+                          const inch = parseInt(e.target.value) || 0;
+                          setHeightIn(e.target.value);
+                          const cm = Math.round((((parseInt(heightFt) || 0) * 12) + inch) * 2.54);
+                          setHeightCm(cm);
+                          updateSetting('height', cm > 0 ? cm : null);
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type="number"
+                      placeholder="cm"
+                      className="settings-input"
+                      style={{ paddingRight: '32px' }}
+                      value={heightCm}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) || 0;
+                        setHeightCm(e.target.value);
+                        updateSetting('height', val > 0 ? val : null);
+                      }}
+                    />
+                    <span style={{ position: 'absolute', right: 8, fontSize: 12, color: 'var(--text-muted)' }}>cm</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Activity Level */}
+            <div className="settings-row">
+              <div className="settings-info">
+                <span className="settings-title">Activity Level</span>
+                <span className="settings-desc">To determine daily calorie multipliers</span>
+              </div>
+              <div style={{ width: '180px' }}>
+                <select 
+                  className="settings-select"
+                  value={profile.activityLevel || ''}
+                  onChange={(e) => updateSetting('activityLevel', e.target.value || null)}
+                >
+                  <option value="">Auto-Detect (Suggested: {autoActivity.toUpperCase()})</option>
+                  <option value="sedentary">Sedentary (No exercise)</option>
+                  <option value="light">Light (1-3 workouts/week)</option>
+                  <option value="moderate">Moderate (3-5 workouts/week)</option>
+                  <option value="active">Active (6-7 workouts/week)</option>
+                  <option value="very_active">Very Active (Heavy training)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Nutrition Goals */}
+        <div className="settings-section mt-24">
+          <span className="section-label">NUTRITION GOALS</span>
+          <div className="settings-card card mt-8">
+            {isProfileComplete ? (
+              <div className="recommendation-banner">
+                <div className="recommendation-text">
+                  Based on your body stats and {latestWeight.source === 'inbody' ? 'latest InBody scan' : 'latest weight'}, we recommend a <strong>{recommendedGoal.toUpperCase()}</strong>:
+                  <br />
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: 'inline-block' }}>
+                    Recommended: <strong>{recommendedCalories} kcal</strong> | P: {recommendedMacros.protein}g | C: {recommendedMacros.carbs}g | F: {recommendedMacros.fat}g
+                  </span>
+                </div>
+                <button 
+                  className="btn-primary" 
+                  style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                  onClick={applyRecommendation}
+                >
+                  ⚡ APPLY RECOMMENDATION
+                </button>
+              </div>
+            ) : (
+              <div className="recommendation-banner warning">
+                <div className="recommendation-text" style={{ fontSize: '13px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span>⚠️</span>
+                  <span>Complete your <strong>Body Profile</strong> and log at least one weight/InBody scan to receive personalized nutrition target recommendations.</span>
+                </div>
+              </div>
+            )}
+
+            <div className="goals-grid">
+              {/* Daily Calories */}
+              <div className="goal-input-box">
+                <label className="section-label" style={{ fontSize: '11px' }}>Daily Calories</label>
+                <div className="goal-input-wrapper">
+                  <input 
+                    type="number"
+                    className="settings-input"
+                    placeholder="Auto"
+                    defaultValue={profile.calorieGoal || ''}
+                    key={profile.calorieGoal}
+                    onBlur={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      updateSetting('calorieGoal', val > 0 ? val : null);
+                    }}
+                  />
+                  <span className="goal-input-unit">kcal</span>
+                </div>
+              </div>
+
+              {/* Water Goal */}
+              <div className="goal-input-box">
+                <label className="section-label" style={{ fontSize: '11px' }}>Water Target</label>
+                <div className="goal-input-wrapper">
+                  <input 
+                    type="number"
+                    className="settings-input"
+                    placeholder="3000"
+                    defaultValue={profile.waterGoal || 3000}
+                    key={profile.waterGoal}
+                    onBlur={e => {
+                      const val = parseInt(e.target.value) || 3000;
+                      updateSetting('waterGoal', val);
+                    }}
+                  />
+                  <span className="goal-input-unit">ml</span>
+                </div>
+              </div>
+
+              {/* Protein */}
+              <div className="goal-input-box">
+                <label className="section-label" style={{ fontSize: '11px' }}>Protein</label>
+                <div className="goal-input-wrapper">
+                  <input 
+                    type="number"
+                    className="settings-input"
+                    placeholder="Auto"
+                    defaultValue={profile.proteinGoal || ''}
+                    key={profile.proteinGoal}
+                    onBlur={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      updateSetting('proteinGoal', val > 0 ? val : null);
+                    }}
+                  />
+                  <span className="goal-input-unit">g</span>
+                </div>
+              </div>
+
+              {/* Carbs */}
+              <div className="goal-input-box">
+                <label className="section-label" style={{ fontSize: '11px' }}>Carbohydrates</label>
+                <div className="goal-input-wrapper">
+                  <input 
+                    type="number"
+                    className="settings-input"
+                    placeholder="Auto"
+                    defaultValue={profile.carbsGoal || ''}
+                    key={profile.carbsGoal}
+                    onBlur={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      updateSetting('carbsGoal', val > 0 ? val : null);
+                    }}
+                  />
+                  <span className="goal-input-unit">g</span>
+                </div>
+              </div>
+
+              {/* Fat */}
+              <div className="goal-input-box">
+                <label className="section-label" style={{ fontSize: '11px' }}>Fat</label>
+                <div className="goal-input-wrapper">
+                  <input 
+                    type="number"
+                    className="settings-input"
+                    placeholder="Auto"
+                    defaultValue={profile.fatGoal || ''}
+                    key={profile.fatGoal}
+                    onBlur={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      updateSetting('fatGoal', val > 0 ? val : null);
+                    }}
+                  />
+                  <span className="goal-input-unit">g</span>
+                </div>
+              </div>
+
+              {/* Goal Type Badge */}
+              <div className="goal-input-box">
+                <label className="section-label" style={{ fontSize: '11px' }}>Goal Type</label>
+                <select
+                  className="settings-select"
+                  value={profile.nutritionGoalType || ''}
+                  onChange={e => updateSetting('nutritionGoalType', e.target.value || null)}
+                >
+                  <option value="">None / Custom</option>
+                  <option value="cut">Cut (Deficit)</option>
+                  <option value="maintain">Maintain (Balance)</option>
+                  <option value="bulk">Bulk (Surplus)</option>
+                </select>
+              </div>
+            </div>
+
+            {(profile.calorieGoal || profile.proteinGoal || profile.carbsGoal || profile.fatGoal || profile.nutritionGoalType) && (
+              <button 
+                className="btn-ghost mt-16" 
+                style={{ fontSize: '12px', minHeight: '32px', padding: '4px' }}
+                onClick={resetGoals}
+              >
+                RESET TO DEFAULT / AUTO
+              </button>
+            )}
           </div>
         </div>
 

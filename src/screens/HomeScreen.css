@@ -320,3 +320,58 @@
   border: 1.5px solid var(--bg-surface);
   border-radius: 50%;
 }
+
+/* Nutrition Card */
+.nutrition-card {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nutrition-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nutrition-card-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.nutrition-card-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.nutrition-stat-pill {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nutrition-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.nutrition-stat-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--accent-blue);
+}
+
+.nutrition-stat-unit {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
