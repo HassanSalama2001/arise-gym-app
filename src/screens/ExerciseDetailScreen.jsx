@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
+import BottomSheet from '../components/BottomSheet';
 import './ExerciseDetailScreen.css';
 
 const DIFFICULTY_LABEL = { E: 'Beginner', D: 'Intermediate', C: 'Advanced' };
@@ -12,6 +13,10 @@ export default function ExerciseDetailScreen() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('guide');
   const [addingToPlan, setAddingToPlan] = useState(null);
+  const [showAddToPlan, setShowAddToPlan] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState(null);
+  const [localSets, setLocalSets] = useState(3);
+  const [localReps, setLocalReps] = useState(10);
 
   const exercise = useLiveQuery(() => db.exercises.get(Number(id)), [id]);
   const plans = useLiveQuery(() => db.workoutPlans.toArray(), []);
@@ -84,8 +89,40 @@ export default function ExerciseDetailScreen() {
         .delete();
     } else {
       const count = await db.planExercises.where('planId').equals(planId).count();
-      await db.planExercises.add({ planId, exerciseId: Number(id), order: count });
+      await db.planExercises.add({ planId, exerciseId: Number(id), order: count, targetSets: 3, targetReps: 10 });
     }
+    setAddingToPlan(null);
+  }
+
+  function handleStartEdit(planId, setsCount, repsCount) {
+    setEditingPlanId(planId);
+    setLocalSets(setsCount);
+    setLocalReps(repsCount);
+  }
+
+  function handleCancelEdit() {
+    setEditingPlanId(null);
+  }
+
+  async function handleSaveTargets(planId) {
+    setAddingToPlan(planId);
+    const peRecord = planExercises?.find(pe => pe.planId === planId);
+    if (peRecord) {
+      await db.planExercises.update(peRecord.id, {
+        targetSets: localSets,
+        targetReps: localReps
+      });
+    } else {
+      const count = await db.planExercises.where('planId').equals(planId).count();
+      await db.planExercises.add({
+        planId,
+        exerciseId: Number(id),
+        order: count,
+        targetSets: localSets,
+        targetReps: localReps
+      });
+    }
+    setEditingPlanId(null);
     setAddingToPlan(null);
   }
 
@@ -131,12 +168,23 @@ export default function ExerciseDetailScreen() {
           </div>
         )}
 
+        {/* Add to Plan Button */}
+        <div style={{ marginTop: 16 }}>
+          <button 
+            className="btn-ghost" 
+            style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+            onClick={() => setShowAddToPlan(true)}
+            id="add-to-plan-btn"
+          >
+            + ADD TO PLAN
+          </button>
+        </div>
+
         {/* Tabs */}
         <div className="tab-pills" style={{ marginTop: 16 }}>
           <button className={`tab-pill ${activeTab === 'guide' ? 'active' : ''}`} onClick={() => setActiveTab('guide')} id="tab-guide">FORM GUIDE</button>
           <button className={`tab-pill ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')} id="tab-history">HISTORY</button>
           <button className={`tab-pill ${activeTab === 'videos' ? 'active' : ''}`} onClick={() => setActiveTab('videos')} id="tab-videos">VIDEOS</button>
-          <button className={`tab-pill ${activeTab === 'plans' ? 'active' : ''}`} onClick={() => setActiveTab('plans')} id="tab-add-plan">ADD TO PLAN</button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -353,38 +401,130 @@ export default function ExerciseDetailScreen() {
             </motion.div>
           )}
 
-          {activeTab === 'plans' && (
-            <motion.div key="plans" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              <div style={{ marginTop: 16 }}>
-                {plans && plans.length > 0 ? (
-                  <div className="plan-toggle-list">
-                    {plans.map(plan => (
-                      <div key={plan.id} className="plan-toggle-row card">
-                        <span className="plan-toggle-name">{plan.name}</span>
-                        <motion.button
-                          className={`plan-toggle-btn ${addedPlanIds.has(plan.id) ? 'added' : ''}`}
-                          onClick={() => togglePlan(plan.id)}
-                          disabled={addingToPlan === plan.id}
-                          whileTap={{ scale: 0.9 }}
-                          id={`toggle-plan-${plan.id}`}
-                        >
-                          {addedPlanIds.has(plan.id) ? '✓ Added' : '+ Add'}
-                        </motion.button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <span style={{ fontSize: 36 }}>📋</span>
-                    <p>No plans yet</p>
-                    <button className="btn-primary" style={{ marginTop: 12, width: 'auto', padding: '12px 28px' }} onClick={() => navigate('/workouts')}>CREATE A PLAN</button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
+
+      {/* Add to Plan Bottom Sheet */}
+      <AnimatePresence>
+        {showAddToPlan && (
+          <BottomSheet
+            onClose={() => {
+              setShowAddToPlan(false);
+              setEditingPlanId(null);
+            }}
+            title="ADD TO PLAN"
+          >
+            <div style={{ marginTop: 8 }}>
+              {plans && plans.length > 0 ? (
+                <div className="plan-toggle-list">
+                  {plans.map(plan => {
+                    const peRecord = planExercises?.find(pe => pe.planId === plan.id);
+                    const isEditing = editingPlanId === plan.id;
+                    
+                    return (
+                      <div key={plan.id} className="plan-toggle-row card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                          <span className="plan-toggle-name">{plan.name}</span>
+                          {!isEditing ? (
+                            addedPlanIds.has(plan.id) ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 13, color: 'var(--accent-gold)', fontWeight: 600 }}>
+                                  {peRecord?.targetSets || 3} sets × {peRecord?.targetReps || 10} reps
+                                </span>
+                                <button
+                                  onClick={() => handleStartEdit(plan.id, peRecord?.targetSets || 3, peRecord?.targetReps || 10)}
+                                  style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 4 }}
+                                  title="Edit target sets/reps"
+                                  id={`edit-targets-${plan.id}`}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                </button>
+                                <button
+                                  onClick={() => togglePlan(plan.id)}
+                                  disabled={addingToPlan === plan.id}
+                                  style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 4 }}
+                                  title="Remove from plan"
+                                  id={`remove-from-plan-${plan.id}`}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                className="plan-toggle-btn"
+                                onClick={() => handleStartEdit(plan.id, 3, 10)}
+                                disabled={addingToPlan === plan.id}
+                                id={`toggle-plan-${plan.id}`}
+                              >
+                                + Add
+                              </button>
+                            )
+                          ) : null}
+                        </div>
+                        
+                        {isEditing && (
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+                            <div style={{ display: 'flex', gap: 16 }}>
+                              <div style={{ flex: 1 }}>
+                                <label className="section-label" style={{ fontSize: 10 }}>SETS</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="20"
+                                  value={localSets}
+                                  onChange={e => setLocalSets(Math.max(1, parseInt(e.target.value) || 0))}
+                                  style={{ width: '100%', marginTop: 4, height: 38, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: '#fff', textAlign: 'center', fontWeight: 'bold' }}
+                                  id={`input-sets-${plan.id}`}
+                                />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <label className="section-label" style={{ fontSize: 10 }}>REPS</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="100"
+                                  value={localReps}
+                                  onChange={e => setLocalReps(Math.max(1, parseInt(e.target.value) || 0))}
+                                  style={{ width: '100%', marginTop: 4, height: 38, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: '#fff', textAlign: 'center', fontWeight: 'bold' }}
+                                  id={`input-reps-${plan.id}`}
+                                />
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button
+                                className="btn-ghost"
+                                onClick={handleCancelEdit}
+                                style={{ flex: 1, height: 36, padding: '0 8px', fontSize: 12 }}
+                                id={`cancel-edit-${plan.id}`}
+                              >
+                                CANCEL
+                              </button>
+                              <button
+                                className="btn-primary"
+                                onClick={() => handleSaveTargets(plan.id)}
+                                style={{ flex: 2, height: 36, padding: '0 8px', fontSize: 12 }}
+                                id={`save-targets-${plan.id}`}
+                              >
+                                SAVE
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <span style={{ fontSize: 36 }}>📋</span>
+                  <p>No plans yet</p>
+                  <button className="btn-primary" style={{ marginTop: 12, width: 'auto', padding: '12px 28px' }} onClick={() => navigate('/workouts')}>CREATE A PLAN</button>
+                </div>
+              )}
+            </div>
+          </BottomSheet>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

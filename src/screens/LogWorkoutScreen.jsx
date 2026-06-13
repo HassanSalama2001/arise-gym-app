@@ -149,13 +149,33 @@ function LogSetupScreen({ onStart }) {
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
 
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.planId && plans && planExercises && exercises) {
+      const plan = plans.find(p => p.id === location.state.planId);
+      if (plan) {
+        startWithPlan(plan);
+        // Clear navigation state
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, plans, planExercises, exercises, navigate]);
 
   function getPlanExercises(planId) {
     if (!planExercises || !exercises) return [];
     return planExercises
       .filter(pe => pe.planId === planId)
       .sort((a, b) => a.order - b.order)
-      .map(pe => exercises.find(e => e.id === pe.exerciseId))
+      .map(pe => {
+        const ex = exercises.find(e => e.id === pe.exerciseId);
+        if (!ex) return null;
+        return {
+          ...ex,
+          targetSets: pe.targetSets !== undefined ? pe.targetSets : 3,
+          targetReps: pe.targetReps !== undefined ? pe.targetReps : 10
+        };
+      })
       .filter(Boolean);
   }
 
@@ -401,10 +421,17 @@ export default function LogWorkoutScreen() {
       endTime: null,
     });
     
-    // Init sets for all exercises
+    // Init sets for all exercises based on template targets
     const initSets = {};
     (config.exercises || []).forEach(ex => { 
-      initSets[ex.id] = [{ weight: 0, reps: 0, type: 'normal', completed: false }]; 
+      const setsCount = ex.targetSets || 3;
+      const targetReps = ex.targetReps || 10;
+      initSets[ex.id] = Array.from({ length: setsCount }, () => ({
+        weight: 0,
+        reps: targetReps,
+        type: 'normal',
+        completed: false
+      })); 
     });
     
     // Merge corrective sets
@@ -869,6 +896,9 @@ export default function LogWorkoutScreen() {
 
   const maxSets = currentBlock.length > 0 ? Math.max(...currentBlock.map(ex => getExSets(ex.id).length)) : 0;
   const isSuperset = currentBlock.length > 1;
+  const currentBlockSets = currentBlock.length > 0 ? getExSets(currentBlock[0].id) : [];
+  const completedBlockSets = currentBlockSets.filter(s => s.completed).length;
+  const totalBlockSets = currentBlockSets.length;
 
   return (
     <div className="screen" id="active-workout-screen">
@@ -942,8 +972,13 @@ export default function LogWorkoutScreen() {
         {/* Sets */}
         {currentBlock.length > 0 && (
           <div className="sets-section">
-            <div className="sets-header">
+            <div className="sets-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="section-label">SETS</span>
+              {totalBlockSets > 0 && (
+                <span className="section-label" style={{ color: completedBlockSets === totalBlockSets ? 'var(--success)' : 'var(--text-muted)' }}>
+                  {completedBlockSets} OF {totalBlockSets} COMPLETED
+                </span>
+              )}
             </div>
 
             {/* Set Grid Headers */}

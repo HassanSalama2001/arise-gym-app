@@ -534,7 +534,9 @@ export default function WorkoutsScreen() {
                         const pes = tpl.exercises.map((e, i) => ({
                           planId,
                           exerciseId: e.exerciseId,
-                          order: i
+                          order: i,
+                          targetSets: e.targetSets || 3,
+                          targetReps: e.targetReps || 10
                         }));
                         await db.planExercises.bulkAdd(pes);
                         showToast(`Cloned "${tpl.name}" successfully!`);
