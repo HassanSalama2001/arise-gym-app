@@ -44,7 +44,7 @@ export default function ExerciseThumbnail({ exercise, style }) {
   }
 
   return (
-    <div style={{ ...style, overflow: 'hidden', borderRadius: 8, background: '#fff' }}>
+    <div style={{ ...style, overflow: 'hidden', borderRadius: 8 }}>
       <img src={visuals.url} alt={exercise?.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
     </div>
   );

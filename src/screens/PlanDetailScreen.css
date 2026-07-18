@@ -116,11 +116,10 @@
   left: 0;
   right: 0;
   padding: 16px;
-  background: linear-gradient(to top, var(--bg-dark) 80%, transparent);
+  background: linear-gradient(to top, var(--bg-dark) 85%, transparent);
   display: flex;
   gap: 12px;
   z-index: 100;
-  backdrop-filter: blur(10px);
 }
 
 .plan-sticky-footer .btn-primary {
