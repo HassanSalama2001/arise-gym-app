@@ -21,6 +21,7 @@ const ProgressScreen = lazy(() => import('./screens/ProgressScreen'));
 const ProfileScreen = lazy(() => import('./screens/ProfileScreen'));
 const LoginScreen = lazy(() => import('./screens/LoginScreen'));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
+const PlanDetailScreen = lazy(() => import('./screens/PlanDetailScreen'));
 const MealTrackerScreen = lazy(() => import('./screens/MealTrackerScreen'));
 
 import { supabase } from './db/supabaseClient';
@@ -55,6 +56,7 @@ function AnimatedRoutes() {
           <Route path="/log" element={<PageWrapper><LogWorkoutScreen /></PageWrapper>} />
           <Route path="/mission-complete" element={<PageWrapper><MissionCompleteScreen /></PageWrapper>} />
           <Route path="/progress" element={<PageWrapper><ProgressScreen /></PageWrapper>} />
+          <Route path="/plan/:planId" element={<PageWrapper><PlanDetailScreen /></PageWrapper>} />
           <Route path="/profile" element={<PageWrapper><ProfileScreen /></PageWrapper>} />
           <Route path="/settings" element={<PageWrapper><SettingsScreen /></PageWrapper>} />
           <Route path="/meals" element={<PageWrapper><MealTrackerScreen /></PageWrapper>} />

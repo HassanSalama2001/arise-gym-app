@@ -54,8 +54,8 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const currentPath = location.pathname;
 
-  // Hide nav during active workout logging
-  if (currentPath.startsWith('/log/active') || currentPath.startsWith('/mission-complete')) {
+  // Hide nav during active workout logging, mission complete, or plan detail
+  if (currentPath.startsWith('/log/active') || currentPath.startsWith('/mission-complete') || currentPath.startsWith('/plan/')) {
     return null;
   }
 

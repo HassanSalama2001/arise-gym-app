@@ -466,6 +466,30 @@ export default function SettingsScreen() {
                 <span className="toggle-slider"></span>
               </label>
             </div>
+
+            {/* Exercise Visuals Cache Mode */}
+            <div className="settings-row flex-column mt-16">
+              <div className="settings-info" style={{ marginBottom: 12 }}>
+                <span className="settings-title">Exercise Visuals Mode</span>
+                <span className="settings-desc">Choose between static images or animated GIFs for offline caching</span>
+              </div>
+              <div className="tab-pills" style={{ margin: 0, width: '100%' }}>
+                <button 
+                  className={`tab-pill ${profile.visualsMode !== 'gifs' ? 'active' : ''}`}
+                  onClick={() => updateSetting('visualsMode', 'images')}
+                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                >
+                  STATIC IMAGES
+                </button>
+                <button 
+                  className={`tab-pill ${profile.visualsMode === 'gifs' ? 'active' : ''}`}
+                  onClick={() => updateSetting('visualsMode', 'gifs')}
+                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                >
+                  ANIMATED GIFS
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

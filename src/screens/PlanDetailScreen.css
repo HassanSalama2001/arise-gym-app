@@ -1,0 +1,130 @@
+.plan-detail-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.plan-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.plan-detail-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.plan-detail-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.plan-detail-description {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.reorder-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reorder-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  touch-action: pan-y;
+}
+
+.reorder-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 48px;
+  color: var(--text-tertiary);
+  cursor: grab;
+}
+
+.reorder-handle:active {
+  cursor: grabbing;
+}
+
+.reorder-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reorder-title {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reorder-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reorder-sets {
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-darker);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.reorder-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-icon.danger {
+  color: #ff5252;
+}
+
+.plan-sticky-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(to top, var(--bg-dark) 80%, transparent);
+  display: flex;
+  gap: 12px;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.plan-sticky-footer .btn-primary {
+  flex: 1;
+  padding: 18px;
+  font-size: 16px;
+}

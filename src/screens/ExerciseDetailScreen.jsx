@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import BottomSheet from '../components/BottomSheet';
+import { getExerciseVisuals } from '../utils/exerciseImages';
 import './ExerciseDetailScreen.css';
 
 const DIFFICULTY_LABEL = { E: 'Beginner', D: 'Intermediate', C: 'Advanced' };
@@ -17,6 +18,15 @@ export default function ExerciseDetailScreen() {
   const [editingPlanId, setEditingPlanId] = useState(null);
   const [localSets, setLocalSets] = useState(3);
   const [localReps, setLocalReps] = useState(10);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [noteType, setNoteType] = useState('Note'); // Hint, Note, Cue
+  const [noteScope, setNoteScope] = useState('Global'); // Global, Plan-specific
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  
+  const [visuals, setVisuals] = useState(null);
+  const [visualsLoading, setVisualsLoading] = useState(false);
+  const [localVisualMode, setLocalVisualMode] = useState('gifs');
 
   const exercise = useLiveQuery(() => db.exercises.get(Number(id)), [id]);
   const plans = useLiveQuery(() => db.workoutPlans.toArray(), []);
@@ -26,6 +36,35 @@ export default function ExerciseDetailScreen() {
   const sessionSets = useLiveQuery(() => db.sets.where('exerciseId').equals(Number(id)).toArray(), [id]);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
+  const exerciseNotes = useLiveQuery(() => db.exerciseNotes.where('exerciseId').equals(Number(id)).toArray(), [id]);
+
+  React.useEffect(() => {
+    let activeUrls = [];
+    async function loadVisuals() {
+      if (!exercise || !profile) return;
+      setVisualsLoading(true);
+      const result = await getExerciseVisuals(exercise, localVisualMode);
+      if (result) {
+        if (result.type === 'gif') {
+          const url = URL.createObjectURL(result.blob);
+          activeUrls.push(url);
+          setVisuals({ type: 'gif', url });
+        } else if (result.type === 'images') {
+          const url0 = URL.createObjectURL(result.blob0);
+          const url1 = URL.createObjectURL(result.blob1);
+          activeUrls.push(url0, url1);
+          setVisuals({ type: 'images', url0, url1 });
+        }
+      } else {
+        setVisuals(null);
+      }
+      setVisualsLoading(false);
+    }
+    loadVisuals();
+    return () => {
+      activeUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [exercise?.id, exercise?.name, profile, localVisualMode]);
 
   const addedPlanIds = new Set((planExercises || []).map(pe => pe.planId));
 
@@ -126,6 +165,23 @@ export default function ExerciseDetailScreen() {
     setAddingToPlan(null);
   }
 
+  async function handleSaveNote() {
+    if (!noteText.trim()) return;
+    await db.exerciseNotes.add({
+      exerciseId: Number(id),
+      planId: noteScope === 'Global' ? null : selectedPlanId,
+      text: noteText.trim(),
+      type: noteType,
+      createdAt: Date.now()
+    });
+    setNoteText('');
+    setShowAddNote(false);
+  }
+
+  async function handleDeleteNote(noteId) {
+    await db.exerciseNotes.delete(noteId);
+  }
+
   if (!exercise) {
     return (
       <div className="screen">
@@ -184,6 +240,7 @@ export default function ExerciseDetailScreen() {
         <div className="tab-pills" style={{ marginTop: 16 }}>
           <button className={`tab-pill ${activeTab === 'guide' ? 'active' : ''}`} onClick={() => setActiveTab('guide')} id="tab-guide">FORM GUIDE</button>
           <button className={`tab-pill ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')} id="tab-history">HISTORY</button>
+          <button className={`tab-pill ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')} id="tab-notes">MY NOTES</button>
           <button className={`tab-pill ${activeTab === 'videos' ? 'active' : ''}`} onClick={() => setActiveTab('videos')} id="tab-videos">VIDEOS</button>
         </div>
 
@@ -191,16 +248,54 @@ export default function ExerciseDetailScreen() {
           {activeTab === 'guide' && (
             <motion.div key="guide" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <div className="tab-pills" style={{ background: 'var(--bg-secondary)', padding: 4, borderRadius: 20 }}>
+                  <button 
+                    className={`tab-pill ${localVisualMode === 'gifs' ? 'active' : ''}`} 
+                    style={{ padding: '6px 20px', fontSize: 13, minWidth: 100 }}
+                    onClick={() => setLocalVisualMode('gifs')}
+                  >
+                    Dynamic GIF
+                  </button>
+                  <button 
+                    className={`tab-pill ${localVisualMode === 'images' ? 'active' : ''}`} 
+                    style={{ padding: '6px 20px', fontSize: 13, minWidth: 100 }}
+                    onClick={() => setLocalVisualMode('images')}
+                  >
+                    Static Images
+                  </button>
+                </div>
+              </div>
+
               {/* Media Player */}
-              {exercise.videoUri && (
+              {visualsLoading ? (
                 <div className="guide-section">
-                  <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', justifyContent: 'center', background: 'var(--bg-surface)' }}>
-                    <img 
-                      src={exercise.videoUri} 
-                      alt={exercise.name} 
-                      style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }}
-                      loading="lazy"
-                    />
+                  <div className="card" style={{ padding: 32, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Loading visual guide...</span>
+                  </div>
+                </div>
+              ) : visuals ? (
+                <div className="guide-section">
+                  <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', gap: 4, background: '#fff' }}>
+                    {visuals.type === 'gif' ? (
+                      <img 
+                        src={visuals.url} 
+                        alt={`${exercise.name} animation`} 
+                        style={{ width: '100%', objectFit: 'contain', background: 'white' }}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <>
+                        <img src={visuals.url0} alt={`${exercise.name} start`} style={{ width: '50%', objectFit: 'contain', background: 'white' }} loading="lazy" />
+                        <img src={visuals.url1} alt={`${exercise.name} end`} style={{ width: '50%', objectFit: 'contain', background: 'white' }} loading="lazy" />
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="guide-section">
+                  <div className="card" style={{ padding: 32, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>No visuals available for this exercise.</span>
                   </div>
                 </div>
               )}
@@ -355,6 +450,82 @@ export default function ExerciseDetailScreen() {
                   <span className="section-label">Your logged sets will appear here</span>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {activeTab === 'notes' && (
+            <motion.div key="notes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              <div style={{ marginTop: 16 }}>
+                <button 
+                  className="btn-ghost" 
+                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  onClick={() => setShowAddNote(true)}
+                >
+                  + ADD NOTE OR HINT
+                </button>
+              </div>
+
+              <div className="section mt-16">
+                <span className="section-label">GLOBAL NOTES</span>
+              </div>
+              <div className="notes-list" style={{ marginTop: 8 }}>
+                {exerciseNotes && exerciseNotes.filter(n => !n.planId).length > 0 ? (
+                  exerciseNotes.filter(n => !n.planId).map(note => (
+                    <div key={note.id} className="card" style={{ padding: 12, marginBottom: 12, position: 'relative' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span className={`chip ${note.type === 'Hint' ? 'chip-green' : note.type === 'Cue' ? 'chip-gold' : 'chip-blue'}`} style={{ fontSize: 10 }}>
+                          {note.type}
+                        </span>
+                        <button className="btn-icon danger" onClick={() => handleDeleteNote(note.id)} style={{ padding: 4 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{note.text}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-state" style={{ padding: '24px 0', minHeight: 'auto' }}>
+                    <p style={{ margin: 0 }}>No global notes yet</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="section mt-16">
+                <span className="section-label">PLAN-SPECIFIC NOTES</span>
+              </div>
+              <div className="notes-list" style={{ marginTop: 8 }}>
+                {exerciseNotes && exerciseNotes.filter(n => n.planId).length > 0 ? (
+                  exerciseNotes.filter(n => n.planId).map(note => {
+                    const planName = plans?.find(p => p.id === note.planId)?.name || 'Unknown Plan';
+                    return (
+                      <div key={note.id} className="card" style={{ padding: 12, marginBottom: 12, position: 'relative', borderLeft: '3px solid var(--accent-purple)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span className={`chip ${note.type === 'Hint' ? 'chip-green' : note.type === 'Cue' ? 'chip-gold' : 'chip-blue'}`} style={{ fontSize: 10 }}>
+                              {note.type}
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>in {planName}</span>
+                          </div>
+                          <button className="btn-icon danger" onClick={() => handleDeleteNote(note.id)} style={{ padding: 4 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                          </button>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{note.text}</p>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="empty-state" style={{ padding: '24px 0', minHeight: 'auto' }}>
+                    <p style={{ margin: 0 }}>No plan-specific notes</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -521,6 +692,100 @@ export default function ExerciseDetailScreen() {
                   <button className="btn-primary" style={{ marginTop: 12, width: 'auto', padding: '12px 28px' }} onClick={() => navigate('/workouts')}>CREATE A PLAN</button>
                 </div>
               )}
+            </div>
+          </BottomSheet>
+        )}
+      </AnimatePresence>
+
+      {/* Add Note Bottom Sheet */}
+      <AnimatePresence>
+        {showAddNote && (
+          <BottomSheet onClose={() => setShowAddNote(false)} title="ADD NOTE OR HINT">
+            <div style={{ marginTop: 16 }}>
+              <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>TYPE</label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {['Hint', 'Note', 'Cue'].map(t => (
+                  <button
+                    key={t}
+                    className={`tab-pill ${noteType === t ? 'active' : ''}`}
+                    onClick={() => setNoteType(t)}
+                    style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>SCOPE</label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <button
+                  className={`tab-pill ${noteScope === 'Global' ? 'active' : ''}`}
+                  onClick={() => setNoteScope('Global')}
+                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                >
+                  🌍 Global
+                </button>
+                <button
+                  className={`tab-pill ${noteScope === 'Plan-specific' ? 'active' : ''}`}
+                  onClick={() => setNoteScope('Plan-specific')}
+                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                >
+                  📋 This Plan Only
+                </button>
+              </div>
+
+              {noteScope === 'Plan-specific' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>SELECT PLAN</label>
+                  <select 
+                    value={selectedPlanId || ''} 
+                    onChange={e => setSelectedPlanId(Number(e.target.value))}
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      background: 'var(--surface)', 
+                      border: '1px solid var(--border)', 
+                      borderRadius: 'var(--radius-md)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <option value="" disabled>Select a plan...</option>
+                    {plans?.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>CONTENT</label>
+              <textarea
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                placeholder="E.g. Keep elbows tucked in..."
+                style={{ 
+                  width: '100%', 
+                  minHeight: '100px',
+                  backgroundColor: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '12px',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  marginBottom: 24
+                }}
+                autoFocus
+              />
+
+              <button 
+                className="btn-primary" 
+                style={{ width: '100%' }}
+                onClick={handleSaveNote}
+                disabled={!noteText.trim() || (noteScope === 'Plan-specific' && !selectedPlanId)}
+              >
+                SAVE NOTE
+              </button>
             </div>
           </BottomSheet>
         )}

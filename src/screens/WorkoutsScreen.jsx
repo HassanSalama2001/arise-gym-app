@@ -192,7 +192,7 @@ export default function WorkoutsScreen() {
   const filtered = useMemo(() => {
     if (!exercises) return []; // Still loading
     try {
-      return exercises.filter(ex => {
+      const res = exercises.filter(ex => {
         if (!ex) return false;
         const matchSearch = !search || (ex.name && ex.name.toLowerCase().includes(search.toLowerCase()));
         const matchFilter = filter === 'All' || ex.muscleGroup === filter;
@@ -377,12 +377,7 @@ export default function WorkoutsScreen() {
                         plan={plan}
                         exerciseCount={planExerciseCount[plan.id] || 0}
                         onDelete={handleDeletePlan}
-                        onClick={async () => {
-                          const confirmed = await showConfirm(`Start training with "${plan.name}"?`, 'Start Workout?');
-                          if (confirmed) {
-                            navigate('/log', { state: { planId: plan.id } });
-                          }
-                        }}
+                        onClick={() => navigate(`/plan/${plan.id}`)}
                       />
                     ))}
                   </div>

@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import defaultExercises from '../data/exercises.js';
 
 const db = new Dexie('AriseDB');
 
@@ -40,6 +41,25 @@ db.version(6).stores({
   meals: '++id, date, type',
   hydration: '++id, date',
   mealSuggestions: '++id, mealType'
+});
+
+db.version(7).stores({
+  exerciseNotes: '++id, exerciseId, planId, createdAt',
+  exerciseImageCache: 'exerciseId'
+});
+
+db.version(10).upgrade(async tx => {
+  console.log("Running DB migration v10 for exercise visual URLs...");
+  const allExercises = await tx.exercises.toArray();
+  for (let dbEx of allExercises) {
+    const match = defaultExercises.find(e => e.name === dbEx.name);
+    if (match) {
+      if (match.gifUrl !== undefined) dbEx.gifUrl = match.gifUrl;
+      if (match.imageUrls !== undefined) dbEx.imageUrls = match.imageUrls;
+      await tx.exercises.put(dbEx);
+    }
+  }
+  console.log("Migration v10 complete!");
 });
 
 export default db;
