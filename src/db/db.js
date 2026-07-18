@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import defaultExercises from '../data/exercises.js';
+import { exercises as defaultExercises } from '../data/exercises.js';
 
 const db = new Dexie('AriseDB');
 
@@ -60,6 +60,19 @@ db.version(10).upgrade(async tx => {
     }
   }
   console.log("Migration v10 complete!");
+});
+
+db.version(11).upgrade(async tx => {
+  console.log("Running DB migration v11 to wipe old exercises and replace with new dataset...");
+  await tx.exercises.clear();
+  await tx.planExercises.clear();
+  await tx.workoutPlans.clear();
+  await tx.sessions.clear();
+  await tx.sets.clear();
+  await tx.personalRecords.clear();
+  await tx.exerciseNotes.clear();
+  await tx.exerciseImageCache.clear();
+  console.log("Wipe complete. App will re-sync exercises from defaultExercises on next boot.");
 });
 
 export default db;

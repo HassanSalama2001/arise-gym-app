@@ -26,7 +26,6 @@ export default function ExerciseDetailScreen() {
   
   const [visuals, setVisuals] = useState(null);
   const [visualsLoading, setVisualsLoading] = useState(false);
-  const [localVisualMode, setLocalVisualMode] = useState('gifs');
 
   const exercise = useLiveQuery(() => db.exercises.get(Number(id)), [id]);
   const plans = useLiveQuery(() => db.workoutPlans.toArray(), []);
@@ -43,18 +42,11 @@ export default function ExerciseDetailScreen() {
     async function loadVisuals() {
       if (!exercise || !profile) return;
       setVisualsLoading(true);
-      const result = await getExerciseVisuals(exercise, localVisualMode);
-      if (result) {
-        if (result.type === 'gif') {
-          const url = URL.createObjectURL(result.blob);
-          activeUrls.push(url);
-          setVisuals({ type: 'gif', url });
-        } else if (result.type === 'images') {
-          const url0 = URL.createObjectURL(result.blob0);
-          const url1 = URL.createObjectURL(result.blob1);
-          activeUrls.push(url0, url1);
-          setVisuals({ type: 'images', url0, url1 });
-        }
+      const result = await getExerciseVisuals(exercise);
+      if (result && result.type === 'gif') {
+        const url = URL.createObjectURL(result.blob);
+        activeUrls.push(url);
+        setVisuals({ type: 'gif', url });
       } else {
         setVisuals(null);
       }
@@ -64,7 +56,7 @@ export default function ExerciseDetailScreen() {
     return () => {
       activeUrls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [exercise?.id, exercise?.name, profile, localVisualMode]);
+  }, [exercise?.id, exercise?.name, profile]);
 
   const addedPlanIds = new Set((planExercises || []).map(pe => pe.planId));
 
@@ -209,7 +201,7 @@ export default function ExerciseDetailScreen() {
             <h1 className="detail-exercise-name">{exercise.name}</h1>
             <div className="detail-chips">
               <span className="chip chip-blue">{exercise.muscleGroup}</span>
-              <span className={`chip ${exercise.difficulty === 'E' ? 'chip-green' : exercise.difficulty === 'D' ? 'chip-gold' : 'chip-red'}`}>{diff}</span>
+              <span className={`chip ${exercise.difficulty === 'C' ? 'chip-red' : exercise.difficulty === 'D' ? 'chip-gold' : 'chip-green'}`}>{diff}</span>
             </div>
           </div>
         </div>
@@ -247,25 +239,6 @@ export default function ExerciseDetailScreen() {
         <AnimatePresence mode="wait">
           {activeTab === 'guide' && (
             <motion.div key="guide" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <div className="tab-pills" style={{ background: 'var(--bg-secondary)', padding: 4, borderRadius: 20 }}>
-                  <button 
-                    className={`tab-pill ${localVisualMode === 'gifs' ? 'active' : ''}`} 
-                    style={{ padding: '6px 20px', fontSize: 13, minWidth: 100 }}
-                    onClick={() => setLocalVisualMode('gifs')}
-                  >
-                    Dynamic GIF
-                  </button>
-                  <button 
-                    className={`tab-pill ${localVisualMode === 'images' ? 'active' : ''}`} 
-                    style={{ padding: '6px 20px', fontSize: 13, minWidth: 100 }}
-                    onClick={() => setLocalVisualMode('images')}
-                  >
-                    Static Images
-                  </button>
-                </div>
-              </div>
 
               {/* Media Player */}
               {visualsLoading ? (
@@ -277,19 +250,12 @@ export default function ExerciseDetailScreen() {
               ) : visuals ? (
                 <div className="guide-section">
                   <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', gap: 4, background: '#fff' }}>
-                    {visuals.type === 'gif' ? (
                       <img 
                         src={visuals.url} 
                         alt={`${exercise.name} animation`} 
                         style={{ width: '100%', objectFit: 'contain', background: 'white' }}
                         loading="lazy"
                       />
-                    ) : (
-                      <>
-                        <img src={visuals.url0} alt={`${exercise.name} start`} style={{ width: '50%', objectFit: 'contain', background: 'white' }} loading="lazy" />
-                        <img src={visuals.url1} alt={`${exercise.name} end`} style={{ width: '50%', objectFit: 'contain', background: 'white' }} loading="lazy" />
-                      </>
-                    )}
                   </div>
                 </div>
               ) : (

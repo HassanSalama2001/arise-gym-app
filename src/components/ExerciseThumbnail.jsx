@@ -10,19 +10,11 @@ export default function ExerciseThumbnail({ exercise, style }) {
   useEffect(() => {
     let activeUrls = [];
     async function loadVisuals() {
-      if (!profile) return;
-      const mode = profile.visualsMode || 'images';
-      const result = await getExerciseVisuals(exercise, mode);
-      if (result) {
-        if (result.type === 'gif') {
-          const url = URL.createObjectURL(result.blob);
-          activeUrls.push(url);
-          setVisuals({ type: 'gif', url });
-        } else if (result.type === 'images') {
-          const url0 = URL.createObjectURL(result.blob0);
-          activeUrls.push(url0);
-          setVisuals({ type: 'images', url: url0 }); // Just use first image as thumbnail
-        }
+      const result = await getExerciseVisuals(exercise);
+      if (result && result.type === 'gif') {
+        const url = URL.createObjectURL(result.blob);
+        activeUrls.push(url);
+        setVisuals({ type: 'gif', url });
       }
     }
     loadVisuals();

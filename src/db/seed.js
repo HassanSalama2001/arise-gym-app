@@ -1,5 +1,5 @@
 import db from './db';
-import exerciseData from '../data/exercises';
+import { exercises as exerciseData } from '../data/exercises';
 
 let seedingPromise = null;
 
@@ -10,7 +10,7 @@ export async function seedDatabase() {
     try {
       const count = await db.exercises.count();
       const seedVer = await db.settings.get('exercise_seed_version');
-      const currentVer = exerciseData.length + '_v2';
+      const currentVer = exerciseData.length + '_v3';
 
       if (count === 0 || !seedVer || seedVer.value !== currentVer) {
         await db.exercises.bulkPut(exerciseData);
