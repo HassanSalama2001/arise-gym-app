@@ -79,6 +79,9 @@ export default function HomeScreen() {
     return loggedHydration.reduce((acc, h) => acc + (parseInt(h.amountMl) || 0), 0);
   }, [loggedHydration]);
 
+  const [timeToMidnight, setTimeToMidnight] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     async function checkQuests() {
@@ -176,8 +179,6 @@ export default function HomeScreen() {
     await db.playerProfile.update('profile', { postponedInBodyDate: nextWeek.toISOString() });
   }
 
-  const [timeToMidnight, setTimeToMidnight] = useState('');
-  const [showNotifications, setShowNotifications] = useState(false);
 
   const notifications = useMemo(() => {
     const list = [];

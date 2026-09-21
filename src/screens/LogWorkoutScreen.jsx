@@ -1046,7 +1046,6 @@ export default function LogWorkoutScreen() {
                 style={{
                   flex: 1,
                   background: 'none',
-                  border: 'none',
                   color: 'var(--accent-red)',
                   fontSize: 12,
                   fontWeight: 700,
@@ -1119,21 +1118,17 @@ export default function LogWorkoutScreen() {
             allExercises={allExercises || []}
             hasCurrentBlock={blocks.length > 0}
             onAdd={(ex, asSuperset) => {
-              setBlocks(prev => {
-                if (asSuperset && prev.length > 0) {
-                  const updated = [...prev];
-                  updated[currentExIdx] = [...updated[currentExIdx], ex];
-                  return updated;
-                } else {
-                  const updated = [...prev, [ex]];
-                  setCurrentExIdx(updated.length - 1);
-                  return updated;
-                }
-              });
+              const joinCurrent = asSuperset && blocks.length > 0;
+              if (joinCurrent) {
+                updateBlocks(prev => prev.map((b, i) => (i === currentExIdx ? [...b, ex] : b)));
+              } else {
+                updateBlocks(prev => [...prev, [ex]]);
+                setCurrentExIdx(blocks.length);
+              }
               // Initialize sets for the new exercise to match the current block maxSets or 1
-              const initialSetsCount = asSuperset ? (maxSets || 1) : 1;
+              const initialSetsCount = joinCurrent ? (maxSets || 1) : 1;
               const newSets = Array.from({ length: initialSetsCount }, () => ({ weight: 0, reps: 0, type: 'normal', completed: false }));
-              setSets(prev => ({ ...prev, [ex.id]: newSets }));
+              updateSets(prev => ({ ...prev, [ex.id]: newSets }));
               setAddExSheet(false);
             }}
             onClose={() => setAddExSheet(false)}

@@ -20,7 +20,7 @@ function playChime() {
 }
 
 function vibrate() {
-  try { navigator.vibrate?.([200, 100, 200]); } catch (e) {}
+  try { navigator.vibrate?.([200, 100, 200]); } catch { /* vibration not available */ }
 }
 
 export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
