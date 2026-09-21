@@ -79,8 +79,8 @@ JSON backups usable again.
 | ID | Status | Task | Done when |
 |---|---|---|---|
 | P4.1 | ⬜ | Split `LogWorkoutScreen.jsx` (1,399 lines): move `SetRow`, `LogSetupScreen`, `AddExerciseSheet`, `ExerciseJumpSheet`, `PlateCalculatorSheet`, `RPESelectionSheet` to `components/log/`. | Screen file < 600 lines, behaviour unchanged |
-| P4.2 | ⬜ | Move workout-finish logic (XP, streak multiplier, PR detection, quest progress, corrective progress) into `utils/workoutRules.js` as pure functions. Removes the duplicated muscle-counting blocks (lines ~542 and ~716). | Unit-tested; the screen calls it |
-| P4.3 | ⬜ | Better PRs: keep the heaviest-weight PR and also track an estimated-1RM PR, so a lighter set with more reps can count. | PR toast fires on e1RM improvement |
+| P4.2 | ✅ | Move workout-finish logic (XP, streak multiplier, PR detection, quest progress, corrective progress) into `utils/workoutRules.js` as pure functions. Removes the duplicated muscle-counting blocks (lines ~542 and ~716). | Unit-tested; the screen calls it — **src/utils/workoutRules.js (+ tests). Found and fixed: 2 of 10 quest types could never complete; per-session quests summed across the day** |
+| P4.3 | ✅ | Better PRs: keep the heaviest-weight PR and also track an estimated-1RM PR, so a lighter set with more reps can count. | PR toast fires on e1RM improvement — **e1RM or heaviest weight. Found and fixed: each PR added a new row and sets were compared to the oldest → repeated PRs/XP. v13 merges duplicates** |
 | P4.4 | ⬜ | Trim `ProgressScreen`, `ProfileScreen`, `SettingsScreen` (870–1,000 lines each) by extracting sections as they're touched (P2.5 removes a lot). | Each < 600 lines |
 | P4.5 | ⬜ | Inline `style={{…}}` → CSS classes, only in files already being changed (no big-bang restyle). | Opportunistic |
 | P4.6 | ✅ | Tidy `package.json`: name `arise-temp` → `arise`, version. | — — **Renamed to arise** |
@@ -135,3 +135,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-22 | P1.3–P1.4, P5 and P4.6 done; P1.5/P1.6 need repo secrets. Found P0.8 (fixed) and P0.9 (UTC dates, open). Lint 0, tests 40/40. |
 | 2026-09-22 | P0.9 fixed (local dates). Owner added all three repo secrets. Tests 44/44, lint 0. |
 | 2026-09-22 | P1.2 done; PR #1 opened (https://github.com/HassanSalama2001/arise-gym-app/pull/1). Tests 69/69. |
+| 2026-09-22 | P4.2/P4.3 done with three game-logic bug fixes. DB now v13. Tests 92/92. |
