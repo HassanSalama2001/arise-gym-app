@@ -43,7 +43,7 @@ several parts of the app still use the old values.
 | ID | Status | Task | Done when |
 |---|---|---|---|
 | P1.1 | ✅ | Add Vitest + `fake-indexeddb`; `npm test` script. | `npm test` runs — **Vitest + fake-indexeddb; `npm test`** |
-| P1.2 | ⬜ | Unit tests for pure logic: `calorieEngine`, `progression` (ranks/XP), `achievements`, set XP/PR logic (after P4.2 extracts it). | Tests green |
+| P1.2 | ✅ | Unit tests for pure logic: `calorieEngine`, `progression` (ranks/XP), `achievements`, set XP/PR logic (after P4.2 extracts it). | Tests green — **calorieEngine, progression, achievements (25 tests). Found: InBody score could exceed 100 — capped. XP/PR finish logic gets tests with P4.2** |
 | P1.3 | ✅ | Clear the remaining lint errors (unused vars, hook deps, purity, set-state-in-effect) — real fixes, not blanket disables. | `npm run lint` exits 0 — **85 → 0. Real bugs fixed along the way: Mission Complete reshuffling quote/particles on re-render, navigate() during render, GIF-load race, plate calculator (P0.8)** |
 | P1.4 | ✅ | CI: add a PR/branch workflow running `npm ci` → lint → test → build. Deploy workflow uses `npm ci`, runs the same gates before deploying. | Failing lint/test blocks deploy — **ci.yml for PRs/branches; deploy runs npm ci → lint → test → build first** |
 | P1.5 | 🟡 | Replace the unpinned `w9jds/firebase-action@master` + deprecated `FIREBASE_TOKEN` with `FirebaseExtended/action-hosting-deploy` (pinned) + service account. **Needs owner:** add a `FIREBASE_SERVICE_ACCOUNT` repo secret. I'll prepare the workflow; it switches over once the secret exists. | Deploy works with the service-account secret — **Secret added by owner 2026-09-22; confirmed on the first deploy from main** |
@@ -134,3 +134,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-22 | P3 done. v11 no longer wipes history on devices that haven't upgraded yet. Tests 40/40, lint 78. |
 | 2026-09-22 | P1.3–P1.4, P5 and P4.6 done; P1.5/P1.6 need repo secrets. Found P0.8 (fixed) and P0.9 (UTC dates, open). Lint 0, tests 40/40. |
 | 2026-09-22 | P0.9 fixed (local dates). Owner added all three repo secrets. Tests 44/44, lint 0. |
+| 2026-09-22 | P1.2 done; PR #1 opened (https://github.com/HassanSalama2001/arise-gym-app/pull/1). Tests 69/69. |
