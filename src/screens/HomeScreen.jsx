@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import { getRankInfo, getRankColor, generateDailyQuests } from '../data/progression';
+import { getRankInfo, generateDailyQuests } from '../data/progression';
 import { getToday } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
 import './HomeScreen.css';
@@ -486,7 +486,7 @@ export default function HomeScreen() {
           >
             <span className="section-label">RECENT ACHIEVEMENTS</span>
             <div className="achievements-list mt-8">
-              {achievements.map((a, i) => (
+              {achievements.map(a => (
                 <div key={a.id} className="achievement-card card">
                   <span className="achievement-icon">🏆</span>
                   <div className="achievement-info">

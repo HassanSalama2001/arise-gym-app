@@ -152,7 +152,7 @@ function CreatePlanSheet({ onClose, onCreated }) {
 }
 
 export default function WorkoutsScreen() {
-  const { showConfirm, showToast } = useAlert();
+  const { showToast } = useAlert();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('exercises');
   const [search, setSearch] = useState('');

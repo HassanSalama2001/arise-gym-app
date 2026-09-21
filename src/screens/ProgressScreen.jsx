@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import { getRankInfo, RANKS } from '../data/progression';
+import { getRankInfo } from '../data/progression';
 import { TRAINED_MUSCLE_GROUPS } from '../data/muscleGroups';
 import SessionDetailModal from '../components/SessionDetailModal';
 import './ProgressScreen.css';

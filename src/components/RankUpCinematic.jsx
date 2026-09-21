@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import './RankUpCinematic.css';
 
@@ -18,7 +18,7 @@ function Particle({ angle, color }) {
   );
 }
 
-export default function RankUpCinematic({ prevRank, newRank, onComplete }) {
+export default function RankUpCinematic({ newRank, onComplete }) {
   useEffect(() => {
     const t = setTimeout(onComplete, 3200);
     return () => clearTimeout(t);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Reorder, useDragControls } from 'framer-motion';
@@ -194,7 +194,7 @@ export default function PlanDetailScreen() {
         isOpen={showAddSheet}
         onClose={() => setShowAddSheet(false)}
         planId={Number(planId)}
-        onExerciseAdded={(id) => showToast('Exercise added!')}
+        onExerciseAdded={() => showToast('Exercise added!')}
       />
     </div>
   );

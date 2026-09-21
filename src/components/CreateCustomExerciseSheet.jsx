@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import BottomSheet from './BottomSheet';
 import db from '../db/db';
 import { MUSCLE_GROUPS } from '../data/muscleGroups';

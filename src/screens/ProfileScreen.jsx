@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -286,7 +286,7 @@ function RankProgressionSheet({ currentXP, onClose }) {
       }
     >
       <div className="rank-list mt-16">
-        {RANKS.map((rank, i) => {
+        {RANKS.map(rank => {
           const isUnlocked = currentXP >= rank.xpRequired;
           const isCurrent = currentRankInfo.current.rank === rank.rank;
           const xpToReach = rank.xpRequired - currentXP;

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
-import { getRankInfo, RANKS } from '../data/progression';
+import { getRankInfo } from '../data/progression';
 import quotes from '../data/quotes';
 import RankUpCinematic from '../components/RankUpCinematic';
 import { playLevelUpSound } from '../utils/audio';

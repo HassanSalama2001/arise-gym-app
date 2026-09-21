@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWorkout } from '../context/WorkoutContext';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -37,7 +37,7 @@ function ElapsedTimer({ startTime }) {
   );
 }
 
-function SetRow({ set, index, onUpdate, onComplete, isActive, onPlateCalc, onDelete, unitPreference, onRpeClick, lastSetData }) {
+function SetRow({ set, index, onUpdate, onComplete, isActive, onDelete, onRpeClick, lastSetData }) {
   const typeColors = { normal: 'var(--text-primary)', warmup: 'var(--accent-gold)', drop: 'var(--accent-red)' };
   const typeLabels = { normal: index + 1, warmup: 'W', drop: 'D' };
   
@@ -148,19 +148,20 @@ function LogSetupScreen({ onStart }) {
   const planExercises = useLiveQuery(() => db.planExercises.toArray(), []);
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
 
-  const [selectedPlan, setSelectedPlan] = useState(null);
   const location = useLocation();
+  const requestedPlanId = location.state?.planId;
+
+  // Another screen can ask to start a plan by navigating here with { planId }.
+  const startRequestedPlan = useEffectEvent(plan => {
+    startWithPlan(plan);
+    navigate(location.pathname, { replace: true, state: {} }); // don't start it again on back/refresh
+  });
 
   useEffect(() => {
-    if (location.state?.planId && plans && planExercises && exercises) {
-      const plan = plans.find(p => p.id === location.state.planId);
-      if (plan) {
-        startWithPlan(plan);
-        // Clear navigation state
-        navigate(location.pathname, { replace: true, state: {} });
-      }
-    }
-  }, [location.state, plans, planExercises, exercises, navigate]);
+    if (!requestedPlanId || !plans || !planExercises || !exercises) return;
+    const plan = plans.find(p => p.id === requestedPlanId);
+    if (plan) startRequestedPlan(plan);
+  }, [requestedPlanId, plans, planExercises, exercises]);
 
   function getPlanExercises(planId) {
     if (!planExercises || !exercises) return [];
@@ -250,14 +251,13 @@ function LogSetupScreen({ onStart }) {
 
 /* ── Active Workout Screen (main) ─────────────────── */
 export default function LogWorkoutScreen() {
-  const { showAlert, showConfirm, showToast } = useAlert();
+  const { showConfirm, showToast } = useAlert();
   const navigate = useNavigate();
   
   // Use global workout context for state persistence
   const { workoutState, startWorkout, updateSets, updateBlocks, setCurrentExIdx, endWorkout, updateTotalXP } = useWorkout();
   const { phase, sessionId, startTime, currentExIdx, sets, blocks, totalXP } = workoutState;
 
-  const [workoutConfig, setWorkoutConfig] = useState(null);
   const [initialQuests, setInitialQuests] = useState([]);
   const toastedQuests = useRef(new Set());
 
@@ -341,7 +341,6 @@ export default function LogWorkoutScreen() {
   function getDefaultRestDuration() { return profile?.defaultRestDuration ?? 60; }
 
   async function handleStart(config) {
-    setWorkoutConfig(config);
     
     // Load initial daily quests for mid-workout progress tracking
     const todayStr = new Date().toISOString().split('T')[0];
@@ -819,7 +818,7 @@ export default function LogWorkoutScreen() {
 
       if (activeCorrectives && activeCorrectives.length > 0) {
         const completedExIds = Object.entries(sets)
-          .filter(([_, exSets]) => exSets.some(s => s.completed))
+          .filter(([, exSets]) => exSets.some(s => s.completed))
           .map(([exIdStr]) => parseInt(exIdStr));
 
         for (const record of activeCorrectives) {
@@ -898,6 +897,10 @@ export default function LogWorkoutScreen() {
   const isSuperset = currentBlock.length > 1;
   const currentBlockSets = currentBlock.length > 0 ? getExSets(currentBlock[0].id) : [];
   const completedBlockSets = currentBlockSets.filter(s => s.completed).length;
+  const isBarbellBlock = currentBlock.some(ex => BARBELL_EQUIPMENT.has(ex.equipment));
+  // Plate calculator loads the next set to do, or the last weight entered.
+  const plateWeight = (currentBlockSets.find(s => !s.completed && s.weight > 0)
+    || [...currentBlockSets].reverse().find(s => s.weight > 0))?.weight || 0;
   const totalBlockSets = currentBlockSets.length;
 
   return (
@@ -1022,9 +1025,7 @@ export default function LogWorkoutScreen() {
                             onUpdate={changes => updateSet(ex.id, roundIdx, changes)}
                             onComplete={() => setRpePrompt({ exId: ex.id, setIdx: roundIdx })}
                             onRpeClick={() => setRpePrompt({ exId: ex.id, setIdx: roundIdx })}
-                            onPlateCalc={() => setPlateCalcWeight(s.weight)}
                             onDelete={() => deleteSet(ex.id, roundIdx)}
-                            unitPreference={profile?.unitPreference || 'kg'}
                             lastSetData={lastWorkoutSets[ex.id] ? (lastWorkoutSets[ex.id][roundIdx] || lastWorkoutSets[ex.id][lastWorkoutSets[ex.id].length - 1]) : null}
                           />
                         </div>
@@ -1039,6 +1040,18 @@ export default function LogWorkoutScreen() {
               <button className="add-set-btn" onClick={addSetToBlock} id="add-set-btn" style={{ flex: 1 }}>
                 + ADD SET
               </button>
+              {isBarbellBlock && (
+                <button
+                  className="add-set-btn"
+                  onClick={() => setPlateCalcWeight(plateWeight)}
+                  disabled={!plateWeight}
+                  title={plateWeight ? `Plates for ${plateWeight}` : 'Enter a weight first'}
+                  id="plate-calc-btn"
+                  style={{ flex: 1, opacity: plateWeight ? 1 : 0.5 }}
+                >
+                  PLATES
+                </button>
+              )}
               <button 
                 className="remove-block-btn" 
                 onClick={() => deleteBlock(currentExIdx)} 
@@ -1164,8 +1177,6 @@ export default function LogWorkoutScreen() {
       <AnimatePresence>
         {rpePrompt !== null && (
           <RPESelectionSheet
-            exId={rpePrompt.exId}
-            setIdx={rpePrompt.setIdx}
             onSelect={handleSelectRpe}
             onClose={() => setRpePrompt(null)}
           />
@@ -1276,6 +1287,8 @@ function ExerciseJumpSheet({ blocks, currentIdx, onSelect, onDeleteBlock, onClos
   );
 }
 
+const BARBELL_EQUIPMENT = new Set(['barbell', 'ez barbell', 'olympic barbell', 'trap bar', 'smith machine']);
+
 /* ── Plate Calculator Sheet ──────────────────────── */
 function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
   const isLbs = unitPreference === 'lbs';
@@ -1283,9 +1296,10 @@ function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
   const platesAvailable = isLbs ? [45, 35, 25, 10, 5, 2.5] : [25, 20, 15, 10, 5, 2.5, 1.25];
   const unitLabel = isLbs ? 'lbs' : 'kg';
   
-  let targetPerSide = (weight - barWeight) / 2;
+  const targetPerSide = (weight - barWeight) / 2;
   const platesToLoad = [];
-  
+  let leftoverPerSide = 0;
+
   if (targetPerSide > 0) {
     let currentTarget = targetPerSide;
     for (const p of platesAvailable) {
@@ -1295,6 +1309,7 @@ function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
         currentTarget = Math.round(currentTarget * 100) / 100; // handle float precision
       }
     }
+    leftoverPerSide = currentTarget;
   }
 
   return (
@@ -1336,6 +1351,11 @@ function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
               ))}
             </div>
           )}
+          {leftoverPerSide > 0 && (
+            <p style={{ marginTop: 12, fontSize: 13, color: 'var(--accent-gold)', textAlign: 'center' }}>
+              {leftoverPerSide} {unitLabel} per side can't be made with standard plates. Closest: {weight - leftoverPerSide * 2} {unitLabel}.
+            </p>
+          )}
         </div>
       )}
     </BottomSheet>
@@ -1343,7 +1363,7 @@ function PlateCalculatorSheet({ weight, unitPreference, onClose }) {
 }
 
 /* ── RPE Selection Sheet ──────────────────────── */
-function RPESelectionSheet({ exId, setIdx, onSelect, onClose }) {
+function RPESelectionSheet({ onSelect, onClose }) {
   const options = [
     { value: 10, label: '10', desc: 'Max Effort / 0 reps left' },
     { value: 9.5, label: '9.5', desc: 'Maybe 1 rep left' },
