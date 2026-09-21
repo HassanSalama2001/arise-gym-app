@@ -1,9 +1,30 @@
 import { LEGACY_ID_MAP, LEGACY_UNMAPPED } from '../data/legacyExercises';
 import { normalizeMuscleGroup } from '../data/muscleGroups';
 
-// Exercises recreated from the pre-2026-07 dataset get old ID + this base, clear of seeded IDs
-// (dataset < 10001, correctives 10001+).
+// Exercise ID ranges:
+//   < 20000          seeded (dataset < 10001, correctives 10001+)
+//   20000 – 99999    exercises recreated from the pre-2026-07 dataset (old ID + 20000)
+//   >= 100000        exercises the user creates
 export const LEGACY_CUSTOM_ID_BASE = 20000;
+export const CUSTOM_EXERCISE_ID_START = 100000;
+
+/** The ID for a new user-created exercise. */
+export async function nextCustomExerciseId(exercisesTable) {
+  const last = await exercisesTable.orderBy(':id').last();
+  return Math.max(CUSTOM_EXERCISE_ID_START, (last?.id ?? 0) + 1);
+}
+
+/** Dexie upgrade step: move custom exercises out of the seeded ID range, updating references. */
+export async function relocateCustomExercises(tx) {
+  const table = tx.table('exercises');
+  const misplaced = await table.filter(ex => !!ex.isCustom && ex.id < LEGACY_CUSTOM_ID_BASE).toArray();
+  if (!misplaced.length) return;
+  let next = await nextCustomExerciseId(table);
+  const moves = new Map(misplaced.map(ex => [ex.id, next++]));
+  await remapExerciseIds(tx, id => moves.get(id));
+  await table.bulkDelete([...moves.keys()]);
+  await table.bulkAdd(misplaced.map(ex => ({ ...ex, id: moves.get(ex.id) })));
+}
 
 // Tables whose rows reference an exercise, and how.
 export const EXERCISE_REF_TABLES = ['sets', 'planExercises', 'personalRecords', 'exerciseNotes'];

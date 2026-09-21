@@ -1,6 +1,8 @@
 import db from './db';
 import { LEGACY_DATASET_CUTOFF } from '../data/legacyExercises';
-import { EXERCISE_REF_TABLES, forEachExerciseRef, legacyResolver } from './remap';
+import {
+  EXERCISE_REF_TABLES, forEachExerciseRef, legacyResolver, LEGACY_CUSTOM_ID_BASE, CUSTOM_EXERCISE_ID_START,
+} from './remap';
 
 export const BACKUP_FORMAT = 'arise-backup';
 export const BACKUP_SCHEMA_VERSION = 1;
@@ -79,7 +81,10 @@ export function parseBackup(data) {
 /** Replaces all user data with the backup's contents in one transaction. */
 export async function importBackup(data) {
   const { tables, customExercises: backupCustom } = parseBackup(data);
-  const customExercises = [...backupCustom, ...(await placeholdersForMissingExercises(tables, backupCustom))];
+  const customExercises = relocateLowCustomIds(
+    [...backupCustom, ...(await placeholdersForMissingExercises(tables, backupCustom))],
+    tables,
+  );
 
   await db.transaction('rw', [...USER_TABLES.map(t => db.table(t)), db.exercises], async () => {
     for (const name of USER_TABLES) {
@@ -161,4 +166,19 @@ async function placeholdersForMissingExercises(tables, customExercises) {
     // A custom exercise still on this device keeps its details; otherwise use a named placeholder.
     return [rows[i] ?? { id, name: `Exercise #${id}`, muscleGroup: 'Other', isCustom: true, instructions: [] }];
   });
+}
+
+// Backups made before custom exercises had their own ID range can hold them among seeded IDs,
+// where a later dataset update would overwrite them. Move them (and their references) up.
+function relocateLowCustomIds(customExercises, tables) {
+  let next = Math.max(CUSTOM_EXERCISE_ID_START, ...customExercises.map(ex => ex.id + 1));
+  const moves = new Map();
+  for (const ex of customExercises) {
+    if (ex.id < LEGACY_CUSTOM_ID_BASE) moves.set(ex.id, next++);
+  }
+  if (!moves.size) return customExercises;
+  for (const holder of exerciseRefs(tables)) {
+    if (moves.has(holder.exerciseId)) holder.exerciseId = moves.get(holder.exerciseId);
+  }
+  return customExercises.map(ex => (moves.has(ex.id) ? { ...ex, id: moves.get(ex.id) } : ex));
 }

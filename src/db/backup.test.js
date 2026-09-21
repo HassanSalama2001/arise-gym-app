@@ -17,13 +17,13 @@ async function resetDb() {
 async function seedUserData() {
   await db.playerProfile.put({ key: 'profile', name: 'Hunter', totalXP: 1200 });
   await db.settings.put({ key: 'rest_default', value: 90 });
-  await db.exercises.put({ id: 5202, name: 'My Cable Thing', muscleGroup: 'Back', isCustom: true });
+  await db.exercises.put({ id: 100000, name: 'My Cable Thing', muscleGroup: 'Back', isCustom: true });
   const planId = await db.workoutPlans.add({ name: 'Push', createdAt: 1 });
   await db.planExercises.add({ planId, exerciseId: 25, order: 0 });
   const sessionId = await db.sessions.add({ planId, name: 'Push', startTime: 10, endTime: 20, date: '2026-09-01' });
   await db.sets.bulkAdd([
     { sessionId, exerciseId: 25, setNumber: 1, weight: 80, reps: 5, completed: 1 },
-    { sessionId, exerciseId: 5202, setNumber: 1, weight: 30, reps: 12, completed: 1 },
+    { sessionId, exerciseId: 100000, setNumber: 1, weight: 30, reps: 12, completed: 1 },
   ]);
   await db.personalRecords.add({ exerciseId: 25, weight: 80, reps: 5, date: 10 });
   await db.exerciseNotes.add({ exerciseId: 25, planId, text: 'elbows in', createdAt: 5 });
@@ -67,12 +67,12 @@ describe('export / import', () => {
 
     await db.sessions.add({ name: 'Extra', startTime: 99 });
     await db.meals.add({ date: '2026-09-02', type: 'dinner' });
-    await db.exercises.put({ id: 5300, name: 'Local only', isCustom: true });
+    await db.exercises.put({ id: 100500, name: 'Local only', isCustom: true });
     await importBackup(backup);
 
     expect(await db.sessions.count()).toBe(1);
     expect(await db.meals.count()).toBe(1);
-    expect(await db.exercises.get(5300)).toBeUndefined();
+    expect(await db.exercises.get(100500)).toBeUndefined();
   });
 
   it('never exports or overwrites device settings', async () => {
@@ -166,8 +166,26 @@ describe('older backups', () => {
       settings: [{ key: 'exercise_seed_version', value: '1324_v3' }],
       exportedAt: '2026-08-20T00:00:00Z',
     });
-    expect(await db.exercises.get(5210)).toMatchObject({ name: 'Exercise #5210', isCustom: true });
-    expect((await db.sets.toArray())[0].exerciseId).toBe(5210);
+    const [set] = await db.sets.toArray();
+    expect(set.exerciseId).toBeGreaterThanOrEqual(100000);
+    expect(await db.exercises.get(set.exerciseId)).toMatchObject({ name: 'Exercise #5210', isCustom: true });
+  });
+
+  it('moves custom exercises out of the seeded ID range, keeping references', async () => {
+    await importBackup({
+      format: 'arise-backup', schemaVersion: 1, exportedAt: '2026-09-01T00:00:00Z',
+      tables: {
+        playerProfile: [{ key: 'profile' }],
+        sets: [{ id: 1, sessionId: 1, exerciseId: 5202, weight: 20, reps: 10 }, { id: 2, sessionId: 1, exerciseId: 25, weight: 60, reps: 5 }],
+        planExercises: [{ id: 1, planId: 1, exerciseId: 5202, order: 0 }],
+        customExercises: [{ id: 5202, name: 'Landmine Press', muscleGroup: 'Shoulders', isCustom: true }],
+      },
+    });
+    const sets = await db.sets.orderBy('id').toArray();
+    expect(sets.map(s => s.exerciseId)).toEqual([100000, 25]);
+    expect((await db.planExercises.toArray())[0].exerciseId).toBe(100000);
+    expect(await db.exercises.get(100000)).toMatchObject({ name: 'Landmine Press' });
+    expect(await db.exercises.get(5202)).toBeUndefined();
   });
 });
 

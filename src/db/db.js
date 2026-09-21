@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { migrateLegacyExercises } from './remap';
+import { migrateLegacyExercises, relocateCustomExercises } from './remap';
 
 const db = new Dexie('AriseDB');
 
@@ -52,5 +52,9 @@ db.version(7).stores({
 // v11 moves pre-2026-07 databases onto the unified dataset's IDs. It originally deleted all workout
 // history; it now remaps instead (see docs/MIGRATIONS.md). Only databases below v11 run it.
 db.version(11).upgrade(migrateLegacyExercises);
+
+// v12: custom exercises used to take the next ID after the dataset, where a future dataset could
+// overwrite them. Move them to the custom range (100000+).
+db.version(12).upgrade(relocateCustomExercises);
 
 export default db;

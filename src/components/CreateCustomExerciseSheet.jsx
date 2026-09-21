@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import BottomSheet from './BottomSheet';
 import db from '../db/db';
 import { MUSCLE_GROUPS } from '../data/muscleGroups';
+import { nextCustomExerciseId } from '../db/remap';
 
 export default function CreateCustomExerciseSheet({ onClose, onCreated }) {
   const [name, setName] = useState('');
@@ -21,6 +22,7 @@ export default function CreateCustomExerciseSheet({ onClose, onCreated }) {
       .filter(i => i.length > 0);
 
     const newEx = {
+      id: await nextCustomExerciseId(db.exercises),
       name: name.trim(),
       muscleGroup,
       difficulty,
@@ -28,8 +30,8 @@ export default function CreateCustomExerciseSheet({ onClose, onCreated }) {
       isCustom: true // Just a flag to identify user-created exercises
     };
 
-    const id = await db.exercises.add(newEx);
-    if (onCreated) onCreated({ ...newEx, id });
+    await db.exercises.add(newEx);
+    if (onCreated) onCreated(newEx);
     onClose();
   }
 
