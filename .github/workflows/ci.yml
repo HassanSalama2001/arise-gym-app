@@ -1,10 +1,10 @@
 name: CI
 
+# Pull requests only: pushing to a PR branch already triggers pull_request, and main runs the
+# same checks in firebase-deploy.yml before deploying.
 on:
   pull_request:
-  push:
-    branches-ignore:
-      - main # main runs the same checks in firebase-deploy.yml before deploying
+  workflow_dispatch:
 
 jobs:
   check:
