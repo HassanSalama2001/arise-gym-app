@@ -50,13 +50,10 @@ export default function SettingsScreen() {
   useEffect(() => {
     const detectActivity = async () => {
       try {
+        // Sessions carry startTime (ms); there is no `date` field to query.
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const recentSessions = await db.sessions
-          .where('date')
-          .above(thirtyDaysAgo.toISOString().split('T')[0])
-          .toArray();
-        const count = recentSessions.length;
+        const count = await db.sessions.where('startTime').above(thirtyDaysAgo.getTime()).count();
         if (count >= 6) setAutoActivity('active');
         else if (count >= 4) setAutoActivity('moderate');
         else if (count >= 2) setAutoActivity('light');

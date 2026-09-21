@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import { getToday } from '../utils/date';
+import { getToday, parseLocalDate, addDays } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
 import { useAlert } from '../context/useAlert';
 import { playClickSound } from '../utils/audio';
@@ -148,14 +148,12 @@ export default function MealTrackerScreen() {
     const today = getToday();
     if (selectedDate === today) return 'TODAY';
     
-    const d = new Date(selectedDate);
+    const d = parseLocalDate(selectedDate);
     return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase();
   };
 
   const adjustDate = (days) => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + days);
-    setSelectedDate(d.toISOString().split('T')[0]);
+    setSelectedDate(addDays(selectedDate, days));
   };
 
   return (

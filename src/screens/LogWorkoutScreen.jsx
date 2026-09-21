@@ -12,6 +12,7 @@ import { playSetCompleteSound } from '../utils/audio';
 import { hapticSetComplete } from '../utils/haptics';
 import { checkAndUnlockAchievement } from '../utils/achievements';
 import { useAlert } from '../context/useAlert';
+import { getToday, getYesterday } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
 import ExerciseDetailsSheet from '../components/ExerciseDetailsSheet';
 import './LogWorkoutScreen.css';
@@ -273,7 +274,7 @@ export default function LogWorkoutScreen() {
   // Sync initialQuests on mount if active workout is running
   useEffect(() => {
     if (phase === 'active' && initialQuests.length === 0) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getToday();
       db.dailyQuests.where('date').equals(todayStr).toArray().then(quests => {
         setInitialQuests(quests);
       }).catch(err => console.error('Failed to load initial quests on reload:', err));
@@ -343,7 +344,7 @@ export default function LogWorkoutScreen() {
   async function handleStart(config) {
     
     // Load initial daily quests for mid-workout progress tracking
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getToday();
     const todayQuests = await db.dailyQuests.where('date').equals(todayStr).toArray();
     setInitialQuests(todayQuests);
     toastedQuests.current = new Set();
@@ -662,7 +663,7 @@ export default function LogWorkoutScreen() {
 
   async function handleFinish() {
     const profile = await db.playerProfile.get('profile');
-    const today = new Date().toISOString().split('T')[0];
+    const today = getToday();
     const prevAchievements = await db.achievements.toArray();
 
     // Calc final XP with streak multiplier and completion bonus
@@ -783,7 +784,7 @@ export default function LogWorkoutScreen() {
 
     // Update player profile
     const lastDate = profile?.lastSessionDate;
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const yesterday = getYesterday();
     const newStreak = lastDate === yesterday ? (profile.currentStreak || 0) + 1 : lastDate === today ? (profile.currentStreak || 0) : 1;
     const newTotalXP = (profile?.totalXP || 0) + finalXP + questXPEarned;
     const newTotalSessions = (profile?.totalSessions || 0) + 1;

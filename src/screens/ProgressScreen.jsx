@@ -7,6 +7,7 @@ import { TRAINED_MUSCLE_GROUPS } from '../data/muscleGroups';
 import SessionDetailModal from '../components/SessionDetailModal';
 import AnimatedNumber from '../components/AnimatedNumber';
 import { useNow } from '../hooks/useNow';
+import { getToday, toLocalDateString } from '../utils/date';
 import './ProgressScreen.css';
 import { 
   calculateInBodyScore, 
@@ -154,7 +155,7 @@ export default function ProgressScreen() {
   const [activeTab, setActiveTab] = useState('stats');
   const [historyFilter, setHistoryFilter] = useState('all');
   const [calendarView, setCalendarView] = useState('week');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getToday);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const now = useNow();
 
@@ -169,7 +170,7 @@ export default function ProgressScreen() {
   // Sessions for selected date
   const selectedSessions = useMemo(() => {
     if (!sessions) return [];
-    return sessions.filter(s => new Date(s.startTime).toISOString().split('T')[0] === selectedDate);
+    return sessions.filter(s => toLocalDateString(s.startTime) === selectedDate);
   }, [sessions, selectedDate]);
 
   // Build 30-day XP history
@@ -177,9 +178,9 @@ export default function ProgressScreen() {
     if (!sessions) return [];
     const days = Array.from({ length: 30 }, (_, i) => {
       const d = new Date(now - (29 - i) * 86400000);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toLocalDateString(d);
       const daySessions = (sessions || []).filter(s => {
-        const sd = new Date(s.startTime).toISOString().split('T')[0];
+        const sd = toLocalDateString(s.startTime);
         return sd === dateStr;
       });
       return { date: dateStr, xp: daySessions.reduce((a, s) => a + (s.xpEarned || 0), 0) };
@@ -297,7 +298,7 @@ export default function ProgressScreen() {
                   sessions={sessions || []} 
                   viewMode={calendarView}
                   selectedDate={selectedDate}
-                  onDateClick={(d) => setSelectedDate(d.toISOString().split('T')[0])}
+                  onDateClick={(d) => setSelectedDate(toLocalDateString(d))}
                 />
                 
                 {/* Selected Day Details */}
@@ -844,7 +845,7 @@ function OneRepMaxChart({ sets, sessions, exercises }) {
       if (!s.completed || s.exerciseId !== ex.id) return;
       const session = sessions.find(sess => sess.id === s.sessionId);
       if (!session) return;
-      const date = new Date(session.startTime).toISOString().split('T')[0];
+      const date = toLocalDateString(session.startTime);
       const epley1RM = s.weight * (1 + s.reps / 30);
       if (!daily1RM[date] || epley1RM > daily1RM[date]) {
         daily1RM[date] = epley1RM;
@@ -937,14 +938,14 @@ function WorkoutCalendar({ sessions, viewMode, selectedDate, onDateClick }) {
 
   const activeDates = useMemo(() => {
     const set = new Set();
-    (sessions || []).forEach(s => set.add(new Date(s.startTime).toISOString().split('T')[0]));
+    (sessions || []).forEach(s => set.add(toLocalDateString(s.startTime)));
     return set;
   }, [sessions]);
 
   const renderDay = (date, isSelected) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(date);
     const isActive = activeDates.has(dateStr);
-    const isToday = dateStr === now.toISOString().split('T')[0];
+    const isToday = dateStr === toLocalDateString(now);
     const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
 
     return (
@@ -978,7 +979,7 @@ function WorkoutCalendar({ sessions, viewMode, selectedDate, onDateClick }) {
       </div>
 
       <div className={`cal-grid ${viewMode}`}>
-        {(viewMode === 'week' ? weekDays : monthDays).map(d => renderDay(d, d.toISOString().split('T')[0] === selectedDate))}
+        {(viewMode === 'week' ? weekDays : monthDays).map(d => renderDay(d, toLocalDateString(d) === selectedDate))}
       </div>
     </div>
   );
