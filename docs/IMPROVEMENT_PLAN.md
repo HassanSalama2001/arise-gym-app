@@ -35,6 +35,8 @@ several parts of the app still use the old values.
 | P0.5 | ✅ | **Referential-integrity test** for all static references (templates, corrective protocols) against the dataset, so a future dataset swap fails CI instead of production. | Test fails if any referenced ID is missing — **`src/data/referentialIntegrity.test.js`** |
 | P0.6 | ✅ | **Remaining real lint bugs:** duplicate `border` key (`LogWorkoutScreen.jsx:1060`), `setTimeToMidnight` used before declaration (`HomeScreen.jsx:132`), empty catch (`RestTimerOverlay.jsx:23`). | Those rules report 0 |
 | P0.7 | ✅ | **Every exercise shows "Beginner".** The dataset has no `difficulty` field, so the UI falls back to the default. Derive difficulty from equipment/category at seed time, or hide the badge. | Library shows a mix of difficulties, or no misleading badge — **815a603 — skills advanced, free weights intermediate, machines/bodyweight beginner** |
+| P0.8 | ✅ | **Plate calculator was unreachable.** Its button was removed from the weight input (e2493c8), leaving the sheet with no way to open it. Add a PLATES button in the set actions bar for barbell/smith exercises; show a per-side remainder standard plates can't make. | PLATES opens the calculator with the next set's weight — **4692a0f** |
+| P0.9 | ⬜ | **"Today" is UTC in several places** (`toISOString().split('T')[0]` for Progress's selected date, session grouping, charts, activity detection). At UTC+3, between midnight and 3 am the app still thinks it's yesterday. Use one local-date helper everywhere. | Sessions logged after local midnight land on the right day |
 
 ## P1 — Test & CI safety net
 
@@ -42,9 +44,10 @@ several parts of the app still use the old values.
 |---|---|---|---|
 | P1.1 | ✅ | Add Vitest + `fake-indexeddb`; `npm test` script. | `npm test` runs — **Vitest + fake-indexeddb; `npm test`** |
 | P1.2 | ⬜ | Unit tests for pure logic: `calorieEngine`, `progression` (ranks/XP), `achievements`, set XP/PR logic (after P4.2 extracts it). | Tests green |
-| P1.3 | ⬜ | Clear the remaining lint errors (unused vars, hook deps, purity, set-state-in-effect) — real fixes, not blanket disables. | `npm run lint` exits 0 |
-| P1.4 | ⬜ | CI: add a PR/branch workflow running `npm ci` → lint → test → build. Deploy workflow uses `npm ci`, runs the same gates before deploying. | Failing lint/test blocks deploy |
-| P1.5 | ⏸ | Replace the unpinned `w9jds/firebase-action@master` + deprecated `FIREBASE_TOKEN` with `FirebaseExtended/action-hosting-deploy` (pinned) + service account. **Needs owner:** add a `FIREBASE_SERVICE_ACCOUNT` repo secret. I'll prepare the workflow; it switches over once the secret exists. | Deploy works with the service-account secret |
+| P1.3 | ✅ | Clear the remaining lint errors (unused vars, hook deps, purity, set-state-in-effect) — real fixes, not blanket disables. | `npm run lint` exits 0 — **85 → 0. Real bugs fixed along the way: Mission Complete reshuffling quote/particles on re-render, navigate() during render, GIF-load race, plate calculator (P0.8)** |
+| P1.4 | ✅ | CI: add a PR/branch workflow running `npm ci` → lint → test → build. Deploy workflow uses `npm ci`, runs the same gates before deploying. | Failing lint/test blocks deploy — **ci.yml for PRs/branches; deploy runs npm ci → lint → test → build first** |
+| P1.5 | 🟡 | Replace the unpinned `w9jds/firebase-action@master` + deprecated `FIREBASE_TOKEN` with `FirebaseExtended/action-hosting-deploy` (pinned) + service account. **Needs owner:** add a `FIREBASE_SERVICE_ACCOUNT` repo secret. I'll prepare the workflow; it switches over once the secret exists. | Deploy works with the service-account secret — **Workflow ready: action pinned (v15.30.2) and a service-account path (action-hosting-deploy v0.11.0) that activates once the FIREBASE_SERVICE_ACCOUNT secret exists** |
+| P1.6 | 🟡 | The deploy build never received `VITE_SUPABASE_*` (`.env` is gitignored), so the deployed app ran in local-only mode unless built locally. Pass them from repo secrets. **Needs owner:** add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` secrets. | Deployed app can sign in — **Workflow passes the secrets; waiting on the owner to add them** |
 
 ## P2 — Backup / restore integrity
 
@@ -80,15 +83,15 @@ JSON backups usable again.
 | P4.3 | ⬜ | Better PRs: keep the heaviest-weight PR and also track an estimated-1RM PR, so a lighter set with more reps can count. | PR toast fires on e1RM improvement |
 | P4.4 | ⬜ | Trim `ProgressScreen`, `ProfileScreen`, `SettingsScreen` (870–1,000 lines each) by extracting sections as they're touched (P2.5 removes a lot). | Each < 600 lines |
 | P4.5 | ⬜ | Inline `style={{…}}` → CSS classes, only in files already being changed (no big-bang restyle). | Opportunistic |
-| P4.6 | ⬜ | Tidy `package.json`: name `arise-temp` → `arise`, version. | — |
+| P4.6 | ✅ | Tidy `package.json`: name `arise-temp` → `arise`, version. | — — **Renamed to arise** |
 
 ## P5 — Repo hygiene
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P5.1 | ⬜ | Untrack `.firebase/`, `temp_dataset.json`, `assets_backup/` (`git rm --cached`) and add them to `.gitignore`. | Not tracked |
-| P5.2 | ⬜ | Move `fetch_new_dataset.cjs`, `map_exercises.cjs`, `update_urls.cjs` to `scripts/`; delete the unused `src/data/exercises.json` (the app imports `exercises.js`). | Root is clean |
-| P5.3 | ⬜ | Real README (what ARISE is, features, setup, Supabase migration, env vars, deploy) + `.env.example`. | — |
+| P5.1 | ✅ | Untrack `.firebase/`, `temp_dataset.json`, `assets_backup/` (`git rm --cached`) and add them to `.gitignore`. | Not tracked — **Files kept on disk; .firebase/ added to .gitignore** |
+| P5.2 | ✅ | Move `fetch_new_dataset.cjs`, `map_exercises.cjs`, `update_urls.cjs` to `scripts/`; delete the unused `src/data/exercises.json` (the app imports `exercises.js`). | Root is clean — **scripts/fetch-exercise-dataset.cjs (npm run dataset:fetch); obsolete scripts and exercises.json removed** |
+| P5.3 | ✅ | Real README (what ARISE is, features, setup, Supabase migration, env vars, deploy) + `.env.example`. | — |
 
 ## P6 — Offline exercise visuals
 
@@ -129,3 +132,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-22 | P0.1–P0.6 and P1.1 implemented. Found and added P0.7 (difficulty) and P3.4 (custom ID collisions). |
 | 2026-09-22 | P0.7 and all of P2 done. Lint 85 → 79. Tests 30/30. |
 | 2026-09-22 | P3 done. v11 no longer wipes history on devices that haven't upgraded yet. Tests 40/40, lint 78. |
+| 2026-09-22 | P1.3–P1.4, P5 and P4.6 done; P1.5/P1.6 need repo secrets. Found P0.8 (fixed) and P0.9 (UTC dates, open). Lint 0, tests 40/40. |
