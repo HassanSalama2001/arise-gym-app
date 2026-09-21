@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo, RANKS } from '../data/progression';
+import { TRAINED_MUSCLE_GROUPS } from '../data/muscleGroups';
 import SessionDetailModal from '../components/SessionDetailModal';
 import './ProgressScreen.css';
 import { 
@@ -97,7 +98,7 @@ function VolumeBarChart({ weekData }) {
 
 /* ── Muscle Frequency Grid ────────────────────────── */
 function MuscleGrid({ data }) {
-  const muscles = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
+  const muscles = TRAINED_MUSCLE_GROUPS;
   const maxCount = Math.max(...muscles.map(m => data[m] || 0), 1);
   return (
     <div className="muscle-grid">
@@ -453,7 +454,7 @@ function MuscleFrequencyGrid({ sessions, sets }) {
   const weekSessions = (sessions || []).filter(s => s.startTime > weekAgo);
   const weekSessionIds = new Set(weekSessions.map(s => s.id));
   const weekSets = (sets || []).filter(s => weekSessionIds.has(s.sessionId) && s.completed);
-  const muscles = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
+  const muscles = TRAINED_MUSCLE_GROUPS;
   const data = {};
   muscles.forEach(m => { data[m] = 0; });
   weekSets.forEach(s => {

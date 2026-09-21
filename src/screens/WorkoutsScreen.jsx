@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import templates from '../data/templates.json';
+import { TRAINED_MUSCLE_GROUPS } from '../data/muscleGroups';
 import { useAlert } from '../context/AlertContext';
 import posturalIssues, { categories as correctiveCategories } from '../data/posturalIssues';
 import PosturalIssueDetail from '../components/PosturalIssueDetail';
@@ -12,7 +13,7 @@ import CreateCustomExerciseSheet from '../components/CreateCustomExerciseSheet';
 import CreateCorrectiveSheet from '../components/CreateCorrectiveSheet';
 import './WorkoutsScreen.css';
 
-const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
+const MUSCLE_GROUPS = ['All', ...TRAINED_MUSCLE_GROUPS, 'Cardio'];
 
 const DIFFICULTY_MAP = {
   E: { label: 'Beginner', cls: 'chip-green' },

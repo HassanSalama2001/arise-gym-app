@@ -3,8 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import BottomSheet from './BottomSheet';
+import { TRAINED_MUSCLE_GROUPS } from '../data/muscleGroups';
 
-const MUSCLE_GROUPS = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio', 'Full Body', 'Corrective'];
+const MUSCLE_GROUPS = ['All', ...TRAINED_MUSCLE_GROUPS, 'Cardio', 'Corrective'];
 
 export default function AddExerciseToPlanSheet({ isOpen, onClose, planId, onExerciseAdded }) {
   const [search, setSearch] = useState('');

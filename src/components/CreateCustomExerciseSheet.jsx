@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import BottomSheet from './BottomSheet';
 import db from '../db/db';
+import { MUSCLE_GROUPS } from '../data/muscleGroups';
 
 export default function CreateCustomExerciseSheet({ onClose, onCreated }) {
   const [name, setName] = useState('');
@@ -8,7 +9,6 @@ export default function CreateCustomExerciseSheet({ onClose, onCreated }) {
   const [difficulty, setDifficulty] = useState('D');
   const [instructions, setInstructions] = useState('');
 
-  const muscleGroups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Corrective', 'Cardio', 'Other'];
   const difficulties = ['A', 'B', 'C', 'D', 'E'];
 
   async function handleSave() {
@@ -56,7 +56,7 @@ export default function CreateCustomExerciseSheet({ onClose, onCreated }) {
             onChange={e => setMuscleGroup(e.target.value)}
             style={{ width: '100%', marginTop: 8, appearance: 'none', background: 'var(--bg-surface)' }}
           >
-            {muscleGroups.map(mg => <option key={mg} value={mg}>{mg}</option>)}
+            {MUSCLE_GROUPS.map(mg => <option key={mg} value={mg}>{mg}</option>)}
           </select>
         </div>
 

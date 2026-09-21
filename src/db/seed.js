@@ -1,5 +1,6 @@
 import db from './db';
 import { exercises as exerciseData } from '../data/exercises';
+import { normalizeMuscleGroup } from '../data/muscleGroups';
 
 let seedingPromise = null;
 
@@ -10,10 +11,14 @@ export async function seedDatabase() {
     try {
       const count = await db.exercises.count();
       const seedVer = await db.settings.get('exercise_seed_version');
-      const currentVer = exerciseData.length + '_v3';
+      const currentVer = exerciseData.length + '_v4';
 
       if (count === 0 || !seedVer || seedVer.value !== currentVer) {
-        await db.exercises.bulkPut(exerciseData);
+        await db.exercises.bulkPut(exerciseData.map(ex => ({
+          ...ex,
+          bodyPart: ex.muscleGroup,
+          muscleGroup: normalizeMuscleGroup(ex.muscleGroup),
+        })));
         await db.settings.put({ key: 'exercise_seed_version', value: currentVer });
       }
 
