@@ -3,79 +3,418 @@
     "id": "tpl_1",
     "name": "PPL - Push Day",
     "exercises": [
-      { "exerciseId": 1, "order": 0, "name": "Barbell Bench Press" },
-      { "exerciseId": 4, "order": 1, "name": "Dumbbell Bench Press" },
-      { "exerciseId": 64, "order": 2, "name": "Lateral Raise (Dumbbell)" }
+      {
+        "exerciseId": 25,
+        "order": 0,
+        "name": "barbell bench press",
+        "targetSets": 4,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 314,
+        "order": 1,
+        "name": "dumbbell incline bench press",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 405,
+        "order": 2,
+        "name": "dumbbell seated shoulder press",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 334,
+        "order": 3,
+        "name": "dumbbell lateral raise",
+        "targetSets": 3,
+        "targetReps": 15
+      },
+      {
+        "exerciseId": 200,
+        "order": 4,
+        "name": "cable pushdown (with rope attachment)",
+        "targetSets": 3,
+        "targetReps": 12
+      }
     ]
   },
   {
     "id": "tpl_2",
     "name": "PPL - Pull Day",
     "exercises": [
-      { "exerciseId": 21, "order": 0, "name": "Deadlift (Conventional)" },
-      { "exerciseId": 23, "order": 1, "name": "Pull-Up" },
-      { "exerciseId": 76, "order": 2, "name": "Barbell Bicep Curl" }
+      {
+        "exerciseId": 32,
+        "order": 0,
+        "name": "barbell deadlift",
+        "targetSets": 3,
+        "targetReps": 5
+      },
+      {
+        "exerciseId": 652,
+        "order": 1,
+        "name": "pull-up",
+        "targetSets": 3,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 27,
+        "order": 2,
+        "name": "barbell bent over row",
+        "targetSets": 3,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 203,
+        "order": 3,
+        "name": "cable rear delt row (with rope)",
+        "targetSets": 3,
+        "targetReps": 15
+      },
+      {
+        "exerciseId": 31,
+        "order": 4,
+        "name": "barbell curl",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 313,
+        "order": 5,
+        "name": "dumbbell hammer curl",
+        "targetSets": 3,
+        "targetReps": 12
+      }
     ]
   },
   {
     "id": "tpl_3",
     "name": "PPL - Legs Day",
     "exercises": [
-      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" }
+      {
+        "exerciseId": 43,
+        "order": 0,
+        "name": "barbell full squat",
+        "targetSets": 4,
+        "targetReps": 6
+      },
+      {
+        "exerciseId": 85,
+        "order": 1,
+        "name": "barbell romanian deadlift",
+        "targetSets": 3,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 585,
+        "order": 2,
+        "name": "lever leg extension",
+        "targetSets": 3,
+        "targetReps": 12
+      },
+      {
+        "exerciseId": 586,
+        "order": 3,
+        "name": "lever lying leg curl",
+        "targetSets": 3,
+        "targetReps": 12
+      },
+      {
+        "exerciseId": 605,
+        "order": 4,
+        "name": "lever standing calf raise",
+        "targetSets": 4,
+        "targetReps": 15
+      }
     ]
   },
   {
     "id": "tpl_4",
     "name": "Full Body Starter",
     "exercises": [
-      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" },
-      { "exerciseId": 1, "order": 1, "name": "Barbell Bench Press" },
-      { "exerciseId": 21, "order": 2, "name": "Deadlift (Conventional)" },
-      { "exerciseId": 23, "order": 3, "name": "Pull-Up" }
+      {
+        "exerciseId": 43,
+        "order": 0,
+        "name": "barbell full squat",
+        "targetSets": 3,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 25,
+        "order": 1,
+        "name": "barbell bench press",
+        "targetSets": 3,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 27,
+        "order": 2,
+        "name": "barbell bent over row",
+        "targetSets": 3,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 405,
+        "order": 3,
+        "name": "dumbbell seated shoulder press",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 472,
+        "order": 4,
+        "name": "hanging leg raise",
+        "targetSets": 3,
+        "targetReps": 10
+      }
     ]
   },
   {
     "id": "tpl_5",
     "name": "Upper Body Strength",
     "exercises": [
-      { "exerciseId": 1, "order": 0, "name": "Barbell Bench Press" },
-      { "exerciseId": 23, "order": 1, "name": "Pull-Up" },
-      { "exerciseId": 4, "order": 2, "name": "Dumbbell Bench Press" },
-      { "exerciseId": 64, "order": 3, "name": "Lateral Raise (Dumbbell)" },
-      { "exerciseId": 76, "order": 4, "name": "Barbell Bicep Curl" }
+      {
+        "exerciseId": 25,
+        "order": 0,
+        "name": "barbell bench press",
+        "targetSets": 5,
+        "targetReps": 5
+      },
+      {
+        "exerciseId": 27,
+        "order": 1,
+        "name": "barbell bent over row",
+        "targetSets": 5,
+        "targetReps": 5
+      },
+      {
+        "exerciseId": 91,
+        "order": 2,
+        "name": "barbell seated overhead press",
+        "targetSets": 3,
+        "targetReps": 6
+      },
+      {
+        "exerciseId": 652,
+        "order": 3,
+        "name": "pull-up",
+        "targetSets": 3,
+        "targetReps": 6
+      },
+      {
+        "exerciseId": 61,
+        "order": 4,
+        "name": "barbell lying triceps extension",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 31,
+        "order": 5,
+        "name": "barbell curl",
+        "targetSets": 3,
+        "targetReps": 10
+      }
     ]
   },
   {
     "id": "tpl_6",
     "name": "Lower Body Power",
     "exercises": [
-      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" },
-      { "exerciseId": 21, "order": 1, "name": "Deadlift (Conventional)" }
+      {
+        "exerciseId": 43,
+        "order": 0,
+        "name": "barbell full squat",
+        "targetSets": 5,
+        "targetReps": 5
+      },
+      {
+        "exerciseId": 32,
+        "order": 1,
+        "name": "barbell deadlift",
+        "targetSets": 3,
+        "targetReps": 5
+      },
+      {
+        "exerciseId": 42,
+        "order": 2,
+        "name": "barbell front squat",
+        "targetSets": 3,
+        "targetReps": 6
+      },
+      {
+        "exerciseId": 336,
+        "order": 3,
+        "name": "dumbbell lunge",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 594,
+        "order": 4,
+        "name": "lever seated calf raise",
+        "targetSets": 4,
+        "targetReps": 12
+      }
     ]
   },
   {
     "id": "tpl_7",
     "name": "Arnold Split - Chest & Back",
     "exercises": [
-      { "exerciseId": 1, "order": 0, "name": "Barbell Bench Press" },
-      { "exerciseId": 23, "order": 1, "name": "Pull-Up" },
-      { "exerciseId": 4, "order": 2, "name": "Dumbbell Bench Press" }
+      {
+        "exerciseId": 25,
+        "order": 0,
+        "name": "barbell bench press",
+        "targetSets": 4,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 47,
+        "order": 1,
+        "name": "barbell incline bench press",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 308,
+        "order": 2,
+        "name": "dumbbell fly",
+        "targetSets": 3,
+        "targetReps": 12
+      },
+      {
+        "exerciseId": 652,
+        "order": 3,
+        "name": "pull-up",
+        "targetSets": 4,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 27,
+        "order": 4,
+        "name": "barbell bent over row",
+        "targetSets": 4,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 861,
+        "order": 5,
+        "name": "cable seated row",
+        "targetSets": 3,
+        "targetReps": 12
+      }
     ]
   },
   {
     "id": "tpl_8",
     "name": "Arnold Split - Shoulders & Arms",
     "exercises": [
-      { "exerciseId": 64, "order": 0, "name": "Lateral Raise (Dumbbell)" },
-      { "exerciseId": 76, "order": 1, "name": "Barbell Bicep Curl" }
+      {
+        "exerciseId": 91,
+        "order": 0,
+        "name": "barbell seated overhead press",
+        "targetSets": 4,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 334,
+        "order": 1,
+        "name": "dumbbell lateral raise",
+        "targetSets": 3,
+        "targetReps": 15
+      },
+      {
+        "exerciseId": 378,
+        "order": 2,
+        "name": "dumbbell rear fly",
+        "targetSets": 3,
+        "targetReps": 15
+      },
+      {
+        "exerciseId": 31,
+        "order": 3,
+        "name": "barbell curl",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 313,
+        "order": 4,
+        "name": "dumbbell hammer curl",
+        "targetSets": 3,
+        "targetReps": 12
+      },
+      {
+        "exerciseId": 61,
+        "order": 5,
+        "name": "barbell lying triceps extension",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 201,
+        "order": 6,
+        "name": "cable pushdown",
+        "targetSets": 3,
+        "targetReps": 12
+      }
     ]
   },
   {
     "id": "tpl_9",
     "name": "Arnold Split - Legs",
     "exercises": [
-      { "exerciseId": 41, "order": 0, "name": "Back Squat (High Bar)" },
-      { "exerciseId": 21, "order": 1, "name": "Deadlift (Conventional)" }
+      {
+        "exerciseId": 43,
+        "order": 0,
+        "name": "barbell full squat",
+        "targetSets": 4,
+        "targetReps": 8
+      },
+      {
+        "exerciseId": 85,
+        "order": 1,
+        "name": "barbell romanian deadlift",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 585,
+        "order": 2,
+        "name": "lever leg extension",
+        "targetSets": 3,
+        "targetReps": 12
+      },
+      {
+        "exerciseId": 586,
+        "order": 3,
+        "name": "lever lying leg curl",
+        "targetSets": 3,
+        "targetReps": 12
+      },
+      {
+        "exerciseId": 336,
+        "order": 4,
+        "name": "dumbbell lunge",
+        "targetSets": 3,
+        "targetReps": 10
+      },
+      {
+        "exerciseId": 605,
+        "order": 5,
+        "name": "lever standing calf raise",
+        "targetSets": 4,
+        "targetReps": 15
+      },
+      {
+        "exerciseId": 472,
+        "order": 6,
+        "name": "hanging leg raise",
+        "targetSets": 3,
+        "targetReps": 12
+      }
     ]
   }
 ]
