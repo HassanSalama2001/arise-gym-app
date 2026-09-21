@@ -4,13 +4,16 @@ import { useWorkout } from '../context/useWorkout';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import { calculateSetXP } from '../data/progression';
 import posturalIssues from '../data/posturalIssues';
 import RestTimerOverlay from '../components/RestTimerOverlay';
 import XPToast from '../components/XPToast';
 import { playSetCompleteSound } from '../utils/audio';
 import { hapticSetComplete } from '../utils/haptics';
 import { checkAndUnlockAchievement } from '../utils/achievements';
+import {
+  setXP, PR_BONUS_XP, summarizeSets, applyQuestProgress, finalSessionXP, nextStreak, earnedAchievements,
+} from '../utils/workoutRules';
+import { recordSetIfPR, countPRsSince } from '../db/records';
 import { useAlert } from '../context/useAlert';
 import { getToday, getYesterday } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
@@ -478,25 +481,11 @@ export default function LogWorkoutScreen() {
     const exSets = getExSets(exId);
     const s = exSets[setIdx];
     if (s.completed) return;
-    const w = s.weight || 0;
-    const r = s.reps || 0;
-    const matchedEx = allExercises?.find(e => e.id === exId);
-    const isCorrectiveEx = matchedEx?.isCorrective || matchedEx?.muscleGroup === 'Corrective';
-    const isWarmup = s.type === 'warmup';
-    const xp = isWarmup ? 0 : isCorrectiveEx ? 5 : calculateSetXP(w, r);
+    const exercise = allExercises?.find(e => e.id === exId);
+    const completedSet = { ...s, completed: true, ...(rpeValue !== undefined ? { rpe: rpeValue } : {}) };
 
-    // Check PR
-    const prRecord = await db.personalRecords.where('exerciseId').equals(exId).first();
-    let isPR = false;
-    if (!isWarmup && (!prRecord || w > prRecord.weight || (w === prRecord.weight && r > prRecord.reps))) {
-      if (w > 0 && r > 0) {
-        isPR = true;
-        await db.personalRecords.put({ exerciseId: exId, weight: w, reps: r, date: Date.now() });
-      }
-    }
-
-    const bonus = isPR ? 100 : 0;
-    const earned = xp + bonus;
+    const isPR = await recordSetIfPR(exId, s);
+    const earned = setXP(s, exercise) + (isPR ? PR_BONUS_XP : 0);
     if (earned > 0) {
       updateTotalXP(prev => prev + earned);
       showXPToast(earned);
@@ -512,82 +501,25 @@ export default function LogWorkoutScreen() {
 
     updateSet(exId, setIdx, { completed: true, ...(rpeValue !== undefined ? { rpe: rpeValue } : {}) });
 
-    // Evaluate quest completions for mid-workout toasts
+    // Toast any quest this set completes (progress is saved when the workout finishes)
     try {
-      const exerciseMap = {};
-      allExercises?.forEach(e => { exerciseMap[e.id] = e; });
-
-      let legSetsCount = 0;
-      let backSetsCount = 0;
-      let shoulderSetsCount = 0;
-      let armSetsCount = 0;
-      let coreSetsCount = 0;
-      let totalCompletedSetsCount = 0;
-      let totalVol = 0;
-
-      const updatedSets = { ...sets };
-      const currentExSets = [...(sets[exId] || [])];
-      currentExSets[setIdx] = { ...currentExSets[setIdx], completed: true, ...(rpeValue !== undefined ? { rpe: rpeValue } : {}) };
-      updatedSets[exId] = currentExSets;
-
-      for (const [eIdStr, exSets] of Object.entries(updatedSets)) {
-        const eId = parseInt(eIdStr);
-        const ex = exerciseMap[eId];
-        if (!ex) continue;
-        
-        const compSets = exSets.filter(s => s.completed);
-        totalCompletedSetsCount += compSets.length;
-        totalVol += compSets.reduce((acc, s) => acc + ((s.weight || 0) * (s.reps || 0)), 0);
-
-        if (ex.muscleGroup === 'Legs') legSetsCount += compSets.length;
-        if (ex.muscleGroup === 'Back') backSetsCount += compSets.length;
-        if (ex.muscleGroup === 'Shoulders') shoulderSetsCount += compSets.length;
-        if (ex.muscleGroup === 'Arms') armSetsCount += compSets.length;
-        if (ex.muscleGroup === 'Core') coreSetsCount += compSets.length;
-      }
-
-      let newPRsCount = 0;
-      for (const eIdStr of Object.keys(updatedSets)) {
-        const eId = parseInt(eIdStr);
-        const prRecord = await db.personalRecords.where('exerciseId').equals(eId).first();
-        if (prRecord && prRecord.date >= startTime) {
-          newPRsCount++;
-        } else if (eId === exId && isPR) {
-          newPRsCount++;
-        }
-      }
-
+      const updatedSets = { ...sets, [exId]: exSets.map((x, i) => (i === setIdx ? completedSet : x)) };
+      const exercisesById = Object.fromEntries((allExercises || []).map(e => [e.id, e]));
+      const stats = {
+        ...summarizeSets(updatedSets, exercisesById),
+        newPRs: await countPRsSince(Object.keys(updatedSets), startTime),
+      };
       for (const quest of initialQuests) {
         if (quest.completed || toastedQuests.current.has(quest.id)) continue;
-
-        let progress = 0;
-        if (quest.type === 'total_volume') {
-          progress = totalVol;
-        } else if (quest.type === 'new_pr') {
-          progress = newPRsCount;
-        } else if (quest.type === 'total_sets') {
-          progress = totalCompletedSetsCount;
-        } else if (quest.type === 'train_legs') {
-          if (legSetsCount > 0) progress = 1;
-        } else if (quest.type === 'back_sets') {
-          progress = backSetsCount;
-        } else if (quest.type === 'shoulder_sets') {
-          progress = shoulderSetsCount;
-        } else if (quest.type === 'arm_sets') {
-          progress = armSetsCount;
-        } else if (quest.type === 'core_work') {
-          progress = coreSetsCount;
-        }
-
-        if (quest.current + progress >= quest.target) {
+        if (applyQuestProgress(quest, stats).completed) {
           toastedQuests.current.add(quest.id);
-          showToast(`🎯 QUEST COMPLETE: ${quest.target} ${quest.type.replace('_', ' ').toUpperCase()} (+${quest.xpReward} XP)`);
+          showToast(`🎯 QUEST COMPLETE: ${quest.description} (+${quest.xpReward} XP)`);
         }
       }
     } catch (err) {
       console.error('Failed to check mid-workout quest progress:', err);
     }
-    
+
     // Auto-start rest timer
     setShowRest(true);
 
@@ -666,113 +598,45 @@ export default function LogWorkoutScreen() {
     const today = getToday();
     const prevAchievements = await db.achievements.toArray();
 
-    // Calc final XP with streak multiplier and completion bonus
-    const streakMult = Math.min(1.0 + (profile?.currentStreak || 0) * 0.1, 2.0);
-    const finalXP = Math.round((totalXP + 50) * streakMult);
+    const finalXP = finalSessionXP(totalXP, profile?.currentStreak);
 
-    // Save all sets to DB
+    // Save all sets to DB (completed ones, plus any with numbers entered)
+    const setRows = [];
     for (const [exIdStr, exSets] of Object.entries(sets)) {
-      const exId = parseInt(exIdStr);
-      for (let i = 0; i < exSets.length; i++) {
-        const s = exSets[i];
-        if (s.completed || (s.weight > 0 && s.reps > 0)) {
-          await db.sets.add({ 
-            sessionId, 
-            exerciseId: exId, 
-            setNumber: i + 1, 
-            weight: s.weight, 
-            reps: s.reps, 
-            rpe: s.rpe || null,
-            type: s.type || 'normal',
-            completed: s.completed ? 1 : 0 
-          });
-        }
-      }
+      exSets.forEach((s, i) => {
+        if (!s.completed && !(s.weight > 0 && s.reps > 0)) return;
+        setRows.push({
+          sessionId,
+          exerciseId: Number(exIdStr),
+          setNumber: i + 1,
+          weight: s.weight,
+          reps: s.reps,
+          rpe: s.rpe || null,
+          type: s.type || 'normal',
+          completed: s.completed ? 1 : 0,
+        });
+      });
     }
+    await db.sets.bulkAdd(setRows);
 
-    // Calculate total volume
-    const totalVol = Object.values(sets).flat().filter(s => s.completed).reduce((acc, s) => acc + (s.weight * s.reps), 0);
+    const exercisesById = Object.fromEntries((await db.exercises.toArray()).map(e => [e.id, e]));
+    const summary = summarizeSets(sets, exercisesById);
+    const totalVol = summary.volume;
+    const stats = {
+      ...summary,
+      newPRs: await countPRsSince(Object.keys(sets), startTime),
+      durationMinutes: (Date.now() - startTime) / 60000,
+    };
 
-    // Evaluate Daily Quests progress
-    const exercisesList = await db.exercises.toArray();
-    const exerciseMap = {};
-    exercisesList.forEach(e => { exerciseMap[e.id] = e; });
-
-    let legSetsCount = 0;
-    let backSetsCount = 0;
-    let shoulderSetsCount = 0;
-    let armSetsCount = 0;
-    let coreSetsCount = 0;
-    let totalCompletedSetsCount = 0;
-
-    for (const [exIdStr, exSets] of Object.entries(sets)) {
-      const exId = parseInt(exIdStr);
-      const ex = exerciseMap[exId];
-      if (!ex) continue;
-      
-      const compSets = exSets.filter(s => s.completed);
-      totalCompletedSetsCount += compSets.length;
-
-      if (ex.muscleGroup === 'Legs') legSetsCount += compSets.length;
-      if (ex.muscleGroup === 'Back') backSetsCount += compSets.length;
-      if (ex.muscleGroup === 'Shoulders') shoulderSetsCount += compSets.length;
-      if (ex.muscleGroup === 'Arms') armSetsCount += compSets.length;
-      if (ex.muscleGroup === 'Core') coreSetsCount += compSets.length;
-    }
-
-    // Check PRs
-    let newPRsCount = 0;
-    for (const exIdStr of Object.keys(sets)) {
-      const exId = parseInt(exIdStr);
-      const prRecord = await db.personalRecords.where('exerciseId').equals(exId).first();
-      if (prRecord && prRecord.date >= startTime) {
-        newPRsCount++;
-      }
-    }
-
-    const durationMinutes = (Date.now() - startTime) / 60000;
-
+    // Daily quests
     const todayQuests = await db.dailyQuests.where('date').equals(today).toArray();
     const prevQuests = JSON.parse(JSON.stringify(todayQuests));
     let questXPEarned = 0;
-
     for (const quest of todayQuests) {
       if (quest.completed) continue;
-
-      let progress = 0;
-      if (quest.type === 'workout_count') {
-        progress = 1;
-      } else if (quest.type === 'total_volume') {
-        progress = totalVol;
-      } else if (quest.type === 'new_pr') {
-        progress = newPRsCount;
-      } else if (quest.type === 'fast_workout') {
-        if (durationMinutes < 45) progress = 1;
-      } else if (quest.type === 'total_sets') {
-        progress = totalCompletedSetsCount;
-      } else if (quest.type === 'train_legs') {
-        if (legSetsCount > 0) progress = 1;
-      } else if (quest.type === 'back_sets') {
-        progress = backSetsCount;
-      } else if (quest.type === 'shoulder_sets') {
-        progress = shoulderSetsCount;
-      } else if (quest.type === 'arm_sets') {
-        progress = armSetsCount;
-      } else if (quest.type === 'core_work') {
-        progress = coreSetsCount;
-      }
-
-      const newCurrent = Math.min(quest.current + progress, quest.target);
-      const completed = newCurrent >= quest.target;
-      
-      await db.dailyQuests.update(quest.id, {
-        current: newCurrent,
-        completed
-      });
-
-      if (completed) {
-        questXPEarned += quest.xpReward;
-      }
+      const { current, completed } = applyQuestProgress(quest, stats);
+      await db.dailyQuests.update(quest.id, { current, completed });
+      if (completed) questXPEarned += quest.xpReward;
     }
 
     // Update session stats
@@ -783,9 +647,7 @@ export default function LogWorkoutScreen() {
     });
 
     // Update player profile
-    const lastDate = profile?.lastSessionDate;
-    const yesterday = getYesterday();
-    const newStreak = lastDate === yesterday ? (profile.currentStreak || 0) + 1 : lastDate === today ? (profile.currentStreak || 0) : 1;
+    const newStreak = nextStreak(profile?.lastSessionDate, profile?.currentStreak, today, getYesterday());
     const newTotalXP = (profile?.totalXP || 0) + finalXP + questXPEarned;
     const newTotalSessions = (profile?.totalSessions || 0) + 1;
 
@@ -798,18 +660,9 @@ export default function LogWorkoutScreen() {
       lastSessionDate: today,
     });
 
-    // Check and Unlock Achievements
-    if (newTotalSessions >= 10) await checkAndUnlockAchievement('sessions_10');
-    if (newTotalSessions >= 50) await checkAndUnlockAchievement('sessions_50');
-    
-    if (newStreak >= 7) await checkAndUnlockAchievement('streak_7');
-    if (newStreak >= 30) await checkAndUnlockAchievement('streak_30');
-
-    if (newTotalXP >= 1000) await checkAndUnlockAchievement('rank_d');
-    if (newTotalXP >= 5000) await checkAndUnlockAchievement('rank_c');
-    if (newTotalXP >= 15000) await checkAndUnlockAchievement('rank_b');
-    if (newTotalXP >= 40000) await checkAndUnlockAchievement('rank_a');
-    if (newTotalXP >= 100000) await checkAndUnlockAchievement('rank_s');
+    for (const type of earnedAchievements({ totalSessions: newTotalSessions, streak: newStreak, totalXP: newTotalXP })) {
+      await checkAndUnlockAchievement(type);
+    }
 
     // ── Corrective Exercises Session Logging ───
     try {

@@ -189,6 +189,25 @@ describe('older backups', () => {
   });
 });
 
+describe('personal records', () => {
+  it('merges the duplicate PR rows older versions created', async () => {
+    await importBackup({
+      format: BACKUP_FORMAT, schemaVersion: 1, exportedAt: '2026-09-01T00:00:00Z',
+      tables: {
+        playerProfile: [{ key: 'profile' }],
+        personalRecords: [
+          { id: 1, exerciseId: 25, weight: 60, reps: 5, date: 1 },
+          { id: 2, exerciseId: 25, weight: 80, reps: 8, date: 2 },
+          { id: 3, exerciseId: 25, weight: 90, reps: 1, date: 3 },
+        ],
+      },
+    });
+    const rows = await db.personalRecords.toArray();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ weight: 80, reps: 8, maxWeight: 90 });
+  });
+});
+
 describe('hasLocalUserData', () => {
   it('is false on a fresh device and true once something is logged', async () => {
     await db.playerProfile.put({ key: 'profile', name: 'Hunter' });

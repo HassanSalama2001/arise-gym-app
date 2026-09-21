@@ -165,7 +165,12 @@ export default function SettingsScreen() {
             }
             const prs = await db.personalRecords.toArray();
             for (const pr of prs) {
-              if (pr.weight) await db.personalRecords.update(pr.id, { weight: Math.round(pr.weight * factor * 10) / 10 });
+              if (pr.weight) {
+                await db.personalRecords.update(pr.id, {
+                  weight: Math.round(pr.weight * factor * 10) / 10,
+                  ...(pr.maxWeight ? { maxWeight: Math.round(pr.maxWeight * factor * 10) / 10 } : {}),
+                });
+              }
             }
             const bws = await db.bodyWeight.toArray();
             for (const bw of bws) {

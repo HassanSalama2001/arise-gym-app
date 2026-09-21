@@ -1,5 +1,6 @@
 import { LEGACY_ID_MAP, LEGACY_UNMAPPED } from '../data/legacyExercises';
 import { normalizeMuscleGroup } from '../data/muscleGroups';
+import { mergeRecords } from '../utils/workoutRules';
 
 // Exercise ID ranges:
 //   < 20000          seeded (dataset < 10001, correctives 10001+)
@@ -96,4 +97,20 @@ export async function migrateLegacyExercises(tx) {
   await tx.table('exercises').clear(); // the seed step repopulates built-ins on next boot
   await tx.table('exerciseImageCache').clear();
   if (created.size) await tx.table('exercises').bulkPut([...created.values()]);
+}
+
+/** Dexie upgrade step: older versions added a new record row per PR; keep one merged row per exercise. */
+export async function collapsePersonalRecords(tx) {
+  const table = tx.table('personalRecords');
+  const byExercise = new Map();
+  for (const row of await table.toArray()) {
+    if (!byExercise.has(row.exerciseId)) byExercise.set(row.exerciseId, []);
+    byExercise.get(row.exerciseId).push(row);
+  }
+  for (const rows of byExercise.values()) {
+    if (rows.length < 2 && rows[0]?.maxWeight !== undefined) continue;
+    const merged = mergeRecords(rows);
+    await table.bulkDelete(rows.map(r => r.id).filter(id => id !== merged.id));
+    await table.put(merged);
+  }
 }

@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { migrateLegacyExercises, relocateCustomExercises } from './remap';
+import { migrateLegacyExercises, relocateCustomExercises, collapsePersonalRecords } from './remap';
 
 const db = new Dexie('AriseDB');
 
@@ -56,5 +56,9 @@ db.version(11).upgrade(migrateLegacyExercises);
 // v12: custom exercises used to take the next ID after the dataset, where a future dataset could
 // overwrite them. Move them to the custom range (100000+).
 db.version(12).upgrade(relocateCustomExercises);
+
+// v13: PRs used to add a new row each time (and compare against the oldest one); keep one merged row
+// per exercise holding the best estimated-1RM set plus the heaviest weight.
+db.version(13).upgrade(collapsePersonalRecords);
 
 export default db;

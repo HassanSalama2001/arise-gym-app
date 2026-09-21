@@ -3,6 +3,7 @@ import { LEGACY_DATASET_CUTOFF } from '../data/legacyExercises';
 import {
   EXERCISE_REF_TABLES, forEachExerciseRef, legacyResolver, LEGACY_CUSTOM_ID_BASE, CUSTOM_EXERCISE_ID_START,
 } from './remap';
+import { mergeRecords } from '../utils/workoutRules';
 
 export const BACKUP_FORMAT = 'arise-backup';
 export const BACKUP_SCHEMA_VERSION = 1;
@@ -81,6 +82,7 @@ export function parseBackup(data) {
 /** Replaces all user data with the backup's contents in one transaction. */
 export async function importBackup(data) {
   const { tables, customExercises: backupCustom } = parseBackup(data);
+  tables.personalRecords = onePersonalRecordPerExercise(tables.personalRecords);
   const customExercises = relocateLowCustomIds(
     [...backupCustom, ...(await placeholdersForMissingExercises(tables, backupCustom))],
     tables,
@@ -181,4 +183,14 @@ function relocateLowCustomIds(customExercises, tables) {
     if (moves.has(holder.exerciseId)) holder.exerciseId = moves.get(holder.exerciseId);
   }
   return customExercises.map(ex => (moves.has(ex.id) ? { ...ex, id: moves.get(ex.id) } : ex));
+}
+
+// Older versions added a record row per PR; keep one merged row per exercise (see migration v13).
+function onePersonalRecordPerExercise(rows) {
+  const byExercise = new Map();
+  for (const row of rows) {
+    if (!byExercise.has(row.exerciseId)) byExercise.set(row.exerciseId, []);
+    byExercise.get(row.exerciseId).push(row);
+  }
+  return [...byExercise.values()].map(group => (group.length === 1 ? group[0] : mergeRecords(group)));
 }
