@@ -133,5 +133,6 @@ export function calculateInBodyScore(weightKg, smmKg, bf, heightCm, gender) {
     score += Math.abs(bfmDev) * 0.5;
   }
   
-  return Math.max(20, Math.round(score));
+  // InBody scores run 20–100
+  return Math.min(100, Math.max(20, Math.round(score)));
 }
