@@ -78,7 +78,7 @@ JSON backups usable again.
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P4.1 | ⬜ | Split `LogWorkoutScreen.jsx` (1,399 lines): move `SetRow`, `LogSetupScreen`, `AddExerciseSheet`, `ExerciseJumpSheet`, `PlateCalculatorSheet`, `RPESelectionSheet` to `components/log/`. | Screen file < 600 lines, behaviour unchanged |
+| P4.1 | 🟡 | Split `LogWorkoutScreen.jsx` (1,399 lines): move `SetRow`, `LogSetupScreen`, `AddExerciseSheet`, `ExerciseJumpSheet`, `PlateCalculatorSheet`, `RPESelectionSheet` to `components/log/`. | Screen file < 600 lines, behaviour unchanged — **Split into components/log/ (1,269 → 833 lines). The remaining bulk is handleStart/handleFinish + JSX; next step is a useWorkoutSession hook to reach < 600** |
 | P4.2 | ✅ | Move workout-finish logic (XP, streak multiplier, PR detection, quest progress, corrective progress) into `utils/workoutRules.js` as pure functions. Removes the duplicated muscle-counting blocks (lines ~542 and ~716). | Unit-tested; the screen calls it — **src/utils/workoutRules.js (+ tests). Found and fixed: 2 of 10 quest types could never complete; per-session quests summed across the day** |
 | P4.3 | ✅ | Better PRs: keep the heaviest-weight PR and also track an estimated-1RM PR, so a lighter set with more reps can count. | PR toast fires on e1RM improvement — **e1RM or heaviest weight. Found and fixed: each PR added a new row and sets were compared to the oldest → repeated PRs/XP. v13 merges duplicates** |
 | P4.4 | ⬜ | Trim `ProgressScreen`, `ProfileScreen`, `SettingsScreen` (870–1,000 lines each) by extracting sections as they're touched (P2.5 removes a lot). | Each < 600 lines |
