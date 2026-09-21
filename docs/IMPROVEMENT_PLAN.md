@@ -34,7 +34,7 @@ several parts of the app still use the old values.
 | P0.4 | ✅ | **Corrective protocols inject nothing.** `posturalIssues.js` references IDs 10001–100xx that don't exist in the dataset (and `Face Pull` id 32 now points elsewhere), so the protocol is silently skipped. Add a small seeded corrective-exercise set (reserved ID range, `muscleGroup: 'Corrective'`, `isCorrective: true`) and fix the references. | Starting a workout with an active postural issue injects its corrective exercises — **24 corrective exercises seeded (10001–10024); 10 stale refs remapped; verified Rounded Shoulders resolves** |
 | P0.5 | ✅ | **Referential-integrity test** for all static references (templates, corrective protocols) against the dataset, so a future dataset swap fails CI instead of production. | Test fails if any referenced ID is missing — **`src/data/referentialIntegrity.test.js`** |
 | P0.6 | ✅ | **Remaining real lint bugs:** duplicate `border` key (`LogWorkoutScreen.jsx:1060`), `setTimeToMidnight` used before declaration (`HomeScreen.jsx:132`), empty catch (`RestTimerOverlay.jsx:23`). | Those rules report 0 |
-| P0.7 | ⬜ | **Every exercise shows "Beginner".** The dataset has no `difficulty` field, so the UI falls back to the default. Derive difficulty from equipment/category at seed time, or hide the badge. | Library shows a mix of difficulties, or no misleading badge |
+| P0.7 | ✅ | **Every exercise shows "Beginner".** The dataset has no `difficulty` field, so the UI falls back to the default. Derive difficulty from equipment/category at seed time, or hide the badge. | Library shows a mix of difficulties, or no misleading badge — **815a603 — skills advanced, free weights intermediate, machines/bodyweight beginner** |
 
 ## P1 — Test & CI safety net
 
@@ -50,14 +50,14 @@ several parts of the app still use the old values.
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P2.1 | ⬜ | Single `USER_TABLES` registry in the DB layer; export/import built from it. Adds the missing `meals`, `hydration`, `exerciseNotes`, `customPosturalIssues`, and custom exercises (`isCustom`). Excludes caches (`exerciseImageCache`) and built-in exercises. | Every user-data table is covered, and a test fails if a new table is added without being classified |
-| P2.2 | ⬜ | Versioned backup format: `format: 'arise-backup'`, `schemaVersion`, `exportedAt`; validate before touching the DB; reject newer versions. | Malformed/foreign JSON is rejected with a clear message |
-| P2.3 | ⬜ | **Restore = replace, not merge.** Clear user tables and custom exercises, then write the backup inside one transaction (keeps IDs so references stay valid; deleted items don't come back). | Restore onto a device with different data gives exactly the backup's contents |
-| P2.4 | ⬜ | **Login auto-restore guard.** `LoginScreen` calls `restoreFromCloud()` on sign-in; once restore replaces data, this would wipe local data. Ask the user when both local data and a cloud backup exist (keep local / use cloud). | Signing in never silently discards local data |
-| P2.5 | ⬜ | Remove the three copies of backup/export/import (Settings, Profile, and Profile's own 8-table export) → one `useBackup` hook + one UI section. | One implementation; Profile and Settings both use it |
-| P2.6 | ⬜ | Legacy backup remap: backups made before `17bac7d` reference old exercise IDs. Build an old-ID → name map from git history and remap by name on import. | Restoring a pre-migration backup shows the right exercises |
-| P2.7 | ⬜ | InBody photos are stored as full-size base64 data URLs (inflates IndexedDB and the cloud JSONB). Downscale/compress to JPEG (~1024px) on upload. | New photo < ~200 KB |
-| P2.8 | ⬜ | Round-trip tests: seed → export → wipe → import → deep-equal. | Test green |
+| P2.1 | ✅ | Single `USER_TABLES` registry in the DB layer; export/import built from it. Adds the missing `meals`, `hydration`, `exerciseNotes`, `customPosturalIssues`, and custom exercises (`isCustom`). Excludes caches (`exerciseImageCache`) and built-in exercises. | Every user-data table is covered, and a test fails if a new table is added without being classified — **src/db/backup.js; test fails if a Dexie table is unclassified. mealSuggestions classified as cache** |
+| P2.2 | ✅ | Versioned backup format: `format: 'arise-backup'`, `schemaVersion`, `exportedAt`; validate before touching the DB; reject newer versions. | Malformed/foreign JSON is rejected with a clear message — **format + schemaVersion; validated before confirm and before any write** |
+| P2.3 | ✅ | **Restore = replace, not merge.** Clear user tables and custom exercises, then write the backup inside one transaction (keeps IDs so references stay valid; deleted items don't come back). | Restore onto a device with different data gives exactly the backup's contents — **Verified in a real browser: extra rows removed, custom + built-in exercises and device settings kept** |
+| P2.4 | ✅ | **Login auto-restore guard.** `LoginScreen` calls `restoreFromCloud()` on sign-in; once restore replaces data, this would wipe local data. Ask the user when both local data and a cloud backup exist (keep local / use cloud). | Signing in never silently discards local data — **Code + unit-tested helpers; not exercised against live Supabase (no credentials in this environment)** |
+| P2.5 | ✅ | Remove the three copies of backup/export/import (Settings, Profile, and Profile's own 8-table export) → one `useBackup` hook + one UI section. | One implementation; Profile and Settings both use it — **src/hooks/useBackup.js; −241 lines across Profile/Settings** |
+| P2.6 | ✅ | Legacy backup remap: backups made before `17bac7d` reference old exercise IDs. Build an old-ID → name map from git history and remap by name on import. | Restoring a pre-migration backup shows the right exercises — **Old IDs detected via exercise_seed_version (371_v2) or export date; 120 exercises mapped, 251 recreated as named custom exercises (IDs 20000+)** |
+| P2.7 | ✅ | InBody photos are stored as full-size base64 data URLs (inflates IndexedDB and the cloud JSONB). Downscale/compress to JPEG (~1024px) on upload. | New photo < ~200 KB — **Capped at 1600px so printouts stay legible; 4000×3000 test image → 189 KB** |
+| P2.8 | ✅ | Round-trip tests: seed → export → wipe → import → deep-equal. | Test green — **src/db/backup.test.js (19 tests)** |
 
 ## P3 — Migration policy
 
@@ -127,3 +127,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 |---|---|
 | 2026-09-22 | Plan created from code review; baseline recorded. |
 | 2026-09-22 | P0.1–P0.6 and P1.1 implemented. Found and added P0.7 (difficulty) and P3.4 (custom ID collisions). |
+| 2026-09-22 | P0.7 and all of P2 done. Lint 85 → 79. Tests 30/30. |
