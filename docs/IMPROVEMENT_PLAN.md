@@ -28,18 +28,19 @@ several parts of the app still use the old values.
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P0.1 | ⬜ | **Crash when adding an exercise mid-workout.** `LogWorkoutScreen.jsx:1122/1136` calls `setBlocks`/`setSets`, which are undefined (context exposes `updateBlocks`/`updateSets`). Also move `setCurrentExIdx` out of the state updater. | Adding an exercise and a superset exercise during a workout works; lint `no-undef` = 0 |
-| P0.2 | ⬜ | **Muscle-group taxonomy mismatch.** Dataset uses `chest`, `back`, `upper legs`, `lower legs`, `upper arms`, `lower arms`, `shoulders`, `waist`, `cardio`, `neck`; the app filters/counts on `Chest`, `Back`, `Legs`, `Arms`, `Core`… so muscle filters return nothing, weekly Muscle Frequency is always 0, and leg/back/arm quest and achievement counters never increase. Add one `normalizeMuscleGroup()` map applied at seed time (keep raw value as `bodyPart`), bump seed version. | Every muscle filter chip shows exercises; Muscle Frequency and quest counters increase in a test session |
-| P0.3 | ⬜ | **Templates point to wrong exercises.** `templates.json` uses old numeric IDs (e.g. "PPL – Push" id 1 now = "3/4 sit-up"); 14 of 25 template names don't match the dataset exactly. Remap all to new IDs by name with a manual mapping for the 14. | Cloning each template yields the named exercises |
-| P0.4 | ⬜ | **Corrective protocols inject nothing.** `posturalIssues.js` references IDs 10001–100xx that don't exist in the dataset (and `Face Pull` id 32 now points elsewhere), so the protocol is silently skipped. Add a small seeded corrective-exercise set (reserved ID range, `muscleGroup: 'Corrective'`, `isCorrective: true`) and fix the references. | Starting a workout with an active postural issue injects its corrective exercises |
-| P0.5 | ⬜ | **Referential-integrity test** for all static references (templates, corrective protocols) against the dataset, so a future dataset swap fails CI instead of production. | Test fails if any referenced ID is missing |
-| P0.6 | ⬜ | **Remaining real lint bugs:** duplicate `border` key (`LogWorkoutScreen.jsx:1060`), `setTimeToMidnight` used before declaration (`HomeScreen.jsx:132`), empty catch (`RestTimerOverlay.jsx:23`). | Those rules report 0 |
+| P0.1 | 🟡 | **Crash when adding an exercise mid-workout.** `LogWorkoutScreen.jsx:1122/1136` calls `setBlocks`/`setSets`, which are undefined (context exposes `updateBlocks`/`updateSets`). Also move `setCurrentExIdx` out of the state updater. | Adding an exercise and a superset exercise during a workout works; lint `no-undef` = 0 — **Fixed in code (`bfd92fb`); waiting on an in-app click test** |
+| P0.2 | ✅ | **Muscle-group taxonomy mismatch.** Dataset uses `chest`, `back`, `upper legs`, `lower legs`, `upper arms`, `lower arms`, `shoulders`, `waist`, `cardio`, `neck`; the app filters/counts on `Chest`, `Back`, `Legs`, `Arms`, `Core`… so muscle filters return nothing, weekly Muscle Frequency is always 0, and leg/back/arm quest and achievement counters never increase. Add one `normalizeMuscleGroup()` map applied at seed time (keep raw value as `bodyPart`), bump seed version. | Every muscle filter chip shows exercises; Muscle Frequency and quest counters increase in a test session — **Verified in app: Legs filter shows 286 exercises** |
+| P0.3 | ✅ | **Templates point to wrong exercises.** `templates.json` uses old numeric IDs (e.g. "PPL – Push" id 1 now = "3/4 sit-up"); 14 of 25 template names don't match the dataset exactly. Remap all to new IDs by name with a manual mapping for the 14. | Cloning each template yields the named exercises — **Verified: cloning PPL – Push gives bench / incline DB / DB shoulder press / lateral raise / rope pushdown** |
+| P0.4 | ✅ | **Corrective protocols inject nothing.** `posturalIssues.js` references IDs 10001–100xx that don't exist in the dataset (and `Face Pull` id 32 now points elsewhere), so the protocol is silently skipped. Add a small seeded corrective-exercise set (reserved ID range, `muscleGroup: 'Corrective'`, `isCorrective: true`) and fix the references. | Starting a workout with an active postural issue injects its corrective exercises — **24 corrective exercises seeded (10001–10024); 10 stale refs remapped; verified Rounded Shoulders resolves** |
+| P0.5 | ✅ | **Referential-integrity test** for all static references (templates, corrective protocols) against the dataset, so a future dataset swap fails CI instead of production. | Test fails if any referenced ID is missing — **`src/data/referentialIntegrity.test.js`** |
+| P0.6 | ✅ | **Remaining real lint bugs:** duplicate `border` key (`LogWorkoutScreen.jsx:1060`), `setTimeToMidnight` used before declaration (`HomeScreen.jsx:132`), empty catch (`RestTimerOverlay.jsx:23`). | Those rules report 0 |
+| P0.7 | ⬜ | **Every exercise shows "Beginner".** The dataset has no `difficulty` field, so the UI falls back to the default. Derive difficulty from equipment/category at seed time, or hide the badge. | Library shows a mix of difficulties, or no misleading badge |
 
 ## P1 — Test & CI safety net
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P1.1 | ⬜ | Add Vitest + `fake-indexeddb`; `npm test` script. | `npm test` runs |
+| P1.1 | ✅ | Add Vitest + `fake-indexeddb`; `npm test` script. | `npm test` runs — **Vitest + fake-indexeddb; `npm test`** |
 | P1.2 | ⬜ | Unit tests for pure logic: `calorieEngine`, `progression` (ranks/XP), `achievements`, set XP/PR logic (after P4.2 extracts it). | Tests green |
 | P1.3 | ⬜ | Clear the remaining lint errors (unused vars, hook deps, purity, set-state-in-effect) — real fixes, not blanket disables. | `npm run lint` exits 0 |
 | P1.4 | ⬜ | CI: add a PR/branch workflow running `npm ci` → lint → test → build. Deploy workflow uses `npm ci`, runs the same gates before deploying. | Failing lint/test blocks deploy |
@@ -64,6 +65,7 @@ several parts of the app still use the old values.
 |---|---|---|---|
 | P3.1 | ⬜ | Document the rule in `docs/`: migrations never clear user tables; dataset changes remap IDs. | Doc exists |
 | P3.2 | ⬜ | `remapExerciseIds(map)` helper that rewrites `sets`, `planExercises`, `personalRecords`, `exerciseNotes` in one transaction, for future dataset changes. | Unit-tested |
+| P3.4 | ⬜ | Custom exercises take the next auto-increment ID after the dataset (currently 10025+ once correctives are seeded), so a future dataset that grows into that range would overwrite them. Give custom exercises their own ID space (e.g. string `custom_<uuid>` or a high reserved range) and migrate existing ones via P3.2. | Custom IDs can never collide with seeded ones |
 | P3.3 | ⬜ | Load the 1.2 MB exercise dataset only when seeding/migrating (dynamic import) instead of on every app start through `db.js`. | `db` chunk is small; dataset lives in its own lazily loaded chunk |
 
 Note: data already wiped by migration v11 can't be recovered from the device. P2.6 makes old cloud or
@@ -85,7 +87,7 @@ JSON backups usable again.
 | ID | Status | Task | Done when |
 |---|---|---|---|
 | P5.1 | ⬜ | Untrack `.firebase/`, `temp_dataset.json`, `assets_backup/` (`git rm --cached`) and add them to `.gitignore`. | Not tracked |
-| P5.2 | ⬜ | Move `fetch_new_dataset.cjs`, `map_exercises.cjs`, `update_urls.cjs` to `scripts/`. | Root is clean |
+| P5.2 | ⬜ | Move `fetch_new_dataset.cjs`, `map_exercises.cjs`, `update_urls.cjs` to `scripts/`; delete the unused `src/data/exercises.json` (the app imports `exercises.js`). | Root is clean |
 | P5.3 | ⬜ | Real README (what ARISE is, features, setup, Supabase migration, env vars, deploy) + `.env.example`. | — |
 
 ## P6 — Offline exercise visuals
@@ -124,3 +126,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | Date | Change |
 |---|---|
 | 2026-09-22 | Plan created from code review; baseline recorded. |
+| 2026-09-22 | P0.1–P0.6 and P1.1 implemented. Found and added P0.7 (difficulty) and P3.4 (custom ID collisions). |
