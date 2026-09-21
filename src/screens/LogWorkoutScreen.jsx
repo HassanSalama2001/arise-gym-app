@@ -11,11 +11,12 @@ import { playSetCompleteSound } from '../utils/audio';
 import { hapticSetComplete } from '../utils/haptics';
 import { checkAndUnlockAchievement } from '../utils/achievements';
 import {
-  setXP, PR_BONUS_XP, summarizeSets, applyQuestProgress, finalSessionXP, nextStreak, earnedAchievements,
+  setXP, PR_BONUS_XP, summarizeSets, applyQuestProgress,
 } from '../utils/workoutRules';
 import { recordSetIfPR, countPRsSince } from '../db/records';
+import { finishWorkout } from '../db/workoutSession';
 import { useAlert } from '../context/useAlert';
-import { getToday, getYesterday } from '../utils/date';
+import { getToday } from '../utils/date';
 import ExerciseDetailsSheet from '../components/ExerciseDetailsSheet';
 import ElapsedTimer from '../components/log/ElapsedTimer';
 import SetRow from '../components/log/SetRow';
@@ -369,139 +370,9 @@ export default function LogWorkoutScreen() {
   }
 
   async function handleFinish() {
-    const profile = await db.playerProfile.get('profile');
-    const today = getToday();
-    const prevAchievements = await db.achievements.toArray();
-
-    const finalXP = finalSessionXP(totalXP, profile?.currentStreak);
-
-    // Save all sets to DB (completed ones, plus any with numbers entered)
-    const setRows = [];
-    for (const [exIdStr, exSets] of Object.entries(sets)) {
-      exSets.forEach((s, i) => {
-        if (!s.completed && !(s.weight > 0 && s.reps > 0)) return;
-        setRows.push({
-          sessionId,
-          exerciseId: Number(exIdStr),
-          setNumber: i + 1,
-          weight: s.weight,
-          reps: s.reps,
-          rpe: s.rpe || null,
-          type: s.type || 'normal',
-          completed: s.completed ? 1 : 0,
-        });
-      });
-    }
-    await db.sets.bulkAdd(setRows);
-
-    const exercisesById = Object.fromEntries((await db.exercises.toArray()).map(e => [e.id, e]));
-    const summary = summarizeSets(sets, exercisesById);
-    const totalVol = summary.volume;
-    const stats = {
-      ...summary,
-      newPRs: await countPRsSince(Object.keys(sets), startTime),
-      durationMinutes: (Date.now() - startTime) / 60000,
-    };
-
-    // Daily quests
-    const todayQuests = await db.dailyQuests.where('date').equals(today).toArray();
-    const prevQuests = JSON.parse(JSON.stringify(todayQuests));
-    let questXPEarned = 0;
-    for (const quest of todayQuests) {
-      if (quest.completed) continue;
-      const { current, completed } = applyQuestProgress(quest, stats);
-      await db.dailyQuests.update(quest.id, { current, completed });
-      if (completed) questXPEarned += quest.xpReward;
-    }
-
-    // Update session stats
-    await db.sessions.update(sessionId, {
-      endTime: Date.now(),
-      volume: totalVol,
-      xpEarned: finalXP + questXPEarned
-    });
-
-    // Update player profile
-    const newStreak = nextStreak(profile?.lastSessionDate, profile?.currentStreak, today, getYesterday());
-    const newTotalXP = (profile?.totalXP || 0) + finalXP + questXPEarned;
-    const newTotalSessions = (profile?.totalSessions || 0) + 1;
-
-    await db.playerProfile.update('profile', {
-      totalXP: newTotalXP,
-      totalSessions: newTotalSessions,
-      totalVolume: (profile?.totalVolume || 0) + totalVol,
-      currentStreak: newStreak,
-      longestStreak: Math.max(profile?.longestStreak || 0, newStreak),
-      lastSessionDate: today,
-    });
-
-    for (const type of earnedAchievements({ totalSessions: newTotalSessions, streak: newStreak, totalXP: newTotalXP })) {
-      await checkAndUnlockAchievement(type);
-    }
-
-    // ── Corrective Exercises Session Logging ───
-    try {
-      const activeCorrectives = await db.userPosturalIssues.where('status').equals('active').toArray();
-      const customIssues = await db.customPosturalIssues.toArray() || [];
-      const allPosturalIssues = [...posturalIssues, ...customIssues];
-
-      if (activeCorrectives && activeCorrectives.length > 0) {
-        const completedExIds = Object.entries(sets)
-          .filter(([, exSets]) => exSets.some(s => s.completed))
-          .map(([exIdStr]) => parseInt(exIdStr));
-
-        for (const record of activeCorrectives) {
-          const issueData = allPosturalIssues.find(p => p.id === record.issueId);
-          if (!issueData) continue;
-
-          // Check if any exercise in the protocol was completed
-          const hasDoneCorrective = issueData.correctiveProtocol.some(protoEx => 
-            completedExIds.includes(protoEx.exerciseId)
-          );
-
-          if (hasDoneCorrective) {
-            const nextCompleted = record.completedSessions + 1;
-            const isNowResolved = nextCompleted >= record.targetSessions;
-            
-            await db.userPosturalIssues.update(record.id, {
-              completedSessions: nextCompleted,
-              status: isNowResolved ? 'resolved' : 'active'
-            });
-
-            if (isNowResolved) {
-              const currentProfile = await db.playerProfile.get('profile');
-              if (currentProfile) {
-                await db.playerProfile.update('profile', {
-                  totalXP: currentProfile.totalXP + 200
-                });
-              }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Failed to log corrective progress:', err);
-    }
-
-    const finalXPApplied = finalXP + questXPEarned;
-    const finalDuration = Date.now() - startTime;
-
-    // Reset global workout state
+    const result = await finishWorkout({ sessionId, startTime, sets, sessionXP: totalXP });
     endWorkout();
-
-    // Navigate to mission complete
-    navigate('/mission-complete', { 
-      state: { 
-        sessionId, 
-        finalXP: finalXPApplied, 
-        totalVol, 
-        duration: finalDuration, 
-        prevXP: profile?.totalXP || 0, 
-        prevProfile: profile,
-        prevQuests,
-        prevAchievements
-      } 
-    });
+    navigate('/mission-complete', { state: result });
   }
 
   async function handleDiscard() {
