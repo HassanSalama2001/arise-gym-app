@@ -1,29 +1,43 @@
 import db from './db';
-import { exercises as exerciseData } from '../data/exercises';
-import { normalizeMuscleGroup } from '../data/muscleGroups';
-import { correctiveExercises } from '../data/correctiveExercises';
-import { deriveDifficulty } from '../data/difficulty';
+
+// Bump when the exercise dataset or how it is seeded changes. Kept separate from the data so a normal boot
+// can skip loading the (large) dataset. referentialIntegrity.test.js checks it matches the data.
+export const EXERCISE_SEED_VERSION = '1324+24_v6';
 
 let seedingPromise = null;
 
+async function seedExercises() {
+  const [{ exercises }, { correctiveExercises }, { normalizeMuscleGroup }, { deriveDifficulty }] = await Promise.all([
+    import('../data/exercises'),
+    import('../data/correctiveExercises'),
+    import('../data/muscleGroups'),
+    import('../data/difficulty'),
+  ]);
+  const rows = [
+    ...exercises.map(ex => ({
+      ...ex,
+      bodyPart: ex.muscleGroup,
+      muscleGroup: normalizeMuscleGroup(ex.muscleGroup),
+      difficulty: ex.difficulty ?? deriveDifficulty(ex),
+    })),
+    ...correctiveExercises.map(ex => ({ ...ex, difficulty: deriveDifficulty(ex) })),
+  ];
+  await db.transaction('rw', db.exercises, db.settings, async () => {
+    await db.exercises.bulkPut(rows);
+    await db.settings.put({ key: 'exercise_seed_version', value: EXERCISE_SEED_VERSION });
+  });
+}
+
 export async function seedDatabase() {
   if (seedingPromise) return seedingPromise;
-  
+
   seedingPromise = (async () => {
     try {
       const count = await db.exercises.count();
       const seedVer = await db.settings.get('exercise_seed_version');
-      const currentVer = `${exerciseData.length}+${correctiveExercises.length}_v6`;
 
-      if (count === 0 || !seedVer || seedVer.value !== currentVer) {
-        await db.exercises.bulkPut(exerciseData.map(ex => ({
-          ...ex,
-          bodyPart: ex.muscleGroup,
-          muscleGroup: normalizeMuscleGroup(ex.muscleGroup),
-          difficulty: ex.difficulty ?? deriveDifficulty(ex),
-        })));
-        await db.exercises.bulkPut(correctiveExercises.map(ex => ({ ...ex, difficulty: deriveDifficulty(ex) })));
-        await db.settings.put({ key: 'exercise_seed_version', value: currentVer });
+      if (count === 0 || seedVer?.value !== EXERCISE_SEED_VERSION) {
+        await seedExercises();
       }
 
       const profile = await db.playerProfile.get('profile');
@@ -60,6 +74,6 @@ export async function seedDatabase() {
       throw error;
     }
   })();
-  
+
   return seedingPromise;
 }

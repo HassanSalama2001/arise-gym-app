@@ -1,8 +1,6 @@
 import db from './db';
-import { LEGACY_DATASET_CUTOFF, LEGACY_ID_MAP, LEGACY_UNMAPPED } from '../data/legacyExercises';
-import { normalizeMuscleGroup } from '../data/muscleGroups';
-import { exercises as exerciseData } from '../data/exercises';
-import { correctiveExercises } from '../data/correctiveExercises';
+import { LEGACY_DATASET_CUTOFF } from '../data/legacyExercises';
+import { EXERCISE_REF_TABLES, forEachExerciseRef, legacyResolver } from './remap';
 
 export const BACKUP_FORMAT = 'arise-backup';
 export const BACKUP_SCHEMA_VERSION = 1;
@@ -21,9 +19,6 @@ export const EXCLUDED_TABLES = ['exercises', 'exerciseImageCache', 'mealSuggesti
 
 // Settings rows that describe this device rather than the user; never exported or overwritten.
 const DEVICE_SETTINGS = new Set(['exercise_seed_version', 'last_sync_time']);
-
-// Custom exercises recreated from old backups live here, clear of seeded IDs (dataset < 10001, correctives 10001+).
-const LEGACY_CUSTOM_ID_BASE = 20000;
 
 export class BackupError extends Error {}
 
@@ -62,7 +57,7 @@ export function parseBackup(data) {
     }
     const { customExercises = [], ...rest } = data.tables || {};
     const tables = pickTables(rest);
-    return fixDanglingReferences({ tables, customExercises: asRows(customExercises), exportedAt: data.exportedAt, legacyIds: false });
+    return { tables, customExercises: asRows(customExercises), exportedAt: data.exportedAt, legacyIds: false };
   }
 
   // Older unversioned exports: table arrays at the top level, profile stored as "profile"
@@ -78,12 +73,13 @@ export function parseBackup(data) {
   }
   const legacyIds = usesLegacyExerciseIds(tables, data.exportedAt);
   const parsed = { tables, customExercises: [], exportedAt: data.exportedAt, legacyIds };
-  return fixDanglingReferences(legacyIds ? remapLegacyExercises(parsed) : parsed);
+  return legacyIds ? remapLegacyExercises(parsed) : parsed;
 }
 
 /** Replaces all user data with the backup's contents in one transaction. */
 export async function importBackup(data) {
-  const { tables, customExercises } = parseBackup(data);
+  const { tables, customExercises: backupCustom } = parseBackup(data);
+  const customExercises = [...backupCustom, ...(await placeholdersForMissingExercises(tables, backupCustom))];
 
   await db.transaction('rw', [...USER_TABLES.map(t => db.table(t)), db.exercises], async () => {
     for (const name of USER_TABLES) {
@@ -130,16 +126,12 @@ function pickTables(source) {
   return tables;
 }
 
-// Tables whose rows point at an exercise.
 function exerciseRefs(tables) {
-  const refs = [];
-  for (const name of ['sets', 'planExercises', 'personalRecords', 'exerciseNotes']) {
-    for (const row of tables[name]) refs.push({ row, key: 'exerciseId' });
+  const holders = [];
+  for (const table of [...EXERCISE_REF_TABLES, 'customPosturalIssues']) {
+    for (const row of tables[table]) forEachExerciseRef(table, row, h => holders.push(h));
   }
-  for (const issue of tables.customPosturalIssues) {
-    for (const item of issue.correctiveProtocol || []) refs.push({ row: item, key: 'exerciseId' });
-  }
-  return refs.filter(r => r.row[r.key] !== undefined && r.row[r.key] !== null);
+  return holders;
 }
 
 function usesLegacyExerciseIds(tables, exportedAt) {
@@ -152,38 +144,21 @@ function usesLegacyExerciseIds(tables, exportedAt) {
 }
 
 function remapLegacyExercises(parsed) {
-  const created = new Map();
-  for (const ref of exerciseRefs(parsed.tables)) {
-    const oldId = Number(ref.row[ref.key]);
-    if (LEGACY_ID_MAP[oldId] !== undefined) {
-      ref.row[ref.key] = LEGACY_ID_MAP[oldId];
-      continue;
-    }
-    const newId = LEGACY_CUSTOM_ID_BASE + oldId;
-    if (!created.has(newId)) {
-      const [name, group] = LEGACY_UNMAPPED[oldId] || [`Exercise #${oldId}`, 'Other'];
-      created.set(newId, { id: newId, name, muscleGroup: normalizeMuscleGroup(group), isCustom: true, instructions: [] });
-    }
-    ref.row[ref.key] = newId;
-  }
+  const { resolve, created } = legacyResolver();
+  for (const holder of exerciseRefs(parsed.tables)) holder.exerciseId = resolve(holder.exerciseId);
   return { ...parsed, customExercises: [...parsed.customExercises, ...created.values()] };
 }
 
-// Older exports never included custom exercises, so sets could point at IDs that won't exist after a restore.
-// Keep the history by creating a named placeholder under the same ID.
-function fixDanglingReferences(parsed) {
-  const known = new Set(parsed.customExercises.map(ex => ex.id));
-  const placeholders = new Map();
-  for (const ref of exerciseRefs(parsed.tables)) {
-    const id = ref.row[ref.key];
-    if (known.has(id) || isSeededExerciseId(id) || placeholders.has(id)) continue;
-    placeholders.set(id, { id, name: `Exercise #${id}`, muscleGroup: 'Other', isCustom: true, instructions: [] });
-  }
-  return { ...parsed, customExercises: [...parsed.customExercises, ...placeholders.values()] };
-}
-
-let seededIds = null;
-function isSeededExerciseId(id) {
-  seededIds ??= new Set([...exerciseData, ...correctiveExercises].map(ex => ex.id));
-  return seededIds.has(id);
+// Older exports never included custom exercises, so a restore could leave sets pointing at nothing.
+// Keep the history by keeping or recreating the exercise under the same ID. (Built-ins are checked against
+// the database; a placeholder that lands on a built-in ID is overwritten by the next seed.)
+async function placeholdersForMissingExercises(tables, customExercises) {
+  const known = new Set(customExercises.map(ex => ex.id));
+  const ids = [...new Set(exerciseRefs(tables).map(h => h.exerciseId))].filter(id => !known.has(id));
+  const rows = await db.exercises.bulkGet(ids);
+  return ids.flatMap((id, i) => {
+    if (rows[i] && !rows[i].isCustom) return [];
+    // A custom exercise still on this device keeps its details; otherwise use a named placeholder.
+    return [rows[i] ?? { id, name: `Exercise #${id}`, muscleGroup: 'Other', isCustom: true, instructions: [] }];
+  });
 }

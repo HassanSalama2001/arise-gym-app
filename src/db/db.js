@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { exercises as defaultExercises } from '../data/exercises.js';
+import { migrateLegacyExercises } from './remap';
 
 const db = new Dexie('AriseDB');
 
@@ -48,31 +48,9 @@ db.version(7).stores({
   exerciseImageCache: 'exerciseId'
 });
 
-db.version(10).upgrade(async tx => {
-  console.log("Running DB migration v10 for exercise visual URLs...");
-  const allExercises = await tx.exercises.toArray();
-  for (let dbEx of allExercises) {
-    const match = defaultExercises.find(e => e.name === dbEx.name);
-    if (match) {
-      if (match.gifUrl !== undefined) dbEx.gifUrl = match.gifUrl;
-      if (match.imageUrls !== undefined) dbEx.imageUrls = match.imageUrls;
-      await tx.exercises.put(dbEx);
-    }
-  }
-  console.log("Migration v10 complete!");
-});
-
-db.version(11).upgrade(async tx => {
-  console.log("Running DB migration v11 to wipe old exercises and replace with new dataset...");
-  await tx.exercises.clear();
-  await tx.planExercises.clear();
-  await tx.workoutPlans.clear();
-  await tx.sessions.clear();
-  await tx.sets.clear();
-  await tx.personalRecords.clear();
-  await tx.exerciseNotes.clear();
-  await tx.exerciseImageCache.clear();
-  console.log("Wipe complete. App will re-sync exercises from defaultExercises on next boot.");
-});
+// v10 refreshed visuals on the old exercise list; v11 replaces that list entirely, so v10 is gone.
+// v11 moves pre-2026-07 databases onto the unified dataset's IDs. It originally deleted all workout
+// history; it now remaps instead (see docs/MIGRATIONS.md). Only databases below v11 run it.
+db.version(11).upgrade(migrateLegacyExercises);
 
 export default db;
