@@ -8,6 +8,7 @@ import { supabase } from '../db/supabaseClient';
 import { useBackup } from '../hooks/useBackup';
 import { useAlert } from '../context/AlertContext';
 import BottomSheet from '../components/BottomSheet';
+import { compressImageToDataUrl } from '../utils/image';
 import './ProfileScreen.css';
 import { 
   calculateInBodyScore, 
@@ -651,12 +652,14 @@ function InBodyTracker({ scans, openSheet, setOpenSheet, unitPreference, gender,
     setFormData({ weight: '', smm: '', bf: '', score: '', photoUrl: '' });
   }
 
-  function handlePhotoUpload(e) {
+  async function handlePhotoUpload(e) {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setFormData(p => ({ ...p, photoUrl: e.target.result }));
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const photoUrl = await compressImageToDataUrl(file);
+      setFormData(p => ({ ...p, photoUrl }));
+    } catch {
+      showAlert('Could not read that image. Try a JPEG or PNG photo.', 'Photo Error');
     }
   }
 
