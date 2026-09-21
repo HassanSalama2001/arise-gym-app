@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
 import { supabase } from '../db/supabaseClient';
-import { backupToCloud, restoreFromCloud } from '../db/sync';
+import { useBackup } from '../hooks/useBackup';
 import { useAlert } from '../context/AlertContext';
 import './SettingsScreen.css';
 import { 
@@ -17,13 +17,11 @@ import {
 } from '../utils/calorieEngine';
 
 export default function SettingsScreen() {
-  const { showAlert, showConfirm, showPrompt } = useAlert();
+  const { showAlert, showConfirm, showPrompt, showToast } = useAlert();
   const navigate = useNavigate();
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const [session, setSession] = useState(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('');
-  const [exportMsg, setExportMsg] = useState('');
+  const { syncing, syncStatus, exportMsg, backup, restore, exportFile, importFile } = useBackup();
 
   const [autoActivity, setAutoActivity] = useState('sedentary');
   const [latestWeight, setLatestWeight] = useState(null);
@@ -160,8 +158,6 @@ export default function SettingsScreen() {
       const confirmation = await showConfirm(`Convert all existing workout history weights from ${profile.unitPreference.toUpperCase()} to ${value.toUpperCase()}?\n\n(Choose CONFIRM to convert values, or CANCEL to only change the label)`);
       
       if (confirmation) {
-        setSyncing(true);
-        setSyncStatus('Converting units...');
         try {
           const factor = value === 'lbs' ? 2.20462 : 1 / 2.20462;
           await db.transaction('rw', [db.sets, db.personalRecords, db.bodyWeight, db.inbodyScans, db.playerProfile], async () => {
@@ -190,76 +186,14 @@ export default function SettingsScreen() {
               });
             }
           });
-          setSyncStatus('Units converted!');
+          showToast('Units converted!');
         } catch (err) {
           await showAlert('Failed to convert units: ' + err.message, 'Error');
-        } finally {
-          setSyncing(false);
-          setTimeout(() => setSyncStatus(''), 3000);
         }
         return;
       }
     }
     await db.playerProfile.update('profile', { [key]: value });
-  }
-
-  async function handleBackup() {
-    setSyncing(true);
-    setSyncStatus('Backing up...');
-    try {
-      const res = await backupToCloud();
-      if (res.success) {
-        setSyncStatus('Backup complete!');
-      } else if (res.conflict) {
-        setSyncStatus('Conflict detected!');
-        const force = await showConfirm(
-          `A newer backup from ${new Date(res.cloudTime).toLocaleString()} exists on the cloud.\n\nYour last sync on this device was ${res.localTime ? new Date(res.localTime).toLocaleString() : 'never'}.\n\nDo you want to FORCE overwrite the cloud with your local data?`,
-          "Sync Conflict Detected",
-          { okText: 'FORCE BACKUP', cancelText: 'CANCEL' }
-        );
-        if (force) {
-          setSyncStatus('Forcing backup...');
-          const forceRes = await backupToCloud(true);
-          if (forceRes.success) {
-            setSyncStatus('Backup complete!');
-          } else {
-            setSyncStatus('Backup failed: ' + forceRes.error);
-          }
-        } else {
-          setSyncStatus('Backup cancelled.');
-        }
-      } else {
-        setSyncStatus('Backup failed: ' + res.error);
-      }
-    } catch (err) {
-      setSyncStatus('Backup failed: ' + err.message);
-    } finally {
-      setSyncing(false);
-      setTimeout(() => setSyncStatus(''), 3000);
-    }
-  }
-
-  async function handleRestore() {
-    const confirmed = await showConfirm("Restoring from the cloud will overwrite your current local data. Do you want to proceed?", "Restore from Cloud?", { danger: true });
-    if (!confirmed) {
-      return;
-    }
-    setSyncing(true);
-    setSyncStatus('Restoring...');
-    try {
-      const res = await restoreFromCloud();
-      if (res.success) {
-        setSyncStatus('Restore complete!');
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        setSyncStatus('Restore failed: ' + res.error);
-      }
-    } catch (err) {
-      setSyncStatus('Restore failed: ' + err.message);
-    } finally {
-      setSyncing(false);
-      setTimeout(() => setSyncStatus(''), 3000);
-    }
   }
 
   async function handleLogout() {
@@ -269,113 +203,6 @@ export default function SettingsScreen() {
       await db.playerProfile.update('profile', { guestMode: true });
       navigate('/profile');
     }
-  }
-
-  async function handleExport() {
-    try {
-      const data = {
-        profile: await db.playerProfile.get('profile'),
-        sessions: await db.sessions.toArray(),
-        sets: await db.sets.toArray(),
-        personalRecords: await db.personalRecords.toArray(),
-        workoutPlans: await db.workoutPlans.toArray(),
-        planExercises: await db.planExercises.toArray(),
-        dailyQuests: await db.dailyQuests.toArray(),
-        achievements: await db.achievements.toArray(),
-        inbodyScans: await db.inbodyScans.toArray(),
-        measurements: await db.measurements.toArray(),
-        exportedAt: new Date().toISOString(),
-      };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `arise-backup-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      setExportMsg('Exported successfully');
-      setTimeout(() => setExportMsg(''), 3000);
-    } catch (err) {
-      await showAlert("Failed to export data: " + err.message, "Export Failed");
-    }
-  }
-
-  async function handleImport(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const confirmed = await showConfirm("Importing this backup will overwrite ALL your current local workout data. Do you want to proceed?", "Import Backup?", { danger: true });
-    if (!confirmed) {
-      e.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const data = JSON.parse(event.target.result);
-        if (!data || !data.profile) {
-          await showAlert("Invalid backup file. Could not find profile data.", "Import Error");
-          return;
-        }
-
-        await db.transaction('rw', [
-          db.playerProfile,
-          db.sessions,
-          db.sets,
-          db.personalRecords,
-          db.workoutPlans,
-          db.planExercises,
-          db.dailyQuests,
-          db.achievements,
-          db.inbodyScans,
-          db.measurements
-        ], async () => {
-          if (data.profile) await db.playerProfile.put(data.profile);
-          if (data.sessions) {
-            await db.sessions.clear();
-            await db.sessions.bulkAdd(data.sessions);
-          }
-          if (data.sets) {
-            await db.sets.clear();
-            await db.sets.bulkAdd(data.sets);
-          }
-          if (data.personalRecords) {
-            await db.personalRecords.clear();
-            await db.personalRecords.bulkAdd(data.personalRecords);
-          }
-          if (data.workoutPlans) {
-            await db.workoutPlans.clear();
-            await db.workoutPlans.bulkAdd(data.workoutPlans);
-          }
-          if (data.planExercises) {
-            await db.planExercises.clear();
-            await db.planExercises.bulkAdd(data.planExercises);
-          }
-          if (data.dailyQuests) {
-            await db.dailyQuests.clear();
-            await db.dailyQuests.bulkAdd(data.dailyQuests);
-          }
-          if (data.achievements) {
-            await db.achievements.clear();
-            await db.achievements.bulkAdd(data.achievements);
-          }
-          if (data.inbodyScans) {
-            await db.inbodyScans.clear();
-            await db.inbodyScans.bulkAdd(data.inbodyScans);
-          }
-          if (data.measurements) {
-            await db.measurements.clear();
-            await db.measurements.bulkAdd(data.measurements);
-          }
-        });
-
-        await showAlert("Import successful! The app will reload to apply changes.", "Success");
-        window.location.reload();
-      } catch (err) {
-        await showAlert("Failed to import backup: " + err.message, "Import Error");
-      }
-    };
-    reader.readAsText(file);
   }
 
   async function handleDeleteAll() {
@@ -798,11 +625,11 @@ export default function SettingsScreen() {
             <div className="sync-actions-grid mt-16">
               {session ? (
                 <>
-                  <button className="sync-btn" onClick={handleBackup} disabled={syncing}>
+                  <button className="sync-btn" onClick={backup} disabled={syncing}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     SYNC TO CLOUD
                   </button>
-                  <button className="sync-btn" onClick={handleRestore} disabled={syncing}>
+                  <button className="sync-btn" onClick={restore} disabled={syncing}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     RESTORE FROM CLOUD
                   </button>
@@ -833,7 +660,7 @@ export default function SettingsScreen() {
                 <span className="settings-title">Export Backup</span>
                 <span className="settings-desc">Save your workout history as a JSON file</span>
               </div>
-              <button className="data-btn mt-8" onClick={handleExport}>
+              <button className="data-btn mt-8" onClick={exportFile}>
                 EXPORT
               </button>
             </div>
@@ -846,7 +673,7 @@ export default function SettingsScreen() {
               </div>
               <label className="data-btn mt-8" style={{ cursor: 'pointer', textAlign: 'center' }}>
                 IMPORT
-                <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+                <input type="file" accept=".json" onChange={importFile} style={{ display: 'none' }} />
               </label>
             </div>
 

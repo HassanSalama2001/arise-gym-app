@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo, RANKS, calculateSetXP } from '../data/progression';
 import { supabase } from '../db/supabaseClient';
-import { backupToCloud, restoreFromCloud } from '../db/sync';
+import { useBackup } from '../hooks/useBackup';
 import { useAlert } from '../context/AlertContext';
 import BottomSheet from '../components/BottomSheet';
 import './ProfileScreen.css';
@@ -347,7 +347,6 @@ function ConfirmDeleteSheet({ onConfirm, onClose }) {
 }
 
 export default function ProfileScreen() {
-  const { showConfirm } = useAlert();
   const navigate = useNavigate();
   const location = useLocation();
   const [editingName, setEditingName] = useState(false);
@@ -356,9 +355,7 @@ export default function ProfileScreen() {
   const [showInbody, setShowInbody] = useState(false);
   const [showMeasurement, setShowMeasurement] = useState(false);
   const [showRankDetails, setShowRankDetails] = useState(false);
-  const [exportMsg, setExportMsg] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('');
+  const { syncing, syncStatus, exportMsg, backup, restore, exportFile } = useBackup();
   const [session, setSession] = useState(null);
   const nameInputRef = useRef(null);
 
@@ -425,59 +422,6 @@ export default function ProfileScreen() {
     setNameVal(profile?.name || '');
     setEditingName(true);
     setTimeout(() => nameInputRef.current?.focus(), 100);
-  }
-
-  async function handleBackup() {
-    setSyncing(true);
-    setSyncStatus('Backing up...');
-    const res = await backupToCloud();
-    if (res.success) {
-      setSyncStatus('Backup successful');
-      await db.playerProfile.update('profile', { lastSyncedAt: Date.now() });
-    } else {
-      setSyncStatus('Backup failed: ' + res.error);
-    }
-    setSyncing(false);
-    setTimeout(() => setSyncStatus(''), 3000);
-  }
-
-  async function handleRestore() {
-    const confirmed = await showConfirm('This will OVERWRITE your local data with cloud data. Continue?', 'Restore from Cloud?', { danger: true });
-    if (!confirmed) return;
-    setSyncing(true);
-    setSyncStatus('Restoring...');
-    const res = await restoreFromCloud();
-    if (res.success) {
-      setSyncStatus('Restore successful');
-      await db.playerProfile.update('profile', { lastSyncedAt: Date.now() });
-      window.location.reload();
-    } else {
-      setSyncStatus('Restore failed: ' + res.error);
-    }
-    setSyncing(false);
-    setTimeout(() => setSyncStatus(''), 3000);
-  }
-
-  async function handleExport() {
-    const data = {
-      profile: await db.playerProfile.toArray(),
-      sessions: await db.sessions.toArray(),
-      sets: await db.sets.toArray(),
-      bodyWeight: await db.bodyWeight.toArray(),
-      personalRecords: await db.personalRecords.toArray(),
-      achievements: await db.achievements.toArray(),
-      workoutPlans: await db.workoutPlans.toArray(),
-      planExercises: await db.planExercises.toArray(),
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `arise-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    setExportMsg('Exported successfully');
-    setTimeout(() => setExportMsg(''), 3000);
   }
 
   async function handleDeleteAll() {
@@ -589,11 +533,11 @@ export default function ProfileScreen() {
             <div className="sync-actions-grid mt-16">
               {session ? (
                 <>
-                  <button className="sync-btn" onClick={handleBackup} disabled={syncing}>
+                  <button className="sync-btn" onClick={backup} disabled={syncing}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     BACKUP
                   </button>
-                  <button className="sync-btn" onClick={handleRestore} disabled={syncing}>
+                  <button className="sync-btn" onClick={restore} disabled={syncing}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     RESTORE
                   </button>
@@ -606,7 +550,7 @@ export default function ProfileScreen() {
             </div>
 
             <div className="sync-secondary-actions mt-16">
-              <button className="data-btn" onClick={handleExport} style={{ padding: 0, minHeight: 'auto' }}>
+              <button className="data-btn" onClick={exportFile} style={{ padding: 0, minHeight: 'auto' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 EXPORT .JSON
               </button>
