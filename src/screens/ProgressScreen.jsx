@@ -1,28 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getRankInfo } from '../data/progression';
 import { TRAINED_MUSCLE_GROUPS } from '../data/muscleGroups';
 import SessionDetailModal from '../components/SessionDetailModal';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { useNow } from '../hooks/useNow';
 import './ProgressScreen.css';
 import { 
   calculateInBodyScore, 
   calculateBMI, 
   lbsToKg 
 } from '../utils/calorieEngine';
-
-/* ── Animated Number ─────────── */
-function AnimCount({ value }) {
-  const [display, setDisplay] = React.useState(0);
-  React.useEffect(() => {
-    if (!value) return;
-    let s = 0; const step = value / 60;
-    const iv = setInterval(() => { s += step; if (s >= value) { setDisplay(value); clearInterval(iv); } else setDisplay(Math.floor(s)); }, 16);
-    return () => clearInterval(iv);
-  }, [value]);
-  return <>{display.toLocaleString()}</>;
-}
 
 /* ── SVG Area Chart (XP over 30 days) ────────────── */
 function XPAreaChart({ data }) {
@@ -166,6 +156,7 @@ export default function ProgressScreen() {
   const [calendarView, setCalendarView] = useState('week');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const now = useNow();
 
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const sessions = useLiveQuery(() => db.sessions.orderBy('startTime').reverse().toArray(), []);
@@ -184,7 +175,6 @@ export default function ProgressScreen() {
   // Build 30-day XP history
   const xpChartData = useMemo(() => {
     if (!sessions) return [];
-    const now = Date.now();
     const days = Array.from({ length: 30 }, (_, i) => {
       const d = new Date(now - (29 - i) * 86400000);
       const dateStr = d.toISOString().split('T')[0];
@@ -197,15 +187,15 @@ export default function ProgressScreen() {
     // Make cumulative
     let cum = 0;
     return days.map(d => { cum += d.xp; return { ...d, xp: cum }; });
-  }, [sessions]);
+  }, [sessions, now]);
 
   // Weekly volume (Mon-Sun)
   const weekData = useMemo(() => {
     if (!sessions || !sets) return Array.from({ length: 7 }, () => ({ vol: 0 }));
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0=Sun
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+    const today = new Date(now);
+    const dayOfWeek = today.getDay(); // 0=Sun
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
     monday.setHours(0, 0, 0, 0);
 
     return Array.from({ length: 7 }, (_, i) => {
@@ -218,19 +208,18 @@ export default function ProgressScreen() {
       }, 0);
       return { vol: Math.round(vol) };
     });
-  }, [sessions, sets]);
+  }, [sessions, sets, now]);
 
 
   // History filter
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
-    const now = Date.now();
     if (historyFilter === 'week') return sessions.filter(s => s.startTime > now - 7 * 86400000);
     if (historyFilter === 'month') return sessions.filter(s => s.startTime > now - 30 * 86400000);
     return sessions;
-  }, [sessions, historyFilter]);
+  }, [sessions, historyFilter, now]);
 
-  const rankInfo = useMemo(() => profile ? getRankInfo(profile.totalXP) : null, [profile?.totalXP]);
+  const rankInfo = profile ? getRankInfo(profile.totalXP) : null;
 
   if (profile === undefined || sessions === undefined) {
     return (
@@ -287,7 +276,7 @@ export default function ProgressScreen() {
                   { label: 'BEST STREAK', value: profile.longestStreak },
                 ].map(s => (
                   <div key={s.label} className="stat-overview-box card">
-                    <span className="stat-number" style={{ fontSize: 22 }}><AnimCount value={s.value} /></span>
+                    <span className="stat-number" style={{ fontSize: 22 }}><AnimatedNumber value={s.value} /></span>
                     <span className="section-label">{s.label}</span>
                   </div>
                 ))}
@@ -450,7 +439,8 @@ export default function ProgressScreen() {
 /* Muscle frequency with exercise DB lookup */
 function MuscleFrequencyGrid({ sessions, sets }) {
   const exercises = useLiveQuery(() => db.exercises.toArray());
-  const weekAgo = Date.now() - 7 * 86400000;
+  const now = useNow();
+  const weekAgo = now - 7 * 86400000;
   const weekSessions = (sessions || []).filter(s => s.startTime > weekAgo);
   const weekSessionIds = new Set(weekSessions.map(s => s.id));
   const weekSets = (sets || []).filter(s => weekSessionIds.has(s.sessionId) && s.completed);
@@ -828,9 +818,8 @@ function BodyWeightChart({ data }) {
 }
 
 function OneRepMaxChart({ sets, sessions, exercises }) {
-  const [selectedEx, setSelectedEx] = useState('');
-  const [chartData, setChartData] = useState([]);
-  
+  const [pickedEx, setSelectedEx] = useState('');
+
   const loggedExerciseIds = useMemo(() => {
     if (!sets) return [];
     const ids = new Set(sets.filter(s => s.completed).map(s => s.exerciseId));
@@ -842,18 +831,14 @@ function OneRepMaxChart({ sets, sessions, exercises }) {
     return loggedExerciseIds.map(id => exercises.find(e => e.id === id)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
   }, [exercises, loggedExerciseIds]);
 
-  React.useEffect(() => {
-    if (loggedExercises.length > 0 && (!selectedEx || !loggedExercises.find(e => e.name === selectedEx))) {
-      setSelectedEx(loggedExercises[0].name);
-    }
-  }, [loggedExercises, selectedEx]);
+  // Fall back to the first logged exercise until the user picks one (or if theirs disappears).
+  const selectedEx = loggedExercises.some(e => e.name === pickedEx) ? pickedEx : (loggedExercises[0]?.name ?? '');
 
-  React.useEffect(() => {
-    if (!sets || !sessions || !exercises || !selectedEx) return;
-    const ex = exercises.find(e => e.name === selectedEx);
-    if (!ex) { setChartData([]); return; }
-    
-    // Group sets by date
+  const chartData = useMemo(() => {
+    const ex = exercises?.find(e => e.name === selectedEx);
+    if (!sets || !sessions || !ex) return [];
+
+    // Best estimated 1RM (Epley) per day
     const daily1RM = {};
     sets.forEach(s => {
       if (!s.completed || s.exerciseId !== ex.id) return;
@@ -866,8 +851,7 @@ function OneRepMaxChart({ sets, sessions, exercises }) {
       }
     });
 
-    const sortedDates = Object.keys(daily1RM).sort();
-    setChartData(sortedDates.map(d => ({ date: d, value: daily1RM[d] })));
+    return Object.keys(daily1RM).sort().map(d => ({ date: d, value: daily1RM[d] }));
   }, [selectedEx, sets, sessions, exercises]);
 
   const W = 340, H = 100, PAD = 10;
@@ -923,8 +907,9 @@ function OneRepMaxChart({ sets, sessions, exercises }) {
 
 /* ── Workout Calendar ─────────────────────────────── */
 function WorkoutCalendar({ sessions, viewMode, selectedDate, onDateClick }) {
-  const now = new Date();
-  const [currentMonth, setCurrentMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  const nowMs = useNow();
+  const now = useMemo(() => new Date(nowMs), [nowMs]);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1));
 
   // Get days for weekly view
   const weekDays = useMemo(() => {
@@ -936,7 +921,7 @@ function WorkoutCalendar({ sessions, viewMode, selectedDate, onDateClick }) {
       d.setDate(start.getDate() + i);
       return d;
     });
-  }, []);
+  }, [now]);
 
   // Get days for monthly view
   const monthDays = useMemo(() => {

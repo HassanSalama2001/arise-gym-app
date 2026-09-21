@@ -30,7 +30,7 @@ export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
   const [showCustom, setShowCustom] = useState(false);
   const [customVal, setCustomVal] = useState('');
   const intervalRef = useRef(null);
-  const startRef = useRef(Date.now());
+  const startRef = useRef(null); // set when the countdown starts
   const durationRef = useRef(defaultDuration);
 
   const reset = useCallback((newDur) => {
@@ -53,6 +53,7 @@ export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
 
   useEffect(() => {
     if (!running) return;
+    startRef.current ??= Date.now();
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startRef.current) / 1000;
       const rem = Math.max(durationRef.current - elapsed, 0);

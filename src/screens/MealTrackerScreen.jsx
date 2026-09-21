@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import { getToday } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import { playClickSound } from '../utils/audio';
 import { hapticClick } from '../utils/haptics';
 import './MealTrackerScreen.css';
@@ -56,6 +56,15 @@ export default function MealTrackerScreen() {
 
   const totalWater = loggedHydration ? loggedHydration.reduce((acc, h) => acc + (parseInt(h.amountMl) || 0), 0) : 0;
 
+  const resetMealForm = () => {
+    setFoodName('');
+    setCalories('');
+    setProtein('');
+    setCarbs('');
+    setFat('');
+    setActiveMealSheet(null);
+  };
+
   // Handle adding meal
   const handleAddMeal = async (type) => {
     if (!foodName.trim()) {
@@ -79,15 +88,6 @@ export default function MealTrackerScreen() {
 
     showToast(`Logged ${foodName.trim()} to ${type}`);
     resetMealForm();
-  };
-
-  const resetMealForm = () => {
-    setFoodName('');
-    setCalories('');
-    setProtein('');
-    setCarbs('');
-    setFat('');
-    setActiveMealSheet(null);
   };
 
   // Handle deleting meal

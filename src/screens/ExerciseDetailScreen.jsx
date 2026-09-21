@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
+import { useExerciseVisual } from '../hooks/useExerciseVisual';
 import BottomSheet from '../components/BottomSheet';
-import { getExerciseVisuals } from '../utils/exerciseImages';
 import './ExerciseDetailScreen.css';
 
 const DIFFICULTY_LABEL = { E: 'Beginner', D: 'Intermediate', C: 'Advanced' };
@@ -24,8 +24,6 @@ export default function ExerciseDetailScreen() {
   const [noteScope, setNoteScope] = useState('Global'); // Global, Plan-specific
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   
-  const [visuals, setVisuals] = useState(null);
-  const [visualsLoading, setVisualsLoading] = useState(false);
 
   const exercise = useLiveQuery(() => db.exercises.get(Number(id)), [id]);
   const plans = useLiveQuery(() => db.workoutPlans.toArray(), []);
@@ -37,26 +35,7 @@ export default function ExerciseDetailScreen() {
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const exerciseNotes = useLiveQuery(() => db.exerciseNotes.where('exerciseId').equals(Number(id)).toArray(), [id]);
 
-  React.useEffect(() => {
-    let activeUrls = [];
-    async function loadVisuals() {
-      if (!exercise || !profile) return;
-      setVisualsLoading(true);
-      const result = await getExerciseVisuals(exercise);
-      if (result && result.type === 'gif') {
-        const url = URL.createObjectURL(result.blob);
-        activeUrls.push(url);
-        setVisuals({ type: 'gif', url });
-      } else {
-        setVisuals(null);
-      }
-      setVisualsLoading(false);
-    }
-    loadVisuals();
-    return () => {
-      activeUrls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [exercise?.id, exercise?.name, profile]);
+  const { url: visualUrl, loading: visualsLoading } = useExerciseVisual(exercise);
 
   const addedPlanIds = new Set((planExercises || []).map(pe => pe.planId));
 
@@ -247,11 +226,11 @@ export default function ExerciseDetailScreen() {
                     <span style={{ color: 'var(--text-muted)' }}>Loading visual guide...</span>
                   </div>
                 </div>
-              ) : visuals ? (
+              ) : visualUrl ? (
                 <div className="guide-section">
                   <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', gap: 4, background: '#fff' }}>
                       <img 
-                        src={visuals.url} 
+                        src={visualUrl} 
                         alt={`${exercise.name} animation`} 
                         style={{ width: '100%', objectFit: 'contain', background: 'white' }}
                         loading="lazy"

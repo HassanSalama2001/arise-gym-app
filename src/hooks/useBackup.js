@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import db from '../db/db';
 import { backupToCloud, restoreFromCloud } from '../db/sync';
 import { exportBackup, importBackup, parseBackup } from '../db/backup';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 
 const REPLACE_WARNING = 'This replaces everything on this device (workouts, plans, meals, scans and progress) with the backup. Export a copy first if you might want the current data back.';
 

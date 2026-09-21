@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Reorder, useDragControls } from 'framer-motion';
 import db from '../db/db';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import { playClickSound } from '../utils/audio';
 import EditPlanModal from '../components/EditPlanModal';
 import AddExerciseToPlanSheet from '../components/AddExerciseToPlanSheet';

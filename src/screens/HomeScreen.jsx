@@ -6,26 +6,8 @@ import db from '../db/db';
 import { getRankInfo, generateDailyQuests } from '../data/progression';
 import { getToday } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
+import AnimatedNumber from '../components/AnimatedNumber';
 import './HomeScreen.css';
-
-function AnimatedNumber({ value, duration = 800 }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    if (!value) { setDisplay(0); return; }
-    let startTime = null;
-    const startVal = 0;
-    const endVal = value;
-    
-    function step(timestamp) {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setDisplay(Math.floor(progress * (endVal - startVal) + startVal));
-      if (progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }, [value, duration]);
-  return <span>{display.toLocaleString()}</span>;
-}
 
 function StreakRing({ streak }) {
   const radius = 42;
@@ -156,10 +138,7 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const rankInfo = useMemo(() => {
-    if (!profile) return null;
-    return getRankInfo(profile.totalXP);
-  }, [profile?.totalXP]);
+  const rankInfo = profile ? getRankInfo(profile.totalXP) : null;
 
   const inbodyScans = useLiveQuery(() => db.inbodyScans.orderBy('date').reverse().limit(1).toArray());
 

@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import BottomSheet from './BottomSheet';
 
 export default function EditPlanModal({ isOpen, onClose, plan, onSave }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(plan?.name || '');
+  const [description, setDescription] = useState(plan?.description || '');
+  const [loadedPlan, setLoadedPlan] = useState(plan);
 
-  useEffect(() => {
+  // Reload the fields when a different (or updated) plan is passed in.
+  if (plan !== loadedPlan) {
+    setLoadedPlan(plan);
     if (plan) {
       setName(plan.name || '');
       setDescription(plan.description || '');
     }
-  }, [plan]);
+  }
 
   const handleSave = () => {
     if (!name.trim()) return;

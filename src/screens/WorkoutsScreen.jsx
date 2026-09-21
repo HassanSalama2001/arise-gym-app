@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
 import templates from '../data/templates.json';
 import { TRAINED_MUSCLE_GROUPS } from '../data/muscleGroups';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import posturalIssues, { categories as correctiveCategories } from '../data/posturalIssues';
 import PosturalIssueDetail from '../components/PosturalIssueDetail';
 import BottomSheet from '../components/BottomSheet';
@@ -165,16 +165,18 @@ export default function WorkoutsScreen() {
   const [selectedIssue, setSelectedIssue] = useState(null);
   
   const trackedIssues = useLiveQuery(() => db.userPosturalIssues.toArray(), []);
-  const customIssues = useLiveQuery(() => db.customPosturalIssues.toArray(), []) || [];
-  
+  const customIssues = useLiveQuery(() => db.customPosturalIssues.toArray(), []);
+
   const allPosturalIssues = useMemo(() => {
-    return [...posturalIssues, ...customIssues].sort((a, b) => a.name.localeCompare(b.name));
+    return [...posturalIssues, ...(customIssues || [])].sort((a, b) => a.name.localeCompare(b.name));
   }, [customIssues]);
 
-  // Reset pagination when searching or filtering
-  React.useEffect(() => {
+  // Reset pagination when the search or filter changes
+  const [pagedFor, setPagedFor] = useState({ search, filter });
+  if (pagedFor.search !== search || pagedFor.filter !== filter) {
+    setPagedFor({ search, filter });
     setVisibleCount(30);
-  }, [search, filter]);
+  }
 
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
   const plans = useLiveQuery(async () => {

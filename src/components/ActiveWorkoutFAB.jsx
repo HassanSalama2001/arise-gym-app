@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWorkout } from '../context/WorkoutContext';
+import { useWorkout } from '../context/useWorkout';
 import { playClickSound } from '../utils/audio';
 import { hapticClick } from '../utils/haptics';
 import './ActiveWorkoutFAB.css';

@@ -6,7 +6,7 @@ import db from '../db/db';
 import { getRankInfo, RANKS, calculateSetXP } from '../data/progression';
 import { supabase } from '../db/supabaseClient';
 import { useBackup } from '../hooks/useBackup';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import BottomSheet from '../components/BottomSheet';
 import { compressImageToDataUrl } from '../utils/image';
 import './ProfileScreen.css';
@@ -353,7 +353,8 @@ export default function ProfileScreen() {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState('');
   const [showDelete, setShowDelete] = useState(false);
-  const [showInbody, setShowInbody] = useState(false);
+  // Other screens can open the InBody sheet directly by navigating here with { openSheet: 'inbody' }.
+  const [showInbody, setShowInbody] = useState(() => location.state?.openSheet === 'inbody');
   const [showMeasurement, setShowMeasurement] = useState(false);
   const [showRankDetails, setShowRankDetails] = useState(false);
   const { syncing, syncStatus, exportMsg, backup, restore, exportFile } = useBackup();
@@ -368,8 +369,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (location.state?.openSheet === 'inbody') {
-      setShowInbody(true);
-      // Only clear if we actually opened it
+      // Clear the request so back/refresh doesn't reopen it
       const timer = setTimeout(() => {
         navigate(location.pathname, { replace: true, state: {} });
       }, 500);
@@ -384,7 +384,7 @@ export default function ProfileScreen() {
   const allSets = useLiveQuery(() => db.sets.toArray(), []);
   const allExercises = useLiveQuery(() => db.exercises.toArray(), []);
 
-  const rankInfo = useMemo(() => profile ? getRankInfo(profile.totalXP) : null, [profile?.totalXP]);
+  const rankInfo = profile ? getRankInfo(profile.totalXP) : null;
   const earnedTypes = new Set((achievements || []).map(a => a.type));
 
   const muscleXP = useMemo(() => {

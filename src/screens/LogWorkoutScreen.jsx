@@ -1,6 +1,6 @@
 import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useWorkout } from '../context/WorkoutContext';
+import { useWorkout } from '../context/useWorkout';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
@@ -11,7 +11,7 @@ import XPToast from '../components/XPToast';
 import { playSetCompleteSound } from '../utils/audio';
 import { hapticSetComplete } from '../utils/haptics';
 import { checkAndUnlockAchievement } from '../utils/achievements';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import BottomSheet from '../components/BottomSheet';
 import ExerciseDetailsSheet from '../components/ExerciseDetailsSheet';
 import './LogWorkoutScreen.css';

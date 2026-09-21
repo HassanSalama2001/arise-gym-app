@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import BottomSheet from './BottomSheet';
 import './SessionDetailModal.css';
 

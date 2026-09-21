@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-
-const WorkoutContext = createContext(null);
+import { useState, useEffect } from 'react';
+import { WorkoutContext } from './useWorkout';
 
 export function WorkoutProvider({ children }) {
   const [workoutState, setWorkoutState] = useState(() => {
@@ -108,10 +107,3 @@ export function WorkoutProvider({ children }) {
   );
 }
 
-export function useWorkout() {
-  const context = useContext(WorkoutContext);
-  if (!context) {
-    throw new Error('useWorkout must be used within a WorkoutProvider');
-  }
-  return context;
-}

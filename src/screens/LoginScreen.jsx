@@ -4,7 +4,7 @@ import { supabase } from '../db/supabaseClient';
 import db from '../db/db';
 import { restoreFromCloud, getCloudBackupTime } from '../db/sync';
 import { hasLocalUserData } from '../db/backup';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 
 export default function LoginScreen({ onGuest, onLogin }) {
   const { showAlert, showConfirm } = useAlert();

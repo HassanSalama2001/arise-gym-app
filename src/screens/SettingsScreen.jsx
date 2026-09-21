@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
 import { supabase } from '../db/supabaseClient';
 import { useBackup } from '../hooks/useBackup';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import './SettingsScreen.css';
 import { 
   calculateBMR, 
@@ -29,6 +29,22 @@ export default function SettingsScreen() {
   const [heightFt, setHeightFt] = useState('');
   const [heightIn, setHeightIn] = useState('');
   const [heightCm, setHeightCm] = useState('');
+  const [syncedHeight, setSyncedHeight] = useState(undefined);
+
+  // Keep the height inputs in sync with the saved value (on load, and when it changes elsewhere).
+  if (profile && profile.height !== syncedHeight) {
+    setSyncedHeight(profile.height);
+    if (profile.height) {
+      const totalInches = profile.height / 2.54;
+      setHeightCm(profile.height);
+      setHeightFt(Math.floor(totalInches / 12));
+      setHeightIn(Math.round(totalInches % 12));
+    } else {
+      setHeightCm('');
+      setHeightFt('');
+      setHeightIn('');
+    }
+  }
 
   // 1. Fetch recent sessions to auto-detect activity level
   useEffect(() => {
@@ -81,21 +97,6 @@ export default function SettingsScreen() {
     fetchBiometrics();
   }, [profile]);
 
-  // 3. Keep height inputs sync'd with database value
-  useEffect(() => {
-    if (profile && profile.height) {
-      setHeightCm(profile.height);
-      const totalInches = profile.height / 2.54;
-      const ft = Math.floor(totalInches / 12);
-      const inch = Math.round(totalInches % 12);
-      setHeightFt(ft);
-      setHeightIn(inch);
-    } else {
-      setHeightCm('');
-      setHeightFt('');
-      setHeightIn('');
-    }
-  }, [profile?.height]);
 
   // 4. Recommendation derivation
   const isProfileComplete = profile?.gender && profile?.dob && profile?.height && latestWeight;
