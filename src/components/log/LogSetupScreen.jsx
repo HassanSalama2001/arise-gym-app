@@ -48,7 +48,7 @@ export default function LogSetupScreen({ onStart }) {
   async function startWithPlan(plan) {
     const exs = getPlanExercises(plan.id);
     if (exs.length === 0) { await showAlert('This plan has no exercises. Add some first!', 'Oops!'); return; }
-    onStart({ planName: plan.name, exercises: exs });
+    onStart({ planName: plan.name, planId: plan.id, exercises: exs });
   }
 
   async function quickStart() {

@@ -4,7 +4,6 @@ import { useWorkout } from '../context/useWorkout';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import posturalIssues from '../data/posturalIssues';
 import RestTimerOverlay from '../components/RestTimerOverlay';
 import XPToast from '../components/XPToast';
 import { playSetCompleteSound } from '../utils/audio';
@@ -14,7 +13,7 @@ import {
   setXP, PR_BONUS_XP, summarizeSets, applyQuestProgress,
 } from '../utils/workoutRules';
 import { recordSetIfPR, countPRsSince } from '../db/records';
-import { finishWorkout } from '../db/workoutSession';
+import { startWorkoutSession, finishWorkout } from '../db/workoutSession';
 import { useAlert } from '../context/useAlert';
 import { getToday } from '../utils/date';
 import ExerciseDetailsSheet from '../components/ExerciseDetailsSheet';
@@ -121,107 +120,15 @@ export default function LogWorkoutScreen() {
   function getDefaultRestDuration() { return profile?.defaultRestDuration ?? 60; }
 
   async function handleStart(config) {
-    
-    // Load initial daily quests for mid-workout progress tracking
-    const todayStr = getToday();
-    const todayQuests = await db.dailyQuests.where('date').equals(todayStr).toArray();
-    setInitialQuests(todayQuests);
+    const session = await startWorkoutSession(config);
+    setInitialQuests(session.todayQuests); // for mid-workout quest toasts
     toastedQuests.current = new Set();
-    
-    // Fetch active corrective protocols
-    const activeCorrectives = await db.userPosturalIssues.where('status').equals('active').toArray();
-    const customIssues = await db.customPosturalIssues.toArray() || [];
-    const allPosturalIssues = [...posturalIssues, ...customIssues];
-    const allExsList = await db.exercises.toArray();
-    
-    const warmupCorrectiveExs = [];
-    const cooldownCorrectiveExs = [];
-    const correctiveSets = {};
-    
-    if (activeCorrectives && activeCorrectives.length > 0) {
-      activeCorrectives.forEach(record => {
-        const issueData = allPosturalIssues.find(p => p.id === record.issueId);
-        if (!issueData) return;
-        
-        issueData.correctiveProtocol.forEach(protoEx => {
-          const matchedEx = allExsList.find(e => e.id === protoEx.exerciseId);
-          if (!matchedEx) return;
-          
-          // Mark exercise object in-memory with issue context
-          const exCopy = { 
-            ...matchedEx, 
-            isCorrective: true, 
-            issueId: record.issueId,
-            protoNote: protoEx.notes 
-          };
-          
-          // Determine placement
-          if (record.position === 'warmup' || record.position === 'both') {
-            if (!warmupCorrectiveExs.some(e => e.id === exCopy.id)) {
-              warmupCorrectiveExs.push(exCopy);
-            }
-          }
-          if (record.position === 'cooldown' || record.position === 'both') {
-            if (!cooldownCorrectiveExs.some(e => e.id === exCopy.id)) {
-              cooldownCorrectiveExs.push(exCopy);
-            }
-          }
-          
-          // Initialize correct number of sets
-          const setsCount = parseInt(protoEx.sets) || 2;
-          const repsMatch = protoEx.reps.match(/\d+/);
-          const defaultReps = repsMatch ? parseInt(repsMatch[0]) : 10;
-          
-          correctiveSets[matchedEx.id] = Array.from({ length: setsCount }, () => ({
-            weight: 0,
-            reps: defaultReps,
-            type: 'normal',
-            completed: false
-          }));
-        });
-      });
-    }
-
-    // Convert flat exercises list into single-exercise blocks
-    const planBlocks = (config.exercises || []).map(ex => [ex]);
-    
-    // Combine: Warmups + Plan + Cooldowns
-    const warmupBlocks = warmupCorrectiveExs.map(ex => [ex]);
-    const cooldownBlocks = cooldownCorrectiveExs.map(ex => [ex]);
-    const initialBlocks = [...warmupBlocks, ...planBlocks, ...cooldownBlocks];
-    
-    const now = Date.now();
-    
-    // Create session record
-    const sid = await db.sessions.add({
-      planId: null,
-      name: config.planName,
-      startTime: now,
-      endTime: null,
-    });
-    
-    // Init sets for all exercises based on template targets
-    const initSets = {};
-    (config.exercises || []).forEach(ex => { 
-      const setsCount = ex.targetSets || 3;
-      const targetReps = ex.targetReps || 10;
-      initSets[ex.id] = Array.from({ length: setsCount }, () => ({
-        weight: 0,
-        reps: targetReps,
-        type: 'normal',
-        completed: false
-      })); 
-    });
-    
-    // Merge corrective sets
-    const finalSets = { ...initSets, ...correctiveSets };
-    
     startWorkout({
       planName: config.planName,
-      sessionId: sid,
-      startTime: now,
-      blocks: initialBlocks,
-      sets: finalSets
+      sessionId: session.sessionId,
+      startTime: session.startTime,
+      blocks: session.blocks,
+      sets: session.sets,
     });
   }
 

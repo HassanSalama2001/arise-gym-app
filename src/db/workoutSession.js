@@ -30,6 +30,63 @@ export function setRowsForSession(sessionId, sets) {
   return rows;
 }
 
+const blankSets = (count, reps) =>
+  Array.from({ length: count }, () => ({ weight: 0, reps, type: 'normal', completed: false }));
+
+/**
+ * Corrective exercises to add around a workout for the user's active postural issues.
+ * Returns { warmup, cooldown, sets } where warmup/cooldown are exercise lists (deduplicated, in protocol
+ * order) and sets holds pre-filled sets for each corrective exercise.
+ */
+export function correctiveBlocks(activeRecords, issues, exercisesById) {
+  const warmup = [];
+  const cooldown = [];
+  const sets = {};
+  for (const record of activeRecords) {
+    const issue = issues.find(p => p.id === record.issueId);
+    for (const item of issue?.correctiveProtocol || []) {
+      const exercise = exercisesById[item.exerciseId];
+      if (!exercise) continue;
+      const tagged = { ...exercise, isCorrective: true, issueId: record.issueId, protoNote: item.notes };
+      if ((record.position === 'warmup' || record.position === 'both') && !warmup.some(e => e.id === tagged.id)) {
+        warmup.push(tagged);
+      }
+      if ((record.position === 'cooldown' || record.position === 'both') && !cooldown.some(e => e.id === tagged.id)) {
+        cooldown.push(tagged);
+      }
+      const reps = parseInt(String(item.reps ?? '').match(/\d+/)?.[0], 10) || 10; // "30s hold" -> 30
+      sets[exercise.id] = blankSets(parseInt(item.sets, 10) || 2, reps);
+    }
+  }
+  return { warmup, cooldown, sets };
+}
+
+/**
+ * Creates the session record and the initial workout state: corrective warm-ups, the plan's exercises
+ * (pre-filled with their target sets/reps) and corrective cool-downs, one exercise per block.
+ */
+export async function startWorkoutSession({ planName, planId = null, exercises = [], now = Date.now() }) {
+  const [activeRecords, customIssues, allExercises, todayQuests] = await Promise.all([
+    db.userPosturalIssues.where('status').equals('active').toArray(),
+    db.customPosturalIssues.toArray(),
+    db.exercises.toArray(),
+    db.dailyQuests.where('date').equals(getToday()).toArray(),
+  ]);
+  const exercisesById = Object.fromEntries(allExercises.map(e => [e.id, e]));
+  const correctives = correctiveBlocks(activeRecords, [...posturalIssues, ...customIssues], exercisesById);
+
+  const planSets = Object.fromEntries(exercises.map(ex => [ex.id, blankSets(ex.targetSets || 3, ex.targetReps || 10)]));
+  const sessionId = await db.sessions.add({ planId, name: planName, startTime: now, endTime: null });
+
+  return {
+    sessionId,
+    startTime: now,
+    blocks: [...correctives.warmup, ...exercises, ...correctives.cooldown].map(ex => [ex]),
+    sets: { ...planSets, ...correctives.sets },
+    todayQuests,
+  };
+}
+
 /** Advances active postural issues whose protocol was trained. Returns XP earned for issues resolved. */
 async function logCorrectiveProgress(sets) {
   const active = await db.userPosturalIssues.where('status').equals('active').toArray();

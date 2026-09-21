@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import db from './db';
-import { finishWorkout, setRowsForSession, CORRECTIVE_RESOLVED_XP } from './workoutSession';
+import {
+  finishWorkout, startWorkoutSession, correctiveBlocks, setRowsForSession, CORRECTIVE_RESOLVED_XP,
+} from './workoutSession';
 
 const NOW = new Date(2026, 8, 22, 18, 0).getTime(); // 18:00 local, Sep 22
 const done = (weight, reps) => ({ weight, reps, type: 'normal', completed: true });
@@ -102,5 +104,46 @@ describe('finishWorkout', () => {
     const sessionId = await startSession();
     await finishWorkout({ sessionId, startTime: NOW - 60000, sessionXP: 0, sets: {} });
     expect((await db.playerProfile.get('profile')).currentStreak).toBe(1);
+  });
+});
+
+describe('correctiveBlocks', () => {
+  const issues = [
+    { id: 'a', correctiveProtocol: [{ exerciseId: 10018, sets: 3, reps: '15 reps' }, { exerciseId: 999, sets: 2, reps: '10' }] },
+    { id: 'b', correctiveProtocol: [{ exerciseId: 10018, sets: 2, reps: '30s hold' }] },
+  ];
+  const byId = { 10018: { id: 10018, name: 'Band Pull-Apart' } };
+
+  it('places exercises by position, once each, skipping unknown exercises', () => {
+    const out = correctiveBlocks([{ issueId: 'a', position: 'both' }, { issueId: 'b', position: 'warmup' }], issues, byId);
+    expect(out.warmup.map(e => e.id)).toEqual([10018]);
+    expect(out.cooldown.map(e => e.id)).toEqual([10018]);
+    expect(out.warmup[0]).toMatchObject({ isCorrective: true, issueId: 'a' });
+  });
+
+  it('pre-fills sets from the protocol, reading numbers out of text like "30s hold"', () => {
+    const out = correctiveBlocks([{ issueId: 'b', position: 'warmup' }], issues, byId);
+    expect(out.sets[10018]).toHaveLength(2);
+    expect(out.sets[10018][0]).toMatchObject({ reps: 30, weight: 0, completed: false });
+  });
+});
+
+describe('startWorkoutSession', () => {
+  it('creates the session (with its plan) and lays out warm-up, plan and cool-down blocks', async () => {
+    await db.userPosturalIssues.add({ issueId: 'rounded_shoulders', status: 'active', position: 'warmup', completedSessions: 0, targetSessions: 30 });
+    const protocol = (await import('../data/posturalIssues')).default.find(i => i.id === 'rounded_shoulders').correctiveProtocol;
+    await db.exercises.bulkPut(protocol.map(p => ({ id: p.exerciseId, name: p.name, muscleGroup: 'Corrective' })));
+    await db.dailyQuests.add({ date: '2026-09-22', type: 'chest_sets', target: 3, current: 0, completed: false, xpReward: 50 });
+
+    const session = await startWorkoutSession({
+      planName: 'Push', planId: 4,
+      exercises: [{ id: 25, name: 'bench', targetSets: 4, targetReps: 8 }],
+    });
+
+    expect(await db.sessions.get(session.sessionId)).toMatchObject({ planId: 4, name: 'Push', startTime: NOW, endTime: null });
+    expect(session.blocks.map(b => b[0].id)).toEqual([...protocol.map(p => p.exerciseId), 25]);
+    expect(session.sets[25]).toHaveLength(4);
+    expect(session.sets[25][0]).toMatchObject({ reps: 8, weight: 0 });
+    expect(session.todayQuests.map(q => q.type)).toEqual(['chest_sets']);
   });
 });
