@@ -63,10 +63,10 @@ several parts of the app still use the old values.
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P3.1 | ⬜ | Document the rule in `docs/`: migrations never clear user tables; dataset changes remap IDs. | Doc exists |
-| P3.2 | ⬜ | `remapExerciseIds(map)` helper that rewrites `sets`, `planExercises`, `personalRecords`, `exerciseNotes` in one transaction, for future dataset changes. | Unit-tested |
-| P3.4 | ⬜ | Custom exercises take the next auto-increment ID after the dataset (currently 10025+ once correctives are seeded), so a future dataset that grows into that range would overwrite them. Give custom exercises their own ID space (e.g. string `custom_<uuid>` or a high reserved range) and migrate existing ones via P3.2. | Custom IDs can never collide with seeded ones |
-| P3.3 | ⬜ | Load the 1.2 MB exercise dataset only when seeding/migrating (dynamic import) instead of on every app start through `db.js`. | `db` chunk is small; dataset lives in its own lazily loaded chunk |
+| P3.1 | ✅ | Document the rule in `docs/`: migrations never clear user tables; dataset changes remap IDs. | Doc exists — **docs/MIGRATIONS.md** |
+| P3.2 | ✅ | `remapExerciseIds(map)` helper that rewrites `sets`, `planExercises`, `personalRecords`, `exerciseNotes` in one transaction, for future dataset changes. | Unit-tested — **src/db/remap.js. Also used to rewrite the v11 migration so it remaps instead of wiping; tested by upgrading a real v7 database** |
+| P3.4 | ✅ | Custom exercises take the next auto-increment ID after the dataset (currently 10025+ once correctives are seeded), so a future dataset that grows into that range would overwrite them. Give custom exercises their own ID space (e.g. string `custom_<uuid>` or a high reserved range) and migrate existing ones via P3.2. | Custom IDs can never collide with seeded ones — **Custom IDs ≥ 100000; v12 upgrade + backup import relocate existing ones** |
+| P3.3 | ✅ | Load the 1.2 MB exercise dataset only when seeding/migrating (dynamic import) instead of on every app start through `db.js`. | `db` chunk is small; dataset lives in its own lazily loaded chunk — **db chunk 1.22 MB → 241 KB; dataset (994 KB) loads only when seeding** |
 
 Note: data already wiped by migration v11 can't be recovered from the device. P2.6 makes old cloud or
 JSON backups usable again.
@@ -128,3 +128,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-22 | Plan created from code review; baseline recorded. |
 | 2026-09-22 | P0.1–P0.6 and P1.1 implemented. Found and added P0.7 (difficulty) and P3.4 (custom ID collisions). |
 | 2026-09-22 | P0.7 and all of P2 done. Lint 85 → 79. Tests 30/30. |
+| 2026-09-22 | P3 done. v11 no longer wipes history on devices that haven't upgraded yet. Tests 40/40, lint 78. |
