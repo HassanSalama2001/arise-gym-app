@@ -51,3 +51,6 @@ skills-lock.json
 assets_backup/
 temp/
 scratch/
+
+# Firebase CLI cache
+.firebase/
