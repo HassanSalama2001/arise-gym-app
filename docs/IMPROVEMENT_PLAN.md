@@ -1,0 +1,126 @@
+# ARISE Improvement Plan
+
+Living tracker. Every task has an ID, a status, and a "done when" check. Update the status and the
+log at the bottom whenever a task changes state.
+
+**Status legend:** ✅ Done · 🟡 In progress · ⬜ Not started · ⏸ Deferred / needs decision
+
+**Working rules**
+- Work happens on branch `claude/app-repo-comparison-5181df`, one commit per task (or small group).
+- Never push or merge to `main` without the owner's go-ahead — a push to `main` deploys to production.
+- Migrations must never clear user tables (see P3).
+- Each phase ends with `npm run lint`, `npm test`, `npm run build` all green.
+
+## Baseline (2026-09-22)
+
+| Check | Result |
+|---|---|
+| `npm run build` | passes; precache 2.66 MB; `db` chunk 1.22 MB (whole exercise dataset bundled with the DB module) |
+| `npm run lint` | **85 problems (74 errors, 11 warnings)** — 47 unused vars, 12 `purity`, 11 `exhaustive-deps`, 8 `set-state-in-effect`, 2 `no-undef`, 1 `no-dupe-keys`, 1 `immutability`, 1 `no-empty`, 2 `only-export-components` |
+| Tests | none; no test runner installed |
+
+---
+
+## P0 — Crash & dataset-migration fallout (confirmed bugs, highest priority)
+
+The move to the unified dataset (commit `17bac7d`) changed exercise IDs and muscle-group names, but
+several parts of the app still use the old values.
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P0.1 | ⬜ | **Crash when adding an exercise mid-workout.** `LogWorkoutScreen.jsx:1122/1136` calls `setBlocks`/`setSets`, which are undefined (context exposes `updateBlocks`/`updateSets`). Also move `setCurrentExIdx` out of the state updater. | Adding an exercise and a superset exercise during a workout works; lint `no-undef` = 0 |
+| P0.2 | ⬜ | **Muscle-group taxonomy mismatch.** Dataset uses `chest`, `back`, `upper legs`, `lower legs`, `upper arms`, `lower arms`, `shoulders`, `waist`, `cardio`, `neck`; the app filters/counts on `Chest`, `Back`, `Legs`, `Arms`, `Core`… so muscle filters return nothing, weekly Muscle Frequency is always 0, and leg/back/arm quest and achievement counters never increase. Add one `normalizeMuscleGroup()` map applied at seed time (keep raw value as `bodyPart`), bump seed version. | Every muscle filter chip shows exercises; Muscle Frequency and quest counters increase in a test session |
+| P0.3 | ⬜ | **Templates point to wrong exercises.** `templates.json` uses old numeric IDs (e.g. "PPL – Push" id 1 now = "3/4 sit-up"); 14 of 25 template names don't match the dataset exactly. Remap all to new IDs by name with a manual mapping for the 14. | Cloning each template yields the named exercises |
+| P0.4 | ⬜ | **Corrective protocols inject nothing.** `posturalIssues.js` references IDs 10001–100xx that don't exist in the dataset (and `Face Pull` id 32 now points elsewhere), so the protocol is silently skipped. Add a small seeded corrective-exercise set (reserved ID range, `muscleGroup: 'Corrective'`, `isCorrective: true`) and fix the references. | Starting a workout with an active postural issue injects its corrective exercises |
+| P0.5 | ⬜ | **Referential-integrity test** for all static references (templates, corrective protocols) against the dataset, so a future dataset swap fails CI instead of production. | Test fails if any referenced ID is missing |
+| P0.6 | ⬜ | **Remaining real lint bugs:** duplicate `border` key (`LogWorkoutScreen.jsx:1060`), `setTimeToMidnight` used before declaration (`HomeScreen.jsx:132`), empty catch (`RestTimerOverlay.jsx:23`). | Those rules report 0 |
+
+## P1 — Test & CI safety net
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P1.1 | ⬜ | Add Vitest + `fake-indexeddb`; `npm test` script. | `npm test` runs |
+| P1.2 | ⬜ | Unit tests for pure logic: `calorieEngine`, `progression` (ranks/XP), `achievements`, set XP/PR logic (after P4.2 extracts it). | Tests green |
+| P1.3 | ⬜ | Clear the remaining lint errors (unused vars, hook deps, purity, set-state-in-effect) — real fixes, not blanket disables. | `npm run lint` exits 0 |
+| P1.4 | ⬜ | CI: add a PR/branch workflow running `npm ci` → lint → test → build. Deploy workflow uses `npm ci`, runs the same gates before deploying. | Failing lint/test blocks deploy |
+| P1.5 | ⏸ | Replace the unpinned `w9jds/firebase-action@master` + deprecated `FIREBASE_TOKEN` with `FirebaseExtended/action-hosting-deploy` (pinned) + service account. **Needs owner:** add a `FIREBASE_SERVICE_ACCOUNT` repo secret. I'll prepare the workflow; it switches over once the secret exists. | Deploy works with the service-account secret |
+
+## P2 — Backup / restore integrity
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P2.1 | ⬜ | Single `USER_TABLES` registry in the DB layer; export/import built from it. Adds the missing `meals`, `hydration`, `exerciseNotes`, `customPosturalIssues`, and custom exercises (`isCustom`). Excludes caches (`exerciseImageCache`) and built-in exercises. | Every user-data table is covered, and a test fails if a new table is added without being classified |
+| P2.2 | ⬜ | Versioned backup format: `format: 'arise-backup'`, `schemaVersion`, `exportedAt`; validate before touching the DB; reject newer versions. | Malformed/foreign JSON is rejected with a clear message |
+| P2.3 | ⬜ | **Restore = replace, not merge.** Clear user tables and custom exercises, then write the backup inside one transaction (keeps IDs so references stay valid; deleted items don't come back). | Restore onto a device with different data gives exactly the backup's contents |
+| P2.4 | ⬜ | **Login auto-restore guard.** `LoginScreen` calls `restoreFromCloud()` on sign-in; once restore replaces data, this would wipe local data. Ask the user when both local data and a cloud backup exist (keep local / use cloud). | Signing in never silently discards local data |
+| P2.5 | ⬜ | Remove the three copies of backup/export/import (Settings, Profile, and Profile's own 8-table export) → one `useBackup` hook + one UI section. | One implementation; Profile and Settings both use it |
+| P2.6 | ⬜ | Legacy backup remap: backups made before `17bac7d` reference old exercise IDs. Build an old-ID → name map from git history and remap by name on import. | Restoring a pre-migration backup shows the right exercises |
+| P2.7 | ⬜ | InBody photos are stored as full-size base64 data URLs (inflates IndexedDB and the cloud JSONB). Downscale/compress to JPEG (~1024px) on upload. | New photo < ~200 KB |
+| P2.8 | ⬜ | Round-trip tests: seed → export → wipe → import → deep-equal. | Test green |
+
+## P3 — Migration policy
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P3.1 | ⬜ | Document the rule in `docs/`: migrations never clear user tables; dataset changes remap IDs. | Doc exists |
+| P3.2 | ⬜ | `remapExerciseIds(map)` helper that rewrites `sets`, `planExercises`, `personalRecords`, `exerciseNotes` in one transaction, for future dataset changes. | Unit-tested |
+| P3.3 | ⬜ | Load the 1.2 MB exercise dataset only when seeding/migrating (dynamic import) instead of on every app start through `db.js`. | `db` chunk is small; dataset lives in its own lazily loaded chunk |
+
+Note: data already wiped by migration v11 can't be recovered from the device. P2.6 makes old cloud or
+JSON backups usable again.
+
+## P4 — Code structure
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P4.1 | ⬜ | Split `LogWorkoutScreen.jsx` (1,399 lines): move `SetRow`, `LogSetupScreen`, `AddExerciseSheet`, `ExerciseJumpSheet`, `PlateCalculatorSheet`, `RPESelectionSheet` to `components/log/`. | Screen file < 600 lines, behaviour unchanged |
+| P4.2 | ⬜ | Move workout-finish logic (XP, streak multiplier, PR detection, quest progress, corrective progress) into `utils/workoutRules.js` as pure functions. Removes the duplicated muscle-counting blocks (lines ~542 and ~716). | Unit-tested; the screen calls it |
+| P4.3 | ⬜ | Better PRs: keep the heaviest-weight PR and also track an estimated-1RM PR, so a lighter set with more reps can count. | PR toast fires on e1RM improvement |
+| P4.4 | ⬜ | Trim `ProgressScreen`, `ProfileScreen`, `SettingsScreen` (870–1,000 lines each) by extracting sections as they're touched (P2.5 removes a lot). | Each < 600 lines |
+| P4.5 | ⬜ | Inline `style={{…}}` → CSS classes, only in files already being changed (no big-bang restyle). | Opportunistic |
+| P4.6 | ⬜ | Tidy `package.json`: name `arise-temp` → `arise`, version. | — |
+
+## P5 — Repo hygiene
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P5.1 | ⬜ | Untrack `.firebase/`, `temp_dataset.json`, `assets_backup/` (`git rm --cached`) and add them to `.gitignore`. | Not tracked |
+| P5.2 | ⬜ | Move `fetch_new_dataset.cjs`, `map_exercises.cjs`, `update_urls.cjs` to `scripts/`. | Root is clean |
+| P5.3 | ⬜ | Real README (what ARISE is, features, setup, Supabase migration, env vars, deploy) + `.env.example`. | — |
+
+## P6 — Offline exercise visuals
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P6.1 | ⬜ | Settings → "Download exercise visuals" (all, or just exercises in my plans) with progress, cancel, and a storage estimate; request `navigator.storage.persist()`. | Airplane mode shows GIFs for downloaded exercises |
+| P6.2 | ⬜ | Workbox runtime cache (`CacheFirst`) for `cdn.jsdelivr.net` GIFs as a fallback. | Cached after first view even outside the Dexie cache |
+
+## P7 — Features
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P7.1 | ⬜ | Screen wake lock during an active workout (Settings toggle, re-acquire on visibility change). | Screen stays on while logging |
+| P7.2 | ⬜ | Progression engine: per plan-exercise scheme (none / linear / double progression), rep range + increment, uses last session + RPE to suggest next weight/reps and pre-fill; deload after N failed sessions. | Suggestions appear and pre-fill; unit-tested |
+| P7.3 | ⬜ | Supersets in plans. Logging already supports superset blocks; add `groupId` on `planExercises`, a link/unlink UI in plan details, and rest after the group rather than after each exercise. | A plan's superset starts as one block |
+| P7.4 | ⬜ | Unilateral (per-side reps) and timed sets (`duration`) on exercises/sets; UI and volume maths adjusted. | Logged, displayed, counted correctly |
+| P7.5 | ⬜ | Import from Hevy / Strong CSV: parse, match exercise names (exact → normalised → manual pick step), preview, then import as sessions. | Sample exports import |
+| P7.6 | ⬜ | Progress: GitHub-style activity heatmap + muscle-group volume (week / month / all-time). Depends on P0.2. | Visible on Progress |
+
+## P8 — Sync v2 (deferred)
+
+| ID | Status | Task | Done when |
+|---|---|---|---|
+| P8.1 | ⏸ | Per-record sync (`updatedAt` + tombstones, stable UUID keys) instead of one whole-DB blob. Large change (key migration for every table). **Decision needed** once P2 lands and the blob size is known. | — |
+
+---
+
+## Execution order
+
+P0 → P1.1–P1.2 → P2 → P3 → P1.3–P1.4 → P5 → P4 → P6 → P7.1 → P7.6 → P7.3 → P7.4 → P7.2 → P7.5.
+Data-loss and crash fixes come first; features are built on top of the tested, restructured code.
+
+## Log
+
+| Date | Change |
+|---|---|
+| 2026-09-22 | Plan created from code review; baseline recorded. |
