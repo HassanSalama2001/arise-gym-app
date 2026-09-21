@@ -2,6 +2,7 @@ import db from './db';
 import { exercises as exerciseData } from '../data/exercises';
 import { normalizeMuscleGroup } from '../data/muscleGroups';
 import { correctiveExercises } from '../data/correctiveExercises';
+import { deriveDifficulty } from '../data/difficulty';
 
 let seedingPromise = null;
 
@@ -12,15 +13,16 @@ export async function seedDatabase() {
     try {
       const count = await db.exercises.count();
       const seedVer = await db.settings.get('exercise_seed_version');
-      const currentVer = `${exerciseData.length}+${correctiveExercises.length}_v5`;
+      const currentVer = `${exerciseData.length}+${correctiveExercises.length}_v6`;
 
       if (count === 0 || !seedVer || seedVer.value !== currentVer) {
         await db.exercises.bulkPut(exerciseData.map(ex => ({
           ...ex,
           bodyPart: ex.muscleGroup,
           muscleGroup: normalizeMuscleGroup(ex.muscleGroup),
+          difficulty: ex.difficulty ?? deriveDifficulty(ex),
         })));
-        await db.exercises.bulkPut(correctiveExercises);
+        await db.exercises.bulkPut(correctiveExercises.map(ex => ({ ...ex, difficulty: deriveDifficulty(ex) })));
         await db.settings.put({ key: 'exercise_seed_version', value: currentVer });
       }
 
