@@ -104,7 +104,7 @@ JSON backups usable again.
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P7.1 | ⬜ | Screen wake lock during an active workout (Settings toggle, re-acquire on visibility change). | Screen stays on while logging |
+| P7.1 | ✅ | Screen wake lock during an active workout (Settings toggle, re-acquire on visibility change). | Screen stays on while logging — **useWakeLock + Settings toggle; verified request/re-acquire/release in-browser** |
 | P7.2 | ⬜ | Progression engine: per plan-exercise scheme (none / linear / double progression), rep range + increment, uses last session + RPE to suggest next weight/reps and pre-fill; deload after N failed sessions. | Suggestions appear and pre-fill; unit-tested |
 | P7.3 | ⬜ | Supersets in plans. Logging already supports superset blocks; add `groupId` on `planExercises`, a link/unlink UI in plan details, and rest after the group rather than after each exercise. | A plan's superset starts as one block |
 | P7.4 | ⬜ | Unilateral (per-side reps) and timed sets (`duration`) on exercises/sets; UI and volume maths adjusted. | Logged, displayed, counted correctly |
