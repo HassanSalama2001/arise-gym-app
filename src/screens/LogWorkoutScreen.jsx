@@ -15,6 +15,7 @@ import {
 import { recordSetIfPR, countPRsSince } from '../db/records';
 import { startWorkoutSession, finishWorkout } from '../db/workoutSession';
 import { useAlert } from '../context/useAlert';
+import { useWakeLock } from '../hooks/useWakeLock';
 import { getToday } from '../utils/date';
 import ExerciseDetailsSheet from '../components/ExerciseDetailsSheet';
 import ElapsedTimer from '../components/log/ElapsedTimer';
@@ -110,6 +111,9 @@ export default function LogWorkoutScreen() {
 
   const allExercises = useLiveQuery(() => db.exercises.toArray(), []);
   const profile = useLiveQuery(() => db.playerProfile.get('profile'));
+
+  // Keep the screen on while logging, unless the user turned it off
+  useWakeLock(phase === 'active' && profile?.keepScreenAwake !== false);
 
   function showXPToast(amount) {
     const id = Date.now();
