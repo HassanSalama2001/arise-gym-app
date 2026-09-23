@@ -12,6 +12,8 @@ import VolumeBarChart from '../components/progress/VolumeBarChart';
 import RankTimeline from '../components/progress/RankTimeline';
 import SessionCard from '../components/progress/SessionCard';
 import MuscleFrequencyGrid from '../components/progress/MuscleFrequencyGrid';
+import ActivityHeatmap from '../components/progress/ActivityHeatmap';
+import MuscleVolumeChart from '../components/progress/MuscleVolumeChart';
 import InBodyProgressionChart from '../components/progress/InBodyProgressionChart';
 import BodyWeightChart from '../components/progress/BodyWeightChart';
 import OneRepMaxChart from '../components/progress/OneRepMaxChart';
@@ -221,6 +223,14 @@ export default function ProgressScreen() {
                   : <div className="chart-empty chart-card card"><span className="section-label">NO DATA YET</span></div>
                 }
               </div>
+            </div>
+
+            <div className="chart-section">
+              <ActivityHeatmap sessions={sessions} />
+            </div>
+
+            <div className="chart-section">
+              <MuscleVolumeChart sessions={sessions} sets={sets} unitPreference={profile.unitPreference || 'kg'} />
             </div>
 
             {/* Rank Timeline */}
