@@ -12,8 +12,8 @@ It's an installable PWA; all data lives on the device, with optional cloud backu
 - **Body**: body weight, InBody scans (with score estimation and progress charts), measurements.
 - **Nutrition**: meal and water tracking against calorie/macro targets computed from your profile.
 - **Posture**: diagnostics and corrective protocols that get added to your workouts automatically.
-- **Data**: works fully offline (IndexedDB via Dexie). Optional Supabase account for cloud backup;
-  JSON export/import from Settings.
+- **Data**: works fully offline (IndexedDB via Dexie). Optional Supabase account syncs per record, so
+  several devices merge rather than overwrite each other; JSON export/import from Settings.
 
 ## Tech
 
@@ -33,7 +33,8 @@ Without Supabase keys the app runs in local-only mode.
 ### Supabase (optional)
 
 1. Create a Supabase project.
-2. Run `supabase/migrations/20260513000000_init.sql` (creates the `backups` table with row-level security).
+2. Run the files in `supabase/migrations/` in order: `20260513000000_init.sql` (backups table) and
+   `20260923120000_sync_records.sql` (per-record sync). Both set up row-level security.
 3. Put the project URL and anon key in `.env` (see `.env.example`).
 
 ## Scripts

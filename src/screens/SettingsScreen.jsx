@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
 import { supabase } from '../db/supabaseClient';
 import { useBackup } from '../hooks/useBackup';
+import { resetSyncDb } from '../db/syncDb';
 import { useAlert } from '../context/useAlert';
 import OfflineVisualsSection from '../components/settings/OfflineVisualsSection';
 import NutritionGoalsSection from '../components/settings/NutritionGoalsSection';
@@ -25,7 +26,7 @@ export default function SettingsScreen() {
   const navigate = useNavigate();
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const [session, setSession] = useState(null);
-  const { syncing, syncStatus, exportMsg, backup, restore, exportFile, importFile } = useBackup();
+  const { syncing, syncStatus, exportMsg, sync, exportFile, importFile } = useBackup();
 
   const [autoActivity, setAutoActivity] = useState('sedentary');
   const [latestWeight, setLatestWeight] = useState(null);
@@ -217,6 +218,7 @@ export default function SettingsScreen() {
     if (confirmed) {
       const confirmation = await showPrompt("Type 'DELETE' to confirm permanent reset:", "", "Type DELETE");
       if (confirmation === 'DELETE') {
+        await resetSyncDb();
         await db.delete();
         window.location.reload();
       } else {
@@ -436,7 +438,7 @@ export default function SettingsScreen() {
 
         <NutritionGoalsSection profile={profile} isProfileComplete={isProfileComplete} latestWeight={latestWeight} recommendedGoal={recommendedGoal} recommendedCalories={recommendedCalories} recommendedMacros={recommendedMacros} onApplyRecommendation={applyRecommendation} onResetGoals={resetGoals} onUpdateSetting={updateSetting} />
 
-        <AccountSyncSection session={session} syncing={syncing} syncStatus={syncStatus} onBackup={backup} onRestore={restore} onSignIn={() => navigate('/login')} onSignOut={handleLogout} />
+        <AccountSyncSection session={session} syncing={syncing} syncStatus={syncStatus} lastSyncedAt={profile.lastSyncedAt} onSync={sync} onSignIn={() => navigate('/login')} onSignOut={handleLogout} />
 
         <LocalDataSection exportMsg={exportMsg} onExport={exportFile} onImport={importFile} onReset={handleDeleteAll} />
 

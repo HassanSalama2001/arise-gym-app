@@ -1,4 +1,4 @@
-export default function AccountSyncSection({ session, syncing, syncStatus, onBackup, onRestore, onSignIn, onSignOut }) {
+export default function AccountSyncSection({ session, syncing, syncStatus, lastSyncedAt, onSync, onSignIn, onSignOut }) {
   return (
     <div className="settings-section mt-24">
       <span className="section-label">ACCOUNT & CLOUD SYNC</span>
@@ -19,20 +19,19 @@ export default function AccountSyncSection({ session, syncing, syncStatus, onBac
           )}
         </div>
 
-        <div className="sync-actions-grid mt-16">
+        <div className="mt-16">
           {session ? (
             <>
-              <button className="sync-btn" onClick={onBackup} disabled={syncing}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                SYNC TO CLOUD
+              <button className="btn-primary" onClick={onSync} disabled={syncing} style={{ width: '100%' }} id="sync-now">
+                {syncing ? 'SYNCING...' : 'SYNC NOW'}
               </button>
-              <button className="sync-btn" onClick={onRestore} disabled={syncing}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                RESTORE FROM CLOUD
-              </button>
+              <span className="settings-desc" style={{ display: 'block', marginTop: 8 }}>
+                Sends what you logged here and brings in changes from your other devices.
+                {lastSyncedAt ? ` Last synced ${new Date(lastSyncedAt).toLocaleString()}.` : ' Not synced yet.'}
+              </span>
             </>
           ) : (
-            <button className="btn-primary" onClick={() => onSignIn()} style={{ gridColumn: 'span 2' }}>
+            <button className="btn-primary" onClick={() => onSignIn()} style={{ width: '100%' }}>
               SIGN IN TO SYNC
             </button>
           )}

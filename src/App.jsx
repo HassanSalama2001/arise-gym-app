@@ -25,8 +25,7 @@ const PlanDetailScreen = lazy(() => import('./screens/PlanDetailScreen'));
 const MealTrackerScreen = lazy(() => import('./screens/MealTrackerScreen'));
 
 import { supabase } from './db/supabaseClient';
-import db from './db/db';
-import { backupToCloud, restoreFromCloud } from './db/sync';
+import { syncWithCloud } from './db/cloudSync';
 
 // Page transition wrapper
 function PageWrapper({ children }) {
@@ -81,7 +80,8 @@ export default function App() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          backupToCloud().catch(err => console.error('Auto-backup failed:', err));
+          // Per-record sync: sends local changes and applies any made elsewhere.
+          syncWithCloud().catch(err => console.error('Auto-sync failed:', err));
         }
       } catch (err) {
         console.error('Session check failed during sync:', err);
@@ -104,24 +104,12 @@ export default function App() {
       }
       
       try {
-        // 2. Check if we have existing local user data
-        const sessionCount = await db.sessions.count();
-        const isNewUser = sessionCount === 0;
-
-        // 3. Conditional Cloud Sync
-        if (isNewUser && navigator.onLine) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            setAuthState('authenticated');
-            const restored = await restoreFromCloud();
-            if (restored && restored.success) console.log('Data restored from cloud');
-          } else {
-            setAuthState('guest');
-          }
-        } else {
-          // We have local data, or we are offline -> Stick to local Source of Truth
-          const { data: { session } } = await supabase.auth.getSession();
-          setAuthState(session ? 'authenticated' : 'guest');
+        // 2. Sync merges per record, so it is safe to run whenever we are signed in and online
+        const { data: { session } } = await supabase.auth.getSession();
+        setAuthState(session ? 'authenticated' : 'guest');
+        if (session && navigator.onLine) {
+          const result = await syncWithCloud();
+          if (!result.success) console.error('Startup sync failed:', result.error);
         }
       } catch (err) {
         console.error('Init auth check failed:', err);

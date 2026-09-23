@@ -34,6 +34,25 @@ phone, with no undo and usually no backup. Treat every migration as irreversible
 `customPosturalIssues` (`correctiveProtocol[].exerciseId`). If you add another,
 add it to `EXERCISE_REF_TABLES` / `forEachExerciseRef` in `src/db/remap.js`.
 
+## Sync
+
+`src/db/recordSync.js` syncs one record at a time instead of a whole-database blob:
+
+- Every synced row carries a `uid` (stable across devices) and `updatedAt`; `src/db/syncStamp.js` is a
+  Dexie middleware that stamps them, so screens keep calling `add`/`put`/`update` as before.
+- Deletions leave a tombstone, so a delete on one device is not undone by another device that still
+  has the row. Tombstones and sync cursors live in a **separate database** (`src/db/syncDb.js`): a Dexie
+  transaction may only touch tables in its scope, so bookkeeping in the main database would force every
+  caller to widen its transactions. The tombstone is written after the delete commits and deliberately
+  not awaited inside it — awaiting another database mid-transaction makes IndexedDB commit early.
+- Local primary keys never travel. Fields listed in `SYNC_TABLES[table].refs` are sent as `uid:<uid>`
+  and resolved back to this device's keys on arrival; a row whose parent has not arrived yet is retried.
+  Seeded exercises have the same id everywhere, so their ids travel as plain numbers.
+- Conflicts resolve per record by `updatedAt`, newest wins, on both the client and (via a trigger) the
+  server. A row edited after a delete survives.
+- The server side is `supabase/migrations/20260923120000_sync_records.sql`. **Run it before syncing.**
+- A device that only ever used the old whole-database backup adopts it on first sync, then syncs normally.
+
 ## Backups
 
 `src/db/backup.js` owns the backup format. Every Dexie table must be listed in `USER_TABLES` or
@@ -47,3 +66,5 @@ format.
 |---|---|
 | v11 | Moves pre-2026-07 databases onto the unified dataset. Originally deleted all workout history. Since 2026-09 it remaps IDs through `LEGACY_ID_MAP` instead. Data already deleted on devices that upgraded before then can't be recovered from the device; an old backup restores correctly. |
 | v12 | Moves custom exercises from right after the dataset into the `>= 100000` range. |
+| v13 | Collapses the duplicate personal-record rows older versions created into one per exercise. |
+| v14 | Per-record sync: stamps every synced row with `uid` + `updatedAt` (see "Sync" below). |
