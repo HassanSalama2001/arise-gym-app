@@ -3,6 +3,7 @@ import posturalIssues from '../data/posturalIssues';
 import { countPRsSince } from './records';
 import { checkAndUnlockAchievement } from '../utils/achievements';
 import { getToday, getYesterday } from '../utils/date';
+import { groupIntoBlocks } from '../utils/planGroups';
 import {
   summarizeSets, applyQuestProgress, finalSessionXP, nextStreak, earnedAchievements,
 } from '../utils/workoutRules';
@@ -81,7 +82,11 @@ export async function startWorkoutSession({ planName, planId = null, exercises =
   return {
     sessionId,
     startTime: now,
-    blocks: [...correctives.warmup, ...exercises, ...correctives.cooldown].map(ex => [ex]),
+    blocks: [
+      ...correctives.warmup.map(ex => [ex]),
+      ...groupIntoBlocks(exercises), // linked plan exercises start as one superset block
+      ...correctives.cooldown.map(ex => [ex]),
+    ],
     sets: { ...planSets, ...correctives.sets },
     todayQuests,
   };

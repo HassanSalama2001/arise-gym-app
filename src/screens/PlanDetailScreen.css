@@ -127,3 +127,21 @@
   padding: 18px;
   font-size: 16px;
 }
+
+/* Marks a plan exercise that runs as a superset with the one above it */
+.superset-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 6px 62px;
+}
+
+.superset-link::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-left: 2px solid var(--accent-gold);
+  border-bottom: 2px solid var(--accent-gold);
+  border-bottom-left-radius: 4px;
+  margin-top: -8px;
+}

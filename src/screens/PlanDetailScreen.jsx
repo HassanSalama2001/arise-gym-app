@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Reorder, useDragControls } from 'framer-motion';
 import db from '../db/db';
 import { useAlert } from '../context/useAlert';
+import { toggleSupersetWithPrevious, isLinkedToPrevious, normalizeGroups } from '../utils/planGroups';
 import { playClickSound } from '../utils/audio';
 import EditPlanModal from '../components/EditPlanModal';
 import AddExerciseToPlanSheet from '../components/AddExerciseToPlanSheet';
@@ -55,6 +56,18 @@ export default function PlanDetailScreen() {
     );
   }
 
+  const handleToggleSuperset = async (index) => {
+    const changes = toggleSupersetWithPrevious(planExercises, index);
+    if (!changes.length) return;
+    playClickSound();
+    await db.transaction('rw', db.planExercises, async () => {
+      for (const change of changes) {
+        await db.planExercises.update(change.id, { groupId: change.groupId });
+      }
+    });
+    showToast(changes.some(c => c.groupId) ? 'Superset created' : 'Superset split');
+  };
+
   const handleReorder = async (newOrder) => {
     // newOrder is an array of planExercise objects in the new order
     // Update the DB
@@ -65,6 +78,10 @@ export default function PlanDetailScreen() {
           if (pe.order !== i) {
             await db.planExercises.update(pe.id, { order: i });
           }
+        }
+        // a superset only holds while its exercises stay next to each other
+        for (const change of normalizeGroups(newOrder)) {
+          await db.planExercises.update(change.id, { groupId: change.groupId });
         }
       });
     } catch (err) {
@@ -155,7 +172,7 @@ export default function PlanDetailScreen() {
             onReorder={handleReorder}
             className="reorder-list"
           >
-            {planExercises.map((pe) => (
+            {planExercises.map((pe, index) => (
               <SortableExerciseItem 
                 key={pe.id} 
                 pe={pe} 
@@ -163,6 +180,9 @@ export default function PlanDetailScreen() {
                 exerciseNotes={exerciseNotes}
                 handleRemoveExercise={handleRemoveExercise}
                 navigate={navigate}
+                canLink={index > 0}
+                linkedToPrevious={isLinkedToPrevious(planExercises, index)}
+                onToggleSuperset={() => handleToggleSuperset(index)}
               />
             ))}
           </Reorder.Group>
@@ -200,7 +220,7 @@ export default function PlanDetailScreen() {
   );
 }
 
-function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise, navigate }) {
+function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise, navigate, linkedToPrevious, canLink, onToggleSuperset }) {
   const controls = useDragControls();
 
   return (
@@ -222,6 +242,12 @@ function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise,
         </svg>
       </div>
       
+      {linkedToPrevious && (
+        <div className="superset-link">
+          <span className="chip chip-gold" style={{ fontSize: 9, padding: '1px 6px' }}>SUPERSET</span>
+        </div>
+      )}
+
       <div className="reorder-content" onClick={() => navigate(`/exercise/${pe.exercise.id}`)} style={{ display: 'flex', gap: 12 }}>
         <ExerciseThumbnail 
           exercise={pe.exercise} 
@@ -254,8 +280,22 @@ function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise,
       </div>
 
       <div className="reorder-actions">
-        <button 
-          className="btn-icon danger" 
+        {canLink && (
+          <button
+            className="btn-icon"
+            title={linkedToPrevious ? 'Split from the exercise above' : 'Superset with the exercise above'}
+            onClick={(e) => { e.stopPropagation(); onToggleSuperset(); }}
+            style={linkedToPrevious ? { color: 'var(--accent-gold)' } : undefined}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {linkedToPrevious
+                ? <><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></>
+                : <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>}
+            </svg>
+          </button>
+        )}
+        <button
+          className="btn-icon danger"
           onClick={(e) => {
             e.stopPropagation();
             handleRemoveExercise(pe.id, pe.exercise.name);
