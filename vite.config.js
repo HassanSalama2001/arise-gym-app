@@ -55,6 +55,17 @@ export default defineConfig({
             }
           },
           {
+            // Exercise GIFs are stored in IndexedDB when viewed or downloaded from Settings;
+            // this is a fallback for ones fetched straight from the CDN.
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*\.gif$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-visuals-cache',
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
             urlPattern: ({ request }) => request.mode === 'navigate',
             handler: 'NetworkFirst',
             options: {
