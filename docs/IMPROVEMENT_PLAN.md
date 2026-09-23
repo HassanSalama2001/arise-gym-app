@@ -108,7 +108,7 @@ JSON backups usable again.
 | P7.2 | ✅ | Progression engine: per plan-exercise scheme (none / linear / double progression), rep range + increment, uses last session + RPE to suggest next weight/reps and pre-fill; deload after N failed sessions. | Suggestions appear and pre-fill; unit-tested — **utils/loadProgression.js + db/progressionHistory.js; settings sheet per plan exercise; pre-filled sets and an explanation line while logging** |
 | P7.3 | ✅ | Supersets in plans. Logging already supports superset blocks; add `groupId` on `planExercises`, a link/unlink UI in plan details, and rest after the group rather than after each exercise. | A plan's superset starts as one block — **groupId on planExercises; link/unlink in plan details; starts as one block. Rest already runs per block** |
 | P7.4 | ✅ | Unilateral (per-side reps) and timed sets (`duration`) on exercises/sets; UI and volume maths adjusted. | Logged, displayed, counted correctly — **Toggles per exercise/block; rules tested; verified in-browser** |
-| P7.5 | ⬜ | Import from Hevy / Strong CSV: parse, match exercise names (exact → normalised → manual pick step), preview, then import as sessions. | Sample exports import |
+| P7.5 | ✅ | Import from Hevy / Strong CSV: parse, match exercise names (exact → normalised → manual pick step), preview, then import as sessions. | Sample exports import — **Hevy + Strong CSV; preview before writing; duplicate-safe; verified in-browser through the Settings UI** |
 | P7.6 | ✅ | Progress: GitHub-style activity heatmap + muscle-group volume (week / month / all-time). Depends on P0.2. | Visible on Progress — **ActivityHeatmap + MuscleVolumeChart on Progress** |
 
 ## P8 — Sync v2 (deferred)
@@ -144,3 +144,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-23 | P7.3 done. Tests 117/117. |
 | 2026-09-23 | P7.4 done. Tests 122/122. |
 | 2026-09-23 | P7.2 done. Tests 140/140. |
+| 2026-09-23 | P7.5 done — all P7 features complete. Tests 155/155. |
