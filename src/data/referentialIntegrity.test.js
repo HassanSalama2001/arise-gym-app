@@ -4,6 +4,7 @@ import { correctiveExercises, CORRECTIVE_ID_START } from './correctiveExercises'
 import templates from './templates.json';
 import posturalIssues from './posturalIssues';
 import { MUSCLE_GROUPS, normalizeMuscleGroup } from './muscleGroups';
+import { NAME_ALIASES } from '../utils/importCsv';
 
 const allExercises = [...exercises, ...correctiveExercises];
 const byId = new Map(allExercises.map(ex => [ex.id, ex]));
@@ -42,6 +43,14 @@ describe('static exercise references', () => {
         .filter(p => !byId.has(p.exerciseId))
         .map(p => `${issue.name}: ${p.name} (${p.exerciseId})`)
     );
+    expect(missing).toEqual([]);
+  });
+});
+
+describe('import aliases', () => {
+  it('every alias points at an exercise that exists', () => {
+    const names = new Set(allExercises.map(ex => ex.name));
+    const missing = Object.entries(NAME_ALIASES).filter(([, target]) => !names.has(target));
     expect(missing).toEqual([]);
   });
 });

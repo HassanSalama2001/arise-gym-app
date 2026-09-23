@@ -1,3 +1,5 @@
+import ImportHistorySection from './ImportHistorySection';
+
 export default function LocalDataSection({ exportMsg, onExport, onImport, onReset }) {
   return (
     <div className="settings-section mt-24">
@@ -24,6 +26,8 @@ export default function LocalDataSection({ exportMsg, onExport, onImport, onRese
             <input type="file" accept=".json" onChange={onImport} style={{ display: 'none' }} />
           </label>
         </div>
+
+        <ImportHistorySection />
 
         <div className="data-action-block" style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
           <div className="settings-info">
