@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { buildActivityCalendar, toWeekColumns } from '../../utils/progressStats';
 import { parseLocalDate } from '../../utils/date';
 
@@ -22,6 +22,13 @@ const COLORS = [
 
 export default function ActivityHeatmap({ sessions }) {
   const columns = useMemo(() => toWeekColumns(buildActivityCalendar(sessions, { weeks: WEEKS })), [sessions]);
+  const scroller = useRef(null);
+
+  // Open on the current week rather than six months ago.
+  useEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [columns]);
   const trained = useMemo(() => columns.flat().filter(d => d.sessions > 0).length, [columns]);
 
   const monthLabels = columns.map((week, i) => {
@@ -39,7 +46,7 @@ export default function ActivityHeatmap({ sessions }) {
         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{trained} days trained</span>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div ref={scroller} style={{ overflowX: 'auto' }}>
         <div style={{ display: 'flex', gap: 3, minWidth: 'min-content' }}>
           <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 10px)', gap: 3, marginTop: 14 }}>
             {DAY_LABELS.map((d, i) => (
