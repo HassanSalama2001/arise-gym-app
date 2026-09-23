@@ -107,7 +107,7 @@ JSON backups usable again.
 | P7.1 | ✅ | Screen wake lock during an active workout (Settings toggle, re-acquire on visibility change). | Screen stays on while logging — **useWakeLock + Settings toggle; verified request/re-acquire/release in-browser** |
 | P7.2 | ⬜ | Progression engine: per plan-exercise scheme (none / linear / double progression), rep range + increment, uses last session + RPE to suggest next weight/reps and pre-fill; deload after N failed sessions. | Suggestions appear and pre-fill; unit-tested |
 | P7.3 | ✅ | Supersets in plans. Logging already supports superset blocks; add `groupId` on `planExercises`, a link/unlink UI in plan details, and rest after the group rather than after each exercise. | A plan's superset starts as one block — **groupId on planExercises; link/unlink in plan details; starts as one block. Rest already runs per block** |
-| P7.4 | ⬜ | Unilateral (per-side reps) and timed sets (`duration`) on exercises/sets; UI and volume maths adjusted. | Logged, displayed, counted correctly |
+| P7.4 | ✅ | Unilateral (per-side reps) and timed sets (`duration`) on exercises/sets; UI and volume maths adjusted. | Logged, displayed, counted correctly — **Toggles per exercise/block; rules tested; verified in-browser** |
 | P7.5 | ⬜ | Import from Hevy / Strong CSV: parse, match exercise names (exact → normalised → manual pick step), preview, then import as sessions. | Sample exports import |
 | P7.6 | ✅ | Progress: GitHub-style activity heatmap + muscle-group volume (week / month / all-time). Depends on P0.2. | Visible on Progress — **ActivityHeatmap + MuscleVolumeChart on Progress** |
 
@@ -142,3 +142,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-23 | P6 done. Offline visual downloads with progress/cancel. |
 | 2026-09-23 | P7.1 and P7.6 done. Tests 107/107. |
 | 2026-09-23 | P7.3 done. Tests 117/117. |
+| 2026-09-23 | P7.4 done. Tests 122/122. |
