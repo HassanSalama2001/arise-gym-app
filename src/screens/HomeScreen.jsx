@@ -1,31 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import { getRankInfo, getRankColor, generateDailyQuests } from '../data/progression';
+import { getRankInfo, generateDailyQuests } from '../data/progression';
 import { getToday } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
+import AnimatedNumber from '../components/AnimatedNumber';
 import './HomeScreen.css';
-
-function AnimatedNumber({ value, duration = 800 }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    if (!value) { setDisplay(0); return; }
-    let startTime = null;
-    const startVal = 0;
-    const endVal = value;
-    
-    function step(timestamp) {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setDisplay(Math.floor(progress * (endVal - startVal) + startVal));
-      if (progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }, [value, duration]);
-  return <span>{display.toLocaleString()}</span>;
-}
 
 function StreakRing({ streak }) {
   const radius = 42;
@@ -78,6 +60,9 @@ export default function HomeScreen() {
     if (!loggedHydration) return 0;
     return loggedHydration.reduce((acc, h) => acc + (parseInt(h.amountMl) || 0), 0);
   }, [loggedHydration]);
+
+  const [timeToMidnight, setTimeToMidnight] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,10 +138,7 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const rankInfo = useMemo(() => {
-    if (!profile) return null;
-    return getRankInfo(profile.totalXP);
-  }, [profile?.totalXP]);
+  const rankInfo = profile ? getRankInfo(profile.totalXP) : null;
 
   const inbodyScans = useLiveQuery(() => db.inbodyScans.orderBy('date').reverse().limit(1).toArray());
 
@@ -176,8 +158,6 @@ export default function HomeScreen() {
     await db.playerProfile.update('profile', { postponedInBodyDate: nextWeek.toISOString() });
   }
 
-  const [timeToMidnight, setTimeToMidnight] = useState('');
-  const [showNotifications, setShowNotifications] = useState(false);
 
   const notifications = useMemo(() => {
     const list = [];
@@ -485,7 +465,7 @@ export default function HomeScreen() {
           >
             <span className="section-label">RECENT ACHIEVEMENTS</span>
             <div className="achievements-list mt-8">
-              {achievements.map((a, i) => (
+              {achievements.map(a => (
                 <div key={a.id} className="achievement-card card">
                   <span className="achievement-icon">🏆</span>
                   <div className="achievement-info">

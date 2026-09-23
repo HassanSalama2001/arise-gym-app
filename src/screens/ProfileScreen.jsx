@@ -1,19 +1,18 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import { getRankInfo, RANKS, calculateSetXP } from '../data/progression';
+import { getRankInfo, calculateSetXP } from '../data/progression';
 import { supabase } from '../db/supabaseClient';
-import { backupToCloud, restoreFromCloud } from '../db/sync';
-import { useAlert } from '../context/AlertContext';
-import BottomSheet from '../components/BottomSheet';
+import { useBackup } from '../hooks/useBackup';
+import CircularProgress from '../components/profile/CircularProgress';
+import MuscleRadarChart from '../components/profile/MuscleRadarChart';
+import RankProgressionSheet from '../components/profile/RankProgressionSheet';
+import ConfirmDeleteSheet from '../components/profile/ConfirmDeleteSheet';
+import InBodyTracker from '../components/profile/InBodyTracker';
+import MeasurementsTracker from '../components/profile/MeasurementsTracker';
 import './ProfileScreen.css';
-import { 
-  calculateInBodyScore, 
-  calculateBMI, 
-  lbsToKg 
-} from '../utils/calorieEngine';
 
 const ALL_ACHIEVEMENTS = [
   { type: 'rank_d', title: 'Iron Hunter', desc: 'Reach Rank D', icon: '🥉' },
@@ -85,280 +84,17 @@ function getAttributeRank(level) {
   return 'E-RANK AWAKENED';
 }
 
-function CircularProgress({ progress, size = 44, strokeWidth = 4 }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progress * circumference);
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="circular-progress">
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="var(--bg-surface)"
-        strokeWidth={strokeWidth}
-      />
-      <motion.circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        className="progress-ring-circle"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        initial={{ strokeDashoffset: circumference }}
-        animate={{ strokeDashoffset }}
-        transition={{ duration: 1.2, ease: 'easeOut' }}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-    </svg>
-  );
-}
-
-function MuscleRadarChart({ muscleLevels }) {
-  const axes = ['Chest', 'Back', 'Arms', 'Legs', 'Shoulders', 'Core'];
-  const maxLevel = 10;
-  const width = 280;
-  const height = 240;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = 70;
-
-  const levelsMap = {};
-  axes.forEach(a => { levelsMap[a] = 1; });
-  if (muscleLevels) {
-    muscleLevels.forEach(([mg, data]) => {
-      const match = axes.find(a => a.toLowerCase() === mg.toLowerCase());
-      if (match) {
-        levelsMap[match] = data.level;
-      }
-    });
-  }
-
-  const getCoordinates = (index, value) => {
-    const angle = (index * 60) * Math.PI / 180 - Math.PI / 2;
-    const factor = Math.min(value, maxLevel) / maxLevel;
-    const d = radius * factor;
-    return {
-      x: centerX + d * Math.cos(angle),
-      y: centerY + d * Math.sin(angle)
-    };
-  };
-
-  const gridLevels = [2, 4, 6, 8, 10];
-  const gridPaths = gridLevels.map(lvl => {
-    const points = Array.from({ length: 6 }).map((_, i) => {
-      const { x, y } = getCoordinates(i, lvl);
-      return `${x},${y}`;
-    });
-    return points.join(' ');
-  });
-
-  const userPoints = Array.from({ length: 6 }).map((_, i) => {
-    const lvl = levelsMap[axes[i]];
-    const { x, y } = getCoordinates(i, lvl);
-    return `${x},${y}`;
-  });
-  const userPath = userPoints.join(' ');
-
-  const userVertices = Array.from({ length: 6 }).map((_, i) => {
-    const lvl = levelsMap[axes[i]];
-    return getCoordinates(i, lvl);
-  });
-
-  const labelPositions = Array.from({ length: 6 }).map((_, i) => {
-    const angle = (i * 60) * Math.PI / 180 - Math.PI / 2;
-    const d = radius + 15;
-    return {
-      name: axes[i].toUpperCase(),
-      level: levelsMap[axes[i]],
-      x: centerX + d * Math.cos(angle),
-      y: centerY + d * Math.sin(angle)
-    };
-  });
-
-  return (
-    <div className="radar-chart-container">
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <defs>
-          <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(79, 195, 247, 0.35)" />
-            <stop offset="100%" stopColor="rgba(79, 195, 247, 0.02)" />
-          </radialGradient>
-        </defs>
-
-        {gridPaths.map((path, idx) => (
-          <polygon
-            key={idx}
-            points={path}
-            fill="none"
-            stroke="rgba(30, 58, 84, 0.4)"
-            strokeWidth="1"
-            strokeDasharray={idx < 4 ? "3 3" : "none"}
-          />
-        ))}
-
-        {Array.from({ length: 6 }).map((_, i) => {
-          const outer = getCoordinates(i, maxLevel);
-          return (
-            <line
-              key={i}
-              x1={centerX}
-              y1={centerY}
-              x2={outer.x}
-              y2={outer.y}
-              stroke="rgba(30, 58, 84, 0.3)"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        <polygon
-          points={userPath}
-          fill="url(#radarGlow)"
-          stroke="var(--accent-blue)"
-          strokeWidth="2"
-        />
-
-        {userVertices.map((pt, i) => (
-          <circle
-            key={i}
-            cx={pt.x}
-            cy={pt.y}
-            r="3.5"
-            fill="var(--bg-void)"
-            stroke="var(--accent-blue)"
-            strokeWidth="1.5"
-          />
-        ))}
-
-        {labelPositions.map((pos, i) => {
-          let textAnchor = 'middle';
-          if (i === 1 || i === 2) textAnchor = 'start';
-          if (i === 4 || i === 5) textAnchor = 'end';
-          
-          let dy = '0.35em';
-          if (i === 0) dy = '-0.1em';
-          if (i === 3) dy = '1.1em';
-
-          return (
-            <g key={i}>
-              <text
-                x={pos.x}
-                y={pos.y}
-                textAnchor={textAnchor}
-                dy={dy}
-                className="radar-label"
-              >
-                {pos.name}
-              </text>
-              <text
-                x={pos.x}
-                y={pos.y}
-                textAnchor={textAnchor}
-                dy={i === 0 ? '-1.3em' : i === 3 ? '2.2em' : '1.3em'}
-                className="radar-level-label"
-              >
-                LVL {pos.level}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-/* ── Rank Progression Sheet ─────────────────────── */
-function RankProgressionSheet({ currentXP, onClose }) {
-  const currentRankInfo = getRankInfo(currentXP);
-  
-  return (
-    <BottomSheet 
-      onClose={onClose} 
-      title="RANK PROGRESSION"
-      footer={
-        <button className="btn-primary w-full" onClick={onClose} style={{ marginBottom: 8 }}>GOT IT</button>
-      }
-    >
-      <div className="rank-list mt-16">
-        {RANKS.map((rank, i) => {
-          const isUnlocked = currentXP >= rank.xpRequired;
-          const isCurrent = currentRankInfo.current.rank === rank.rank;
-          const xpToReach = rank.xpRequired - currentXP;
-          
-          return (
-            <div key={rank.rank} className={`rank-item ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`}>
-              <div className="rank-item-badge" style={{ borderColor: rank.color, color: rank.color }}>
-                {rank.rank}
-              </div>
-              <div className="rank-item-info">
-                <span className="rank-item-name">{rank.name}</span>
-                <span className="section-label">
-                  {isUnlocked 
-                    ? (isCurrent ? 'CURRENT RANK' : 'UNLOCKED') 
-                    : `REACH AT: ${rank.xpRequired.toLocaleString()} XP (${xpToReach.toLocaleString()} REMAINING)`}
-                </span>
-              </div>
-              {isUnlocked && <div className="rank-check">✓</div>}
-            </div>
-          );
-        })}
-      </div>
-    </BottomSheet>
-  );
-}
-
-function ConfirmDeleteSheet({ onConfirm, onClose }) {
-  const [input, setInput] = useState('');
-  return (
-    <BottomSheet 
-      onClose={onClose} 
-      title="DANGER ZONE"
-      footer={
-        <div className="sheet-actions" style={{ display: 'flex', gap: 8 }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>CANCEL</button>
-          <button
-            className="btn-primary"
-            style={{ flex: 1, background: input === 'ARISE' ? 'var(--accent-red)' : 'var(--bg-surface)', color: input === 'ARISE' ? 'white' : 'var(--text-muted)' }}
-            disabled={input !== 'ARISE'}
-            onClick={onConfirm}
-            id="confirm-delete-btn"
-          >
-            DELETE ALL
-          </button>
-        </div>
-      }
-    >
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>This will permanently delete ALL your workout data, XP, and progress. Type <strong style={{ color: 'var(--text-primary)' }}>ARISE</strong> to confirm.</p>
-      <input
-        type="text"
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        placeholder="Type ARISE to confirm"
-        id="delete-confirm-input"
-        style={{ marginBottom: 16 }}
-      />
-    </BottomSheet>
-  );
-}
-
 export default function ProfileScreen() {
-  const { showConfirm } = useAlert();
   const navigate = useNavigate();
   const location = useLocation();
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState('');
   const [showDelete, setShowDelete] = useState(false);
-  const [showInbody, setShowInbody] = useState(false);
+  // Other screens can open the InBody sheet directly by navigating here with { openSheet: 'inbody' }.
+  const [showInbody, setShowInbody] = useState(() => location.state?.openSheet === 'inbody');
   const [showMeasurement, setShowMeasurement] = useState(false);
   const [showRankDetails, setShowRankDetails] = useState(false);
-  const [exportMsg, setExportMsg] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('');
+  const { syncing, syncStatus, exportMsg, backup, restore, exportFile } = useBackup();
   const [session, setSession] = useState(null);
   const nameInputRef = useRef(null);
 
@@ -370,8 +106,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (location.state?.openSheet === 'inbody') {
-      setShowInbody(true);
-      // Only clear if we actually opened it
+      // Clear the request so back/refresh doesn't reopen it
       const timer = setTimeout(() => {
         navigate(location.pathname, { replace: true, state: {} });
       }, 500);
@@ -386,7 +121,7 @@ export default function ProfileScreen() {
   const allSets = useLiveQuery(() => db.sets.toArray(), []);
   const allExercises = useLiveQuery(() => db.exercises.toArray(), []);
 
-  const rankInfo = useMemo(() => profile ? getRankInfo(profile.totalXP) : null, [profile?.totalXP]);
+  const rankInfo = profile ? getRankInfo(profile.totalXP) : null;
   const earnedTypes = new Set((achievements || []).map(a => a.type));
 
   const muscleXP = useMemo(() => {
@@ -425,59 +160,6 @@ export default function ProfileScreen() {
     setNameVal(profile?.name || '');
     setEditingName(true);
     setTimeout(() => nameInputRef.current?.focus(), 100);
-  }
-
-  async function handleBackup() {
-    setSyncing(true);
-    setSyncStatus('Backing up...');
-    const res = await backupToCloud();
-    if (res.success) {
-      setSyncStatus('Backup successful');
-      await db.playerProfile.update('profile', { lastSyncedAt: Date.now() });
-    } else {
-      setSyncStatus('Backup failed: ' + res.error);
-    }
-    setSyncing(false);
-    setTimeout(() => setSyncStatus(''), 3000);
-  }
-
-  async function handleRestore() {
-    const confirmed = await showConfirm('This will OVERWRITE your local data with cloud data. Continue?', 'Restore from Cloud?', { danger: true });
-    if (!confirmed) return;
-    setSyncing(true);
-    setSyncStatus('Restoring...');
-    const res = await restoreFromCloud();
-    if (res.success) {
-      setSyncStatus('Restore successful');
-      await db.playerProfile.update('profile', { lastSyncedAt: Date.now() });
-      window.location.reload();
-    } else {
-      setSyncStatus('Restore failed: ' + res.error);
-    }
-    setSyncing(false);
-    setTimeout(() => setSyncStatus(''), 3000);
-  }
-
-  async function handleExport() {
-    const data = {
-      profile: await db.playerProfile.toArray(),
-      sessions: await db.sessions.toArray(),
-      sets: await db.sets.toArray(),
-      bodyWeight: await db.bodyWeight.toArray(),
-      personalRecords: await db.personalRecords.toArray(),
-      achievements: await db.achievements.toArray(),
-      workoutPlans: await db.workoutPlans.toArray(),
-      planExercises: await db.planExercises.toArray(),
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `arise-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    setExportMsg('Exported successfully');
-    setTimeout(() => setExportMsg(''), 3000);
   }
 
   async function handleDeleteAll() {
@@ -589,11 +271,11 @@ export default function ProfileScreen() {
             <div className="sync-actions-grid mt-16">
               {session ? (
                 <>
-                  <button className="sync-btn" onClick={handleBackup} disabled={syncing}>
+                  <button className="sync-btn" onClick={backup} disabled={syncing}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     BACKUP
                   </button>
-                  <button className="sync-btn" onClick={handleRestore} disabled={syncing}>
+                  <button className="sync-btn" onClick={restore} disabled={syncing}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     RESTORE
                   </button>
@@ -606,7 +288,7 @@ export default function ProfileScreen() {
             </div>
 
             <div className="sync-secondary-actions mt-16">
-              <button className="data-btn" onClick={handleExport} style={{ padding: 0, minHeight: 'auto' }}>
+              <button className="data-btn" onClick={exportFile} style={{ padding: 0, minHeight: 'auto' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 EXPORT .JSON
               </button>
@@ -669,265 +351,6 @@ export default function ProfileScreen() {
       <AnimatePresence>
         {showDelete && <ConfirmDeleteSheet onConfirm={handleDeleteAll} onClose={() => setShowDelete(false)} />}
         {showRankDetails && <RankProgressionSheet currentXP={profile.totalXP} onClose={() => setShowRankDetails(false)} />}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ── InBody Scan Tracker ────────────────────────── */
-function InBodyTracker({ scans, openSheet, setOpenSheet, unitPreference, gender, height }) {
-  const { showAlert, showConfirm, showToast } = useAlert();
-  const [formData, setFormData] = useState({ weight: '', smm: '', bf: '', score: '', photoUrl: '' });
-  
-  async function handleSave() {
-    if (!formData.weight || !formData.smm || !formData.bf) return;
-    
-    let scoreVal = parseFloat(formData.score) || 0;
-    let scoreEstimated = false;
-    
-    if (scoreVal === 0 && height && gender) {
-      const weightKg = unitPreference === 'lbs' ? lbsToKg(parseFloat(formData.weight)) : parseFloat(formData.weight);
-      const smmKg = unitPreference === 'lbs' ? lbsToKg(parseFloat(formData.smm)) : parseFloat(formData.smm);
-      scoreVal = calculateInBodyScore(weightKg, smmKg, parseFloat(formData.bf), height, gender);
-      scoreEstimated = true;
-    } else if (scoreVal > 0) {
-      scoreEstimated = false;
-    }
-
-    await db.inbodyScans.put({
-      date: new Date().toISOString(),
-      weight: parseFloat(formData.weight),
-      smm: parseFloat(formData.smm),
-      bf: parseFloat(formData.bf),
-      score: scoreVal,
-      scoreEstimated,
-      photoUrl: formData.photoUrl
-    });
-    setOpenSheet(false);
-    setFormData({ weight: '', smm: '', bf: '', score: '', photoUrl: '' });
-  }
-
-  function handlePhotoUpload(e) {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setFormData(p => ({ ...p, photoUrl: e.target.result }));
-      reader.readAsDataURL(file);
-    }
-  }
-
-  const unscoredCount = scans ? scans.filter(s => !s.score || s.score === 0).length : 0;
-  const canRecalculate = unscoredCount > 0 && gender && height;
-
-  async function handleBatchRecalculate() {
-    const confirmation = await showConfirm(`Estimate scores for ${unscoredCount} historical scan(s) using your profile height (${height}cm) and gender (${gender.toUpperCase()})?`);
-    if (!confirmation) return;
-    
-    await db.transaction('rw', db.inbodyScans, async () => {
-      for (const scan of scans) {
-        if (!scan.score || scan.score === 0) {
-          const weightKg = unitPreference === 'lbs' ? lbsToKg(scan.weight) : scan.weight;
-          const smmKg = unitPreference === 'lbs' ? lbsToKg(scan.smm) : scan.smm;
-          const calculated = calculateInBodyScore(weightKg, smmKg, scan.bf, height, gender);
-          await db.inbodyScans.update(scan.id, {
-            score: calculated,
-            scoreEstimated: true
-          });
-        }
-      }
-    });
-    
-    showToast(`Estimated scores for ${unscoredCount} scans!`);
-  }
-
-  const getScoreColor = (score) => {
-    if (!score) return 'var(--text-secondary)';
-    if (score >= 80) return 'var(--success)';
-    if (score >= 70) return 'var(--accent-gold)';
-    return 'var(--accent-red)';
-  };
-
-  const latest = scans?.[0];
-
-  return (
-    <div className="profile-section">
-      <span className="section-label">INBODY SCANS</span>
-      <div className="card mt-8">
-        {latest ? (
-          <div className="inbody-latest">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Latest: {new Date(latest.date).toLocaleDateString()}</span>
-              {latest.photoUrl && <span style={{ fontSize: 13, color: 'var(--accent-blue)' }}>📸 Proof attached</span>}
-            </div>
-            <div className="stat-overview-row" style={{ marginBottom: 0 }}>
-              <div className="stat-overview-box">
-                <span className="stat-number">{latest.weight}{unitPreference}</span>
-                <span className="section-label">Weight</span>
-              </div>
-              <div className="stat-overview-box">
-                <span className="stat-number" style={{ color: 'var(--success)' }}>{latest.smm}{unitPreference}</span>
-                <span className="section-label">Muscle</span>
-              </div>
-              <div className="stat-overview-box">
-                <span className="stat-number" style={{ color: 'var(--accent-red)' }}>{latest.bf}%</span>
-                <span className="section-label">Fat</span>
-              </div>
-              <div className="stat-overview-box">
-                <span className="stat-number" style={{ color: getScoreColor(latest.score) }}>{latest.score || 'N/A'}</span>
-                <span className="section-label" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  Score
-                  {latest.scoreEstimated && <span style={{ fontSize: 9, color: 'var(--accent-blue)', opacity: 0.8, marginTop: 2 }}>⚡ EST.</span>}
-                </span>
-              </div>
-            </div>
-
-            {height ? (
-              <div style={{ textAlign: 'center', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-                BMI: <strong style={{ color: 'var(--text-primary)' }}>{calculateBMI(unitPreference === 'lbs' ? lbsToKg(latest.weight) : latest.weight, height)}</strong>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
-                ⚠️ Set Height in settings to view BMI and auto-calculate InBody Score
-              </div>
-            )}
-          </div>
-        ) : (
-          <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: '12px 0' }}>No InBody scans recorded yet.</p>
-        )}
-        
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button className="btn-ghost" style={{ marginTop: 16, flex: 1 }} onClick={() => setOpenSheet(true)}>+ ADD INBODY SCAN</button>
-          {canRecalculate && (
-            <button className="btn-ghost" style={{ marginTop: 16, flex: 1, color: 'var(--accent-blue)', borderColor: 'rgba(79, 195, 247, 0.3)' }} onClick={handleBatchRecalculate}>
-              ⚡ ESTIMATE HISTORICAL ({unscoredCount})
-            </button>
-          )}
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {openSheet && (
-          <BottomSheet 
-            onClose={() => setOpenSheet(false)} 
-            title="RECORD INBODY SCAN"
-            footer={
-              <button className="btn-primary w-full" onClick={handleSave} disabled={!formData.weight || !formData.smm || !formData.bf}>SAVE SCAN</button>
-            }
-          >
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div>
-                <label className="section-label">Weight ({unitPreference})</label>
-                <input type="number" inputMode="decimal" value={formData.weight} onChange={e => setFormData(p => ({ ...p, weight: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-              </div>
-              <div>
-                <label className="section-label">SMM - Muscle ({unitPreference})</label>
-                <input type="number" inputMode="decimal" value={formData.smm} onChange={e => setFormData(p => ({ ...p, smm: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-              </div>
-              <div>
-                <label className="section-label">Body Fat (%)</label>
-                <input type="number" inputMode="decimal" value={formData.bf} onChange={e => setFormData(p => ({ ...p, bf: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-              </div>
-              <div>
-                <label className="section-label">InBody Score</label>
-                <input type="number" inputMode="decimal" value={formData.score} onChange={e => setFormData(p => ({ ...p, score: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label className="section-label">Photo Proof (Optional)</label>
-              {formData.photoUrl ? (
-                <div style={{ marginTop: 8, position: 'relative' }}>
-                  <img src={formData.photoUrl} alt="InBody Proof" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
-                  <button onClick={() => setFormData(p => ({ ...p, photoUrl: '' }))} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', padding: 4, borderRadius: '50%' }}>❌</button>
-                </div>
-              ) : (
-                <label style={{ display: 'block', marginTop: 8, padding: '16px', border: '1px solid var(--border)', borderStyle: 'dashed', borderRadius: 'var(--radius-sm)', textAlign: 'center', color: 'var(--accent-blue)', cursor: 'pointer' }}>
-                  Tap to upload scan photo
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
-                </label>
-              )}
-            </div>
-          </BottomSheet>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ── Measurements Tracker ────────────────────────── */
-function MeasurementsTracker({ measurements, openSheet, setOpenSheet }) {
-  const [showGuide, setShowGuide] = useState(null);
-  const [formData, setFormData] = useState({ neck: '', chest: '', waist: '', arms: '' });
-
-  const guides = {
-    neck: 'Measure horizontally around the widest part of your neck.',
-    chest: 'Measure across the nipples while breathing normally.',
-    waist: 'Measure around the belly button, totally relaxed.',
-    arms: 'Measure the thickest part of the bicep while flexed.'
-  };
-
-  async function handleSave() {
-    await db.measurements.put({
-      date: new Date().toISOString(),
-      neck: parseFloat(formData.neck) || null,
-      chest: parseFloat(formData.chest) || null,
-      waist: parseFloat(formData.waist) || null,
-      arms: parseFloat(formData.arms) || null
-    });
-    setOpenSheet(false);
-    setFormData({ neck: '', chest: '', waist: '', arms: '' });
-  }
-
-  const latest = measurements?.[0];
-
-  return (
-    <div className="profile-section">
-      <span className="section-label">BODY MEASUREMENTS</span>
-      <div className="card mt-8">
-        {latest ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {['neck', 'chest', 'waist', 'arms'].map(k => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 4 }}>
-                <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{k}</span>
-                <span className="stat-number" style={{ fontSize: 16 }}>{latest[k]}cm</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: '12px 0' }}>No measurements yet.</p>
-        )}
-        <button className="btn-ghost" style={{ marginTop: 16 }} onClick={() => setOpenSheet(true)}>+ ADD MEASUREMENTS</button>
-      </div>
-
-      <AnimatePresence>
-        {openSheet && (
-          <BottomSheet 
-            onClose={() => setOpenSheet(false)} 
-            title="RECORD MEASUREMENTS"
-            footer={
-              <button className="btn-primary w-full" onClick={handleSave}>SAVE MEASUREMENTS</button>
-            }
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-              {['neck', 'chest', 'waist', 'arms'].map(k => (
-                <div key={k}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="section-label" style={{ textTransform: 'capitalize' }}>{k} (cm)</label>
-                    <button className="guide-btn" onClick={() => setShowGuide(showGuide === k ? null : k)} style={{ background: 'var(--bg-void)', border: '1px solid var(--border)', width: 20, height: 20, borderRadius: '50%', fontSize: 10, color: 'var(--text-muted)' }}>?</button>
-                  </div>
-                  <input type="number" inputMode="decimal" value={formData[k]} onChange={e => setFormData(p => ({ ...p, [k]: e.target.value }))} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} style={{ marginTop: 4 }} />
-                  <AnimatePresence>
-                    {showGuide === k && (
-                      <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ fontSize: 11, color: 'var(--accent-blue)', marginTop: 4, overflow: 'hidden' }}>
-                        {guides[k]}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ))}
-            </div>
-          </BottomSheet>
-        )}
       </AnimatePresence>
     </div>
   );

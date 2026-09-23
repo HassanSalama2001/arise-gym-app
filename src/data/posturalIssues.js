@@ -36,7 +36,7 @@ const posturalIssues = [
     ],
     correctiveProtocol: [
       { exerciseId: 10003, name: 'Doorway Pec Stretch', sets: 2, reps: '30s hold', notes: 'Keep elbows at 90 degrees; lean forward gently.' },
-      { exerciseId: 32, name: 'Face Pull', sets: 3, reps: '15 reps', notes: 'Squeeze shoulder blades together and externally rotate at the top.' },
+      { exerciseId: 203, name: 'Face Pull', sets: 3, reps: '15 reps', notes: 'Squeeze shoulder blades together and externally rotate at the top.' },
       { exerciseId: 10001, name: 'Wall Angel', sets: 2, reps: '12 reps', notes: 'Keep head, spine, elbows, and hands flat against the wall.' }
     ]
   },
@@ -129,8 +129,8 @@ const posturalIssues = [
     ],
     correctiveProtocol: [
       { exerciseId: 10004, name: 'Kneeling Hip Flexor Stretch', sets: 2, reps: '30s hold', notes: 'Squeeze the glute on the trailing leg to maximize hip flexor stretch.' },
-      { exerciseId: 55, name: 'Glute Bridge', sets: 3, reps: '15 reps', notes: 'Drive through heels, squeeze glutes at top; do not arch lower back.' },
-      { exerciseId: 106, name: 'Dead Bug', sets: 3, reps: '10 per side', notes: 'Keep your lower back absolutely flat against the floor.' }
+      { exerciseId: 3013, name: 'Glute Bridge', sets: 3, reps: '15 reps', notes: 'Drive through heels, squeeze glutes at top; do not arch lower back.' },
+      { exerciseId: 276, name: 'Dead Bug', sets: 3, reps: '10 per side', notes: 'Keep your lower back absolutely flat against the floor.' }
     ]
   },
   {
@@ -161,7 +161,7 @@ const posturalIssues = [
     correctiveProtocol: [
       { exerciseId: 10010, name: 'Standing Hamstring Stretch', sets: 2, reps: '30s hold', notes: 'Hinge at the hips with a flat back; do not round your spine.' },
       { exerciseId: 10004, name: 'Kneeling Hip Flexor Stretch', sets: 3, reps: '12 reps', notes: 'Instead of holding, perform dynamic repetitions pushing hips forward.' },
-      { exerciseId: 107, name: 'Bird Dog', sets: 3, reps: '10 per side', notes: 'Extend opposite arm/leg while keeping spine neutral.' }
+      { exerciseId: 10021, name: 'Bird Dog', sets: 3, reps: '10 per side', notes: 'Extend opposite arm/leg while keeping spine neutral.' }
     ]
   },
   {
@@ -192,7 +192,7 @@ const posturalIssues = [
     correctiveProtocol: [
       { exerciseId: 10005, name: 'Clamshell', sets: 3, reps: '15 reps', notes: 'Lie on side; lift knee while keeping feet together and hips stable.' },
       { exerciseId: 10011, name: 'Lateral Band Walk', sets: 2, reps: '15 steps', notes: 'Place band around ankles; walk sideways keeping knees pushed apart.' },
-      { exerciseId: 55, name: 'Glute Bridge', sets: 3, reps: '15 reps', notes: 'Push knees outward against a band if possible.' }
+      { exerciseId: 3013, name: 'Glute Bridge', sets: 3, reps: '15 reps', notes: 'Push knees outward against a band if possible.' }
     ]
   },
   {
@@ -222,7 +222,7 @@ const posturalIssues = [
     ],
     correctiveProtocol: [
       { exerciseId: 10012, name: 'IT Band Foam Roll', sets: 1, reps: '60s hold', notes: 'Roll outer thigh slowly; pause on tender spots.' },
-      { exerciseId: 208, name: 'Pigeon Pose', sets: 2, reps: '30s hold', notes: 'Stretch glutes and outer hips deeply.' },
+      { exerciseId: 10023, name: 'Pigeon Pose', sets: 2, reps: '30s hold', notes: 'Stretch glutes and outer hips deeply.' },
       { exerciseId: 10013, name: 'Side-Lying Leg Raise', sets: 3, reps: '15 reps', notes: 'Raise leg slightly up and back to activate gluteus medius.' }
     ]
   },
@@ -254,7 +254,7 @@ const posturalIssues = [
     correctiveProtocol: [
       { exerciseId: 10014, name: 'Towel Foot Scrunch', sets: 2, reps: '10 reps', notes: 'Use toes to pull a towel flat along the floor.' },
       { exerciseId: 10015, name: 'Short Foot Arch Lift', sets: 3, reps: '10 reps', notes: 'Draw the ball of your foot toward the heel to lift the arch.' },
-      { exerciseId: 56, name: 'Calf Raise (Standing)', sets: 2, reps: '15 reps', notes: 'Full range of motion, stretching calves at the bottom.' }
+      { exerciseId: 1490, name: 'Calf Raise (Standing)', sets: 2, reps: '15 reps', notes: 'Full range of motion, stretching calves at the bottom.' }
     ]
   },
   {
@@ -315,8 +315,8 @@ const posturalIssues = [
     ],
     correctiveProtocol: [
       { exerciseId: 10006, name: 'Couch Stretch', sets: 2, reps: '30s hold', notes: 'Deeply stretch the tight psoas and rectus femoris.' },
-      { exerciseId: 55, name: 'Glute Bridge', sets: 3, reps: '15 reps', notes: 'Awaken dormant glute muscles.' },
-      { exerciseId: 96, name: 'Plank', sets: 3, reps: '45s hold', notes: 'Brace core; keep lower back flat, avoiding sag.' }
+      { exerciseId: 3013, name: 'Glute Bridge', sets: 3, reps: '15 reps', notes: 'Awaken dormant glute muscles.' },
+      { exerciseId: 10024, name: 'Plank', sets: 3, reps: '45s hold', notes: 'Brace core; keep lower back flat, avoiding sag.' }
     ]
   },
   {
@@ -347,7 +347,7 @@ const posturalIssues = [
     correctiveProtocol: [
       { exerciseId: 10007, name: 'Serratus Push-Up+', sets: 3, reps: '12 reps', notes: 'Focus entirely on push-away at the top of the range.' },
       { exerciseId: 10020, name: 'Scapular Wall Slide', sets: 3, reps: '10 reps', notes: 'Keep elbows and wrists touching the wall throughout.' },
-      { exerciseId: 23, name: 'Pull-Up', sets: 2, reps: '10 reps', notes: 'Perform only the first few inches (scapular shrugs) to pull shoulders down.' }
+      { exerciseId: 652, name: 'Pull-Up', sets: 2, reps: '10 reps', notes: 'Perform only the first few inches (scapular shrugs) to pull shoulders down.' }
     ]
   },
   {
@@ -377,7 +377,7 @@ const posturalIssues = [
     ],
     correctiveProtocol: [
       { exerciseId: 10016, name: 'Thoracic Roller Extension', sets: 2, reps: '10 reps', notes: 'Support your neck; roll and extend upper back over the roller.' },
-      { exerciseId: 207, name: 'Cat-Cow', sets: 2, reps: '12 reps', notes: 'Move spine smoothly through full flexion and extension.' },
+      { exerciseId: 10022, name: 'Cat-Cow', sets: 2, reps: '12 reps', notes: 'Move spine smoothly through full flexion and extension.' },
       { exerciseId: 10018, name: 'Band Pull-Apart', sets: 3, reps: '15 reps', notes: 'Strengthen erectors and upper back retractors.' }
     ]
   },
@@ -409,7 +409,7 @@ const posturalIssues = [
     correctiveProtocol: [
       { exerciseId: 10017, name: 'Single-Leg Balance', sets: 3, reps: '30s hold', notes: 'Ensure hips remain perfectly level; do not let hip drop.' },
       { exerciseId: 10005, name: 'Clamshell', sets: 3, reps: '12 reps', notes: 'Perform on the weak side to balance hip stabilizers.' },
-      { exerciseId: 97, name: 'Side Plank', sets: 2, reps: '30s hold', notes: 'Perform on both sides; focus on keeping body in a straight line.' }
+      { exerciseId: 705, name: 'Side Plank', sets: 2, reps: '30s hold', notes: 'Perform on both sides; focus on keeping body in a straight line.' }
     ]
   },
   {
@@ -440,7 +440,7 @@ const posturalIssues = [
     correctiveProtocol: [
       { exerciseId: 10004, name: 'Kneeling Hip Flexor Stretch', sets: 2, reps: '30s hold', notes: 'Tilt pelvis backward slightly to isolate hip flexor.' },
       { exerciseId: 10006, name: 'Couch Stretch', sets: 2, reps: '30s hold', notes: 'Intense stretch; hold upright posture as much as possible.' },
-      { exerciseId: 107, name: 'Bird Dog', sets: 3, reps: '10 per side', notes: 'Strengthen back chain dynamically.' }
+      { exerciseId: 10021, name: 'Bird Dog', sets: 3, reps: '10 per side', notes: 'Strengthen back chain dynamically.' }
     ]
   },
   {

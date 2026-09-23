@@ -1,24 +1,72 @@
-# React + Vite
+# ARISE
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A gamified, offline-first gym tracker. You log workouts to earn XP and move up hunter ranks
+(E → S → National Level). It also tracks body composition, nutrition and posture correction.
+It's an installable PWA; all data lives on the device, with optional cloud backup.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Training**: 1,300+ exercises with animated demos, workout plans and templates, guided logging with
+  target sets/reps, supersets, RPE, rest timer, plate calculator, PR detection and exercise notes.
+- **Progression**: XP per set, streak multipliers, ranks, daily quests, achievements, muscle-frequency stats.
+- **Body**: body weight, InBody scans (with score estimation and progress charts), measurements.
+- **Nutrition**: meal and water tracking against calorie/macro targets computed from your profile.
+- **Posture**: diagnostics and corrective protocols that get added to your workouts automatically.
+- **Data**: works fully offline (IndexedDB via Dexie). Optional Supabase account for cloud backup;
+  JSON export/import from Settings.
 
-## React Compiler
+## Tech
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React 19, Vite, React Router, Framer Motion, Dexie (IndexedDB), vite-plugin-pwa, Supabase (auth + backup),
+Vitest. Hosted on Firebase Hosting.
 
-## Expanding the ESLint configuration
+## Getting started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm ci
+cp .env.example .env   # optional: fill in Supabase keys to enable sign-in and cloud backup
+npm run dev
+```
+
+Without Supabase keys the app runs in local-only mode.
+
+### Supabase (optional)
+
+1. Create a Supabase project.
+2. Run `supabase/migrations/20260513000000_init.sql` (creates the `backups` table with row-level security).
+3. Put the project URL and anon key in `.env` (see `.env.example`).
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm test` | Unit and database tests (Vitest + fake-indexeddb) |
+| `npm run lint` | ESLint |
+| `npm run build` | Production build + service worker into `dist/` |
+| `npm run dataset:fetch` | Regenerate `src/data/exercises.js` from the upstream dataset |
+
+## Project layout
+
+```
+src/
+  screens/      one file per route
+  components/   shared UI (sheets, overlays, timers)
+  context/      workout session + alert providers
+  hooks/        shared hooks (e.g. useBackup)
+  db/           Dexie schema, seeding, migrations, backup format, cloud sync
+  data/         exercise dataset, correctives, templates, ranks/quests, posture content
+  utils/        calorie engine, achievements, images, notifications, audio/haptics
+docs/           improvement plan, migration rules
+scripts/        dataset tooling
+```
+
+Before changing the database schema or the exercise dataset, read [docs/MIGRATIONS.md](docs/MIGRATIONS.md).
+Migrations run once on users' phones and can't be undone.
 
 ## Deployment
 
-1. `npm run build`
-2. `firebase deploy`
-3. Open the Firebase hosting URL on iPhone Safari
-4. Tap Share → "Add to Home Screen"
-5. ARISE installs with icon, runs fullscreen, works offline forever
+Pushing to `main` builds and deploys to Firebase Hosting (`.github/workflows/`).
+
+To install on iPhone: open the hosting URL in Safari → Share → **Add to Home Screen**. ARISE runs
+fullscreen and works offline.

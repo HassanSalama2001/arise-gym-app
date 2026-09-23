@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import db from '../db/db';
-import { getToday } from '../utils/date';
+import { getToday, parseLocalDate, addDays } from '../utils/date';
 import BottomSheet from '../components/BottomSheet';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import { playClickSound } from '../utils/audio';
 import { hapticClick } from '../utils/haptics';
 import './MealTrackerScreen.css';
@@ -56,6 +56,15 @@ export default function MealTrackerScreen() {
 
   const totalWater = loggedHydration ? loggedHydration.reduce((acc, h) => acc + (parseInt(h.amountMl) || 0), 0) : 0;
 
+  const resetMealForm = () => {
+    setFoodName('');
+    setCalories('');
+    setProtein('');
+    setCarbs('');
+    setFat('');
+    setActiveMealSheet(null);
+  };
+
   // Handle adding meal
   const handleAddMeal = async (type) => {
     if (!foodName.trim()) {
@@ -79,15 +88,6 @@ export default function MealTrackerScreen() {
 
     showToast(`Logged ${foodName.trim()} to ${type}`);
     resetMealForm();
-  };
-
-  const resetMealForm = () => {
-    setFoodName('');
-    setCalories('');
-    setProtein('');
-    setCarbs('');
-    setFat('');
-    setActiveMealSheet(null);
   };
 
   // Handle deleting meal
@@ -148,14 +148,12 @@ export default function MealTrackerScreen() {
     const today = getToday();
     if (selectedDate === today) return 'TODAY';
     
-    const d = new Date(selectedDate);
+    const d = parseLocalDate(selectedDate);
     return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase();
   };
 
   const adjustDate = (days) => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + days);
-    setSelectedDate(d.toISOString().split('T')[0]);
+    setSelectedDate(addDays(selectedDate, days));
   };
 
   return (

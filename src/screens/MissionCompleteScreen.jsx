@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
-import { getRankInfo, RANKS } from '../data/progression';
+import { getRankInfo } from '../data/progression';
 import quotes from '../data/quotes';
 import RankUpCinematic from '../components/RankUpCinematic';
+import AnimatedNumber from '../components/AnimatedNumber';
 import { playLevelUpSound } from '../utils/audio';
 import { hapticLevelUp } from '../utils/haptics';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import { getToday } from '../utils/date';
 import './MissionCompleteScreen.css';
 
@@ -24,53 +25,40 @@ function FloatingParticle({ style }) {
   );
 }
 
-function AnimatedNumber({ value, duration = 1500, prefix = '', suffix = '' }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    if (!value) return;
-    let start = 0;
-    const step = value / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= value) { setDisplay(value); clearInterval(timer); }
-      else setDisplay(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [value]);
-  return <span>{prefix}{display.toLocaleString()}{suffix}</span>;
-}
-
 export default function MissionCompleteScreen() {
   const { showConfirm } = useAlert();
   const { state } = useLocation();
   const navigate = useNavigate();
   const { sessionId, finalXP = 0, totalVol = 0, duration = 0, prevXP = 0, prevProfile, prevQuests, prevAchievements } = state || {};
 
-  const [rankUp, setRankUp] = useState(null);
   const [showCinematic, setShowCinematic] = useState(false);
-  const checkedRankUp = useRef(false);
+  const shownRankUp = useRef(null);
 
   const profile = useLiveQuery(() => db.playerProfile.get('profile'));
   const sessionSets = useLiveQuery(() => sessionId ? db.sets.where('sessionId').equals(sessionId).toArray() : [], [sessionId]);
   const quests = useLiveQuery(() => db.dailyQuests.where('date').equals(getToday()).toArray());
 
-  const quote = quotes[Math.floor(Math.random() * quotes.length)];
+  // Picked once per visit; re-renders (live queries resolving) must not reshuffle them.
+  const [quote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
+
+  const rankUp = useMemo(() => {
+    if (!profile) return null;
+    const prevRank = getRankInfo(prevXP).current;
+    const newRank = getRankInfo(profile.totalXP).current;
+    return prevRank.rank !== newRank.rank ? { prevRank, newRank } : null;
+  }, [profile, prevXP]);
+  const rankUpKey = rankUp?.newRank.rank ?? null;
 
   useEffect(() => {
-    if (checkedRankUp.current || !profile) return;
-    checkedRankUp.current = true;
-
-    const prevRankInfo = getRankInfo(prevXP);
-    const newRankInfo = getRankInfo(profile.totalXP);
-    if (newRankInfo.current.rank !== prevRankInfo.current.rank) {
-      setRankUp({ prevRank: prevRankInfo.current, newRank: newRankInfo.current });
-      setTimeout(() => {
-        playLevelUpSound();
-        hapticLevelUp();
-        setShowCinematic(true);
-      }, 600);
-    }
-  }, [profile, prevXP]);
+    if (!rankUpKey || shownRankUp.current === rankUpKey) return;
+    const timer = setTimeout(() => {
+      shownRankUp.current = rankUpKey;
+      playLevelUpSound();
+      hapticLevelUp();
+      setShowCinematic(true);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [rankUpKey]);
 
   // Duration formatting
   const dSecs = Math.floor(duration / 1000);
@@ -81,7 +69,7 @@ export default function MissionCompleteScreen() {
   const completedSets = (sessionSets || []).filter(s => s.completed);
   const exerciseIds = [...new Set((sessionSets || []).map(s => s.exerciseId))];
 
-  const particles = Array.from({ length: 20 }, (_, i) => ({
+  const [particles] = useState(() => Array.from({ length: 20 }, (_, i) => ({
     left: `${Math.random() * 100}%`,
     width: `${4 + Math.random() * 6}px`,
     height: `${4 + Math.random() * 6}px`,
@@ -90,11 +78,10 @@ export default function MissionCompleteScreen() {
     position: 'absolute',
     duration: 4 + Math.random() * 4,
     delay: Math.random() * 3,
-  }));
+  })));
 
   if (!state) {
-    navigate('/');
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   return (

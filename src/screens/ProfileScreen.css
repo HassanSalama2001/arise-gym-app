@@ -360,58 +360,6 @@
   justify-content: center;
 }
 
-.sync-status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.sync-actions-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.sync-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border-radius: var(--radius-md);
-  background: var(--bg-void);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.sync-btn:active {
-  transform: scale(0.96);
-  border-color: var(--accent-blue);
-}
-
-.sync-btn svg {
-  color: var(--accent-blue);
-}
-
-.sync-secondary-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sync-msg {
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.sync-msg.success { color: var(--success); }
-.sync-msg.error { color: var(--accent-red); }
-
 /* Rank Detail Sheet */
 .rank-list {
   display: flex;

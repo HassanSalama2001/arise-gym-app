@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
 import { supabase } from '../db/supabaseClient';
-import { backupToCloud, restoreFromCloud } from '../db/sync';
-import { useAlert } from '../context/AlertContext';
+import { useBackup } from '../hooks/useBackup';
+import { useAlert } from '../context/useAlert';
+import OfflineVisualsSection from '../components/settings/OfflineVisualsSection';
+import NutritionGoalsSection from '../components/settings/NutritionGoalsSection';
+import AccountSyncSection from '../components/settings/AccountSyncSection';
+import LocalDataSection from '../components/settings/LocalDataSection';
 import './SettingsScreen.css';
 import { 
   calculateBMR, 
@@ -17,13 +21,11 @@ import {
 } from '../utils/calorieEngine';
 
 export default function SettingsScreen() {
-  const { showAlert, showConfirm, showPrompt } = useAlert();
+  const { showAlert, showConfirm, showPrompt, showToast } = useAlert();
   const navigate = useNavigate();
   const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
   const [session, setSession] = useState(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('');
-  const [exportMsg, setExportMsg] = useState('');
+  const { syncing, syncStatus, exportMsg, backup, restore, exportFile, importFile } = useBackup();
 
   const [autoActivity, setAutoActivity] = useState('sedentary');
   const [latestWeight, setLatestWeight] = useState(null);
@@ -31,18 +33,31 @@ export default function SettingsScreen() {
   const [heightFt, setHeightFt] = useState('');
   const [heightIn, setHeightIn] = useState('');
   const [heightCm, setHeightCm] = useState('');
+  const [syncedHeight, setSyncedHeight] = useState(undefined);
+
+  // Keep the height inputs in sync with the saved value (on load, and when it changes elsewhere).
+  if (profile && profile.height !== syncedHeight) {
+    setSyncedHeight(profile.height);
+    if (profile.height) {
+      const totalInches = profile.height / 2.54;
+      setHeightCm(profile.height);
+      setHeightFt(Math.floor(totalInches / 12));
+      setHeightIn(Math.round(totalInches % 12));
+    } else {
+      setHeightCm('');
+      setHeightFt('');
+      setHeightIn('');
+    }
+  }
 
   // 1. Fetch recent sessions to auto-detect activity level
   useEffect(() => {
     const detectActivity = async () => {
       try {
+        // Sessions carry startTime (ms); there is no `date` field to query.
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const recentSessions = await db.sessions
-          .where('date')
-          .above(thirtyDaysAgo.toISOString().split('T')[0])
-          .toArray();
-        const count = recentSessions.length;
+        const count = await db.sessions.where('startTime').above(thirtyDaysAgo.getTime()).count();
         if (count >= 6) setAutoActivity('active');
         else if (count >= 4) setAutoActivity('moderate');
         else if (count >= 2) setAutoActivity('light');
@@ -83,21 +98,6 @@ export default function SettingsScreen() {
     fetchBiometrics();
   }, [profile]);
 
-  // 3. Keep height inputs sync'd with database value
-  useEffect(() => {
-    if (profile && profile.height) {
-      setHeightCm(profile.height);
-      const totalInches = profile.height / 2.54;
-      const ft = Math.floor(totalInches / 12);
-      const inch = Math.round(totalInches % 12);
-      setHeightFt(ft);
-      setHeightIn(inch);
-    } else {
-      setHeightCm('');
-      setHeightFt('');
-      setHeightIn('');
-    }
-  }, [profile?.height]);
 
   // 4. Recommendation derivation
   const isProfileComplete = profile?.gender && profile?.dob && profile?.height && latestWeight;
@@ -160,8 +160,6 @@ export default function SettingsScreen() {
       const confirmation = await showConfirm(`Convert all existing workout history weights from ${profile.unitPreference.toUpperCase()} to ${value.toUpperCase()}?\n\n(Choose CONFIRM to convert values, or CANCEL to only change the label)`);
       
       if (confirmation) {
-        setSyncing(true);
-        setSyncStatus('Converting units...');
         try {
           const factor = value === 'lbs' ? 2.20462 : 1 / 2.20462;
           await db.transaction('rw', [db.sets, db.personalRecords, db.bodyWeight, db.inbodyScans, db.playerProfile], async () => {
@@ -171,7 +169,12 @@ export default function SettingsScreen() {
             }
             const prs = await db.personalRecords.toArray();
             for (const pr of prs) {
-              if (pr.weight) await db.personalRecords.update(pr.id, { weight: Math.round(pr.weight * factor * 10) / 10 });
+              if (pr.weight) {
+                await db.personalRecords.update(pr.id, {
+                  weight: Math.round(pr.weight * factor * 10) / 10,
+                  ...(pr.maxWeight ? { maxWeight: Math.round(pr.maxWeight * factor * 10) / 10 } : {}),
+                });
+              }
             }
             const bws = await db.bodyWeight.toArray();
             for (const bw of bws) {
@@ -190,76 +193,14 @@ export default function SettingsScreen() {
               });
             }
           });
-          setSyncStatus('Units converted!');
+          showToast('Units converted!');
         } catch (err) {
           await showAlert('Failed to convert units: ' + err.message, 'Error');
-        } finally {
-          setSyncing(false);
-          setTimeout(() => setSyncStatus(''), 3000);
         }
         return;
       }
     }
     await db.playerProfile.update('profile', { [key]: value });
-  }
-
-  async function handleBackup() {
-    setSyncing(true);
-    setSyncStatus('Backing up...');
-    try {
-      const res = await backupToCloud();
-      if (res.success) {
-        setSyncStatus('Backup complete!');
-      } else if (res.conflict) {
-        setSyncStatus('Conflict detected!');
-        const force = await showConfirm(
-          `A newer backup from ${new Date(res.cloudTime).toLocaleString()} exists on the cloud.\n\nYour last sync on this device was ${res.localTime ? new Date(res.localTime).toLocaleString() : 'never'}.\n\nDo you want to FORCE overwrite the cloud with your local data?`,
-          "Sync Conflict Detected",
-          { okText: 'FORCE BACKUP', cancelText: 'CANCEL' }
-        );
-        if (force) {
-          setSyncStatus('Forcing backup...');
-          const forceRes = await backupToCloud(true);
-          if (forceRes.success) {
-            setSyncStatus('Backup complete!');
-          } else {
-            setSyncStatus('Backup failed: ' + forceRes.error);
-          }
-        } else {
-          setSyncStatus('Backup cancelled.');
-        }
-      } else {
-        setSyncStatus('Backup failed: ' + res.error);
-      }
-    } catch (err) {
-      setSyncStatus('Backup failed: ' + err.message);
-    } finally {
-      setSyncing(false);
-      setTimeout(() => setSyncStatus(''), 3000);
-    }
-  }
-
-  async function handleRestore() {
-    const confirmed = await showConfirm("Restoring from the cloud will overwrite your current local data. Do you want to proceed?", "Restore from Cloud?", { danger: true });
-    if (!confirmed) {
-      return;
-    }
-    setSyncing(true);
-    setSyncStatus('Restoring...');
-    try {
-      const res = await restoreFromCloud();
-      if (res.success) {
-        setSyncStatus('Restore complete!');
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        setSyncStatus('Restore failed: ' + res.error);
-      }
-    } catch (err) {
-      setSyncStatus('Restore failed: ' + err.message);
-    } finally {
-      setSyncing(false);
-      setTimeout(() => setSyncStatus(''), 3000);
-    }
   }
 
   async function handleLogout() {
@@ -269,113 +210,6 @@ export default function SettingsScreen() {
       await db.playerProfile.update('profile', { guestMode: true });
       navigate('/profile');
     }
-  }
-
-  async function handleExport() {
-    try {
-      const data = {
-        profile: await db.playerProfile.get('profile'),
-        sessions: await db.sessions.toArray(),
-        sets: await db.sets.toArray(),
-        personalRecords: await db.personalRecords.toArray(),
-        workoutPlans: await db.workoutPlans.toArray(),
-        planExercises: await db.planExercises.toArray(),
-        dailyQuests: await db.dailyQuests.toArray(),
-        achievements: await db.achievements.toArray(),
-        inbodyScans: await db.inbodyScans.toArray(),
-        measurements: await db.measurements.toArray(),
-        exportedAt: new Date().toISOString(),
-      };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `arise-backup-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      setExportMsg('Exported successfully');
-      setTimeout(() => setExportMsg(''), 3000);
-    } catch (err) {
-      await showAlert("Failed to export data: " + err.message, "Export Failed");
-    }
-  }
-
-  async function handleImport(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const confirmed = await showConfirm("Importing this backup will overwrite ALL your current local workout data. Do you want to proceed?", "Import Backup?", { danger: true });
-    if (!confirmed) {
-      e.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const data = JSON.parse(event.target.result);
-        if (!data || !data.profile) {
-          await showAlert("Invalid backup file. Could not find profile data.", "Import Error");
-          return;
-        }
-
-        await db.transaction('rw', [
-          db.playerProfile,
-          db.sessions,
-          db.sets,
-          db.personalRecords,
-          db.workoutPlans,
-          db.planExercises,
-          db.dailyQuests,
-          db.achievements,
-          db.inbodyScans,
-          db.measurements
-        ], async () => {
-          if (data.profile) await db.playerProfile.put(data.profile);
-          if (data.sessions) {
-            await db.sessions.clear();
-            await db.sessions.bulkAdd(data.sessions);
-          }
-          if (data.sets) {
-            await db.sets.clear();
-            await db.sets.bulkAdd(data.sets);
-          }
-          if (data.personalRecords) {
-            await db.personalRecords.clear();
-            await db.personalRecords.bulkAdd(data.personalRecords);
-          }
-          if (data.workoutPlans) {
-            await db.workoutPlans.clear();
-            await db.workoutPlans.bulkAdd(data.workoutPlans);
-          }
-          if (data.planExercises) {
-            await db.planExercises.clear();
-            await db.planExercises.bulkAdd(data.planExercises);
-          }
-          if (data.dailyQuests) {
-            await db.dailyQuests.clear();
-            await db.dailyQuests.bulkAdd(data.dailyQuests);
-          }
-          if (data.achievements) {
-            await db.achievements.clear();
-            await db.achievements.bulkAdd(data.achievements);
-          }
-          if (data.inbodyScans) {
-            await db.inbodyScans.clear();
-            await db.inbodyScans.bulkAdd(data.inbodyScans);
-          }
-          if (data.measurements) {
-            await db.measurements.clear();
-            await db.measurements.bulkAdd(data.measurements);
-          }
-        });
-
-        await showAlert("Import successful! The app will reload to apply changes.", "Success");
-        window.location.reload();
-      } catch (err) {
-        await showAlert("Failed to import backup: " + err.message, "Import Error");
-      }
-    };
-    reader.readAsText(file);
   }
 
   async function handleDeleteAll() {
@@ -467,31 +301,10 @@ export default function SettingsScreen() {
               </label>
             </div>
 
-            {/* Exercise Visuals Cache Mode */}
-            <div className="settings-row flex-column mt-16">
-              <div className="settings-info" style={{ marginBottom: 12 }}>
-                <span className="settings-title">Exercise Visuals Mode</span>
-                <span className="settings-desc">Choose between static images or animated GIFs for offline caching</span>
-              </div>
-              <div className="tab-pills" style={{ margin: 0, width: '100%' }}>
-                <button 
-                  className={`tab-pill ${profile.visualsMode !== 'gifs' ? 'active' : ''}`}
-                  onClick={() => updateSetting('visualsMode', 'images')}
-                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
-                >
-                  STATIC IMAGES
-                </button>
-                <button 
-                  className={`tab-pill ${profile.visualsMode === 'gifs' ? 'active' : ''}`}
-                  onClick={() => updateSetting('visualsMode', 'gifs')}
-                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
-                >
-                  ANIMATED GIFS
-                </button>
-              </div>
-            </div>
           </div>
         </div>
+
+        <OfflineVisualsSection />
 
         {/* Section: Body Profile */}
         <div className="settings-section mt-24">
@@ -621,246 +434,11 @@ export default function SettingsScreen() {
           </div>
         </div>
 
-        {/* Section: Nutrition Goals */}
-        <div className="settings-section mt-24">
-          <span className="section-label">NUTRITION GOALS</span>
-          <div className="settings-card card mt-8">
-            {isProfileComplete ? (
-              <div className="recommendation-banner">
-                <div className="recommendation-text">
-                  Based on your body stats and {latestWeight.source === 'inbody' ? 'latest InBody scan' : 'latest weight'}, we recommend a <strong>{recommendedGoal.toUpperCase()}</strong>:
-                  <br />
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: 'inline-block' }}>
-                    Recommended: <strong>{recommendedCalories} kcal</strong> | P: {recommendedMacros.protein}g | C: {recommendedMacros.carbs}g | F: {recommendedMacros.fat}g
-                  </span>
-                </div>
-                <button 
-                  className="btn-primary" 
-                  style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
-                  onClick={applyRecommendation}
-                >
-                  ⚡ APPLY RECOMMENDATION
-                </button>
-              </div>
-            ) : (
-              <div className="recommendation-banner warning">
-                <div className="recommendation-text" style={{ fontSize: '13px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span>⚠️</span>
-                  <span>Complete your <strong>Body Profile</strong> and log at least one weight/InBody scan to receive personalized nutrition target recommendations.</span>
-                </div>
-              </div>
-            )}
+        <NutritionGoalsSection profile={profile} isProfileComplete={isProfileComplete} latestWeight={latestWeight} recommendedGoal={recommendedGoal} recommendedCalories={recommendedCalories} recommendedMacros={recommendedMacros} onApplyRecommendation={applyRecommendation} onResetGoals={resetGoals} onUpdateSetting={updateSetting} />
 
-            <div className="goals-grid">
-              {/* Daily Calories */}
-              <div className="goal-input-box">
-                <label className="section-label" style={{ fontSize: '11px' }}>Daily Calories</label>
-                <div className="goal-input-wrapper">
-                  <input 
-                    type="number"
-                    className="settings-input"
-                    placeholder="Auto"
-                    defaultValue={profile.calorieGoal || ''}
-                    key={profile.calorieGoal}
-                    onBlur={e => {
-                      const val = parseInt(e.target.value) || 0;
-                      updateSetting('calorieGoal', val > 0 ? val : null);
-                    }}
-                  />
-                  <span className="goal-input-unit">kcal</span>
-                </div>
-              </div>
+        <AccountSyncSection session={session} syncing={syncing} syncStatus={syncStatus} onBackup={backup} onRestore={restore} onSignIn={() => navigate('/login')} onSignOut={handleLogout} />
 
-              {/* Water Goal */}
-              <div className="goal-input-box">
-                <label className="section-label" style={{ fontSize: '11px' }}>Water Target</label>
-                <div className="goal-input-wrapper">
-                  <input 
-                    type="number"
-                    className="settings-input"
-                    placeholder="3000"
-                    defaultValue={profile.waterGoal || 3000}
-                    key={profile.waterGoal}
-                    onBlur={e => {
-                      const val = parseInt(e.target.value) || 3000;
-                      updateSetting('waterGoal', val);
-                    }}
-                  />
-                  <span className="goal-input-unit">ml</span>
-                </div>
-              </div>
-
-              {/* Protein */}
-              <div className="goal-input-box">
-                <label className="section-label" style={{ fontSize: '11px' }}>Protein</label>
-                <div className="goal-input-wrapper">
-                  <input 
-                    type="number"
-                    className="settings-input"
-                    placeholder="Auto"
-                    defaultValue={profile.proteinGoal || ''}
-                    key={profile.proteinGoal}
-                    onBlur={e => {
-                      const val = parseInt(e.target.value) || 0;
-                      updateSetting('proteinGoal', val > 0 ? val : null);
-                    }}
-                  />
-                  <span className="goal-input-unit">g</span>
-                </div>
-              </div>
-
-              {/* Carbs */}
-              <div className="goal-input-box">
-                <label className="section-label" style={{ fontSize: '11px' }}>Carbohydrates</label>
-                <div className="goal-input-wrapper">
-                  <input 
-                    type="number"
-                    className="settings-input"
-                    placeholder="Auto"
-                    defaultValue={profile.carbsGoal || ''}
-                    key={profile.carbsGoal}
-                    onBlur={e => {
-                      const val = parseInt(e.target.value) || 0;
-                      updateSetting('carbsGoal', val > 0 ? val : null);
-                    }}
-                  />
-                  <span className="goal-input-unit">g</span>
-                </div>
-              </div>
-
-              {/* Fat */}
-              <div className="goal-input-box">
-                <label className="section-label" style={{ fontSize: '11px' }}>Fat</label>
-                <div className="goal-input-wrapper">
-                  <input 
-                    type="number"
-                    className="settings-input"
-                    placeholder="Auto"
-                    defaultValue={profile.fatGoal || ''}
-                    key={profile.fatGoal}
-                    onBlur={e => {
-                      const val = parseInt(e.target.value) || 0;
-                      updateSetting('fatGoal', val > 0 ? val : null);
-                    }}
-                  />
-                  <span className="goal-input-unit">g</span>
-                </div>
-              </div>
-
-              {/* Goal Type Badge */}
-              <div className="goal-input-box">
-                <label className="section-label" style={{ fontSize: '11px' }}>Goal Type</label>
-                <select
-                  className="settings-select"
-                  value={profile.nutritionGoalType || ''}
-                  onChange={e => updateSetting('nutritionGoalType', e.target.value || null)}
-                >
-                  <option value="">None / Custom</option>
-                  <option value="cut">Cut (Deficit)</option>
-                  <option value="maintain">Maintain (Balance)</option>
-                  <option value="bulk">Bulk (Surplus)</option>
-                </select>
-              </div>
-            </div>
-
-            {(profile.calorieGoal || profile.proteinGoal || profile.carbsGoal || profile.fatGoal || profile.nutritionGoalType) && (
-              <button 
-                className="btn-ghost mt-16" 
-                style={{ fontSize: '12px', minHeight: '32px', padding: '4px' }}
-                onClick={resetGoals}
-              >
-                RESET TO DEFAULT / AUTO
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Section: Account & Cloud Sync */}
-        <div className="settings-section mt-24">
-          <span className="section-label">ACCOUNT & CLOUD SYNC</span>
-          <div className="settings-card card mt-8">
-            <div className="account-status-row">
-              <div className="settings-info">
-                <span className="settings-title">
-                  {session ? `Signed in as` : 'Guest Mode'}
-                </span>
-                <span className="settings-desc" style={{ color: session ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>
-                  {session ? session.user.email : 'Data saved locally on this device'}
-                </span>
-              </div>
-              {session && (
-                <div className="sync-badge">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-              )}
-            </div>
-
-            <div className="sync-actions-grid mt-16">
-              {session ? (
-                <>
-                  <button className="sync-btn" onClick={handleBackup} disabled={syncing}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    SYNC TO CLOUD
-                  </button>
-                  <button className="sync-btn" onClick={handleRestore} disabled={syncing}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    RESTORE FROM CLOUD
-                  </button>
-                </>
-              ) : (
-                <button className="btn-primary" onClick={() => navigate('/login')} style={{ gridColumn: 'span 2' }}>
-                  SIGN IN TO SYNC
-                </button>
-              )}
-            </div>
-
-            {syncStatus && <div className={`sync-msg mt-8 ${syncStatus.includes('failed') ? 'error' : 'success'}`}>{syncStatus}</div>}
-
-            {session && (
-              <button className="btn-ghost mt-16" onClick={handleLogout} style={{ color: 'var(--accent-red)', borderColor: 'rgba(255, 23, 68, 0.2)' }}>
-                SIGN OUT
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Section: Backup & Recovery */}
-        <div className="settings-section mt-24">
-          <span className="section-label">BACKUP & LOCAL DATA</span>
-          <div className="settings-card card mt-8" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="data-action-block">
-              <div className="settings-info">
-                <span className="settings-title">Export Backup</span>
-                <span className="settings-desc">Save your workout history as a JSON file</span>
-              </div>
-              <button className="data-btn mt-8" onClick={handleExport}>
-                EXPORT
-              </button>
-            </div>
-            {exportMsg && <div className="sync-msg success" style={{ marginTop: 4 }}>{exportMsg}</div>}
-
-            <div className="data-action-block" style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              <div className="settings-info">
-                <span className="settings-title">Import Backup</span>
-                <span className="settings-desc">Load database from a previously exported JSON file</span>
-              </div>
-              <label className="data-btn mt-8" style={{ cursor: 'pointer', textAlign: 'center' }}>
-                IMPORT
-                <input type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
-              </label>
-            </div>
-
-            <div className="data-action-block" style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              <div className="settings-info">
-                <span className="settings-title" style={{ color: 'var(--accent-red)' }}>Clear All Data</span>
-                <span className="settings-desc">Delete all local workouts, plans, and profile history</span>
-              </div>
-              <button className="btn-ghost mt-8" onClick={handleDeleteAll} style={{ color: 'var(--accent-red)', borderColor: 'rgba(255, 23, 68, 0.3)' }}>
-                RESET APP
-              </button>
-            </div>
-          </div>
-        </div>
+        <LocalDataSection exportMsg={exportMsg} onExport={exportFile} onImport={importFile} onReset={handleDeleteAll} />
 
         {/* Info / Version */}
         <div style={{ textAlign: 'center', marginTop: 32, marginBottom: 16, color: 'var(--text-muted)', fontSize: 12 }}>

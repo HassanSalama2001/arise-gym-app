@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/db';
-import { useAlert } from '../context/AlertContext';
+import { useAlert } from '../context/useAlert';
 import BottomSheet from './BottomSheet';
 import './SessionDetailModal.css';
 
@@ -166,7 +166,9 @@ export default function SessionDetailModal({ sessionId, onClose }) {
                         {s.displayNum}
                       </span>
                       <span style={{ textAlign: 'right', fontWeight: 600 }}>{s.weight}</span>
-                      <span style={{ textAlign: 'right', fontWeight: 600 }}>{s.reps}</span>
+                      <span style={{ textAlign: 'right', fontWeight: 600 }}>
+                        {s.mode === 'time' ? `${s.duration || 0}s` : s.perSide ? `${s.reps}/side` : s.reps}
+                      </span>
                       <span style={{ textAlign: 'right', color: s.rpe ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                         {s.rpe || '-'}
                       </span>

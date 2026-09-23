@@ -1,5 +1,9 @@
+// Regenerates src/data/exercises.js from the hasaneyldrm dataset. Run: npm run dataset:fetch
+// Afterwards: bump EXERCISE_SEED_VERSION in src/db/seed.js and run npm test (see docs/MIGRATIONS.md).
+
 const fs = require('fs');
 const https = require('https');
+const path = require('path');
 
 const RAW_URL = 'https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/data/exercises.json';
 
@@ -30,7 +34,7 @@ https.get(RAW_URL, (res) => {
 export const exercises = ${JSON.stringify(mapped, null, 2)};
 `;
 
-      fs.writeFileSync('./src/data/exercises.js', output, 'utf8');
+      fs.writeFileSync(path.join(__dirname, '..', 'src', 'data', 'exercises.js'), output, 'utf8');
       console.log(`Successfully wrote ${mapped.length} exercises to src/data/exercises.js`);
     } catch (e) {
       console.error('Error parsing JSON:', e);

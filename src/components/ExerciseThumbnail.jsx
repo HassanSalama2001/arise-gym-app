@@ -1,29 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import db from '../db/db';
-import { getExerciseVisuals } from '../utils/exerciseImages';
+import { useExerciseVisual } from '../hooks/useExerciseVisual';
 
 export default function ExerciseThumbnail({ exercise, style }) {
-  const profile = useLiveQuery(() => db.playerProfile.get('profile'), []);
-  const [visuals, setVisuals] = useState(null);
+  const { url } = useExerciseVisual(exercise);
 
-  useEffect(() => {
-    let activeUrls = [];
-    async function loadVisuals() {
-      const result = await getExerciseVisuals(exercise);
-      if (result && result.type === 'gif') {
-        const url = URL.createObjectURL(result.blob);
-        activeUrls.push(url);
-        setVisuals({ type: 'gif', url });
-      }
-    }
-    loadVisuals();
-    return () => {
-      activeUrls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [exercise?.id, exercise?.name, exercise?.videoUri, profile]);
-
-  if (!visuals) {
+  if (!url) {
     return (
       <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', borderRadius: 8 }}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -37,7 +17,7 @@ export default function ExerciseThumbnail({ exercise, style }) {
 
   return (
     <div style={{ ...style, overflow: 'hidden', borderRadius: 8 }}>
-      <img src={visuals.url} alt={exercise?.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
+      <img src={url} alt={exercise?.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
     </div>
   );
 }

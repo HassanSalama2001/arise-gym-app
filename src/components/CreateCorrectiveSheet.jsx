@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import BottomSheet from './BottomSheet';
 import ExercisePickerSheet from './ExercisePickerSheet';
 import db from '../db/db';

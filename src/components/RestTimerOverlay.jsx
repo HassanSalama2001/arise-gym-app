@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './RestTimerOverlay.css';
 
@@ -16,11 +16,11 @@ function playChime() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
     osc.start();
     osc.stop(ctx.currentTime + 0.5);
-  } catch (e) { /* audio not available */ }
+  } catch { /* audio not available */ }
 }
 
 function vibrate() {
-  try { navigator.vibrate?.([200, 100, 200]); } catch (e) {}
+  try { navigator.vibrate?.([200, 100, 200]); } catch { /* vibration not available */ }
 }
 
 export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
@@ -30,7 +30,7 @@ export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
   const [showCustom, setShowCustom] = useState(false);
   const [customVal, setCustomVal] = useState('');
   const intervalRef = useRef(null);
-  const startRef = useRef(Date.now());
+  const startRef = useRef(null); // set when the countdown starts
   const durationRef = useRef(defaultDuration);
 
   const reset = useCallback((newDur) => {
@@ -53,6 +53,7 @@ export default function RestTimerOverlay({ defaultDuration = 60, onClose }) {
 
   useEffect(() => {
     if (!running) return;
+    startRef.current ??= Date.now();
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startRef.current) / 1000;
       const rem = Math.max(durationRef.current - elapsed, 0);

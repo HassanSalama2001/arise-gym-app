@@ -1,0 +1,23 @@
+name: CI
+
+# Pull requests only: pushing to a PR branch already triggers pull_request, and main runs the
+# same checks in firebase-deploy.yml before deploying.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build

@@ -1,16 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AlertContext } from './useAlert';
 import './AlertContext.css';
-
-const AlertContext = createContext(null);
-
-export function useAlert() {
-  const context = useContext(AlertContext);
-  if (!context) {
-    throw new Error('useAlert must be used within an AlertProvider');
-  }
-  return context;
-}
 
 export function AlertProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -21,9 +12,10 @@ export function AlertProvider({ children }) {
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    const timeouts = activeTimeouts.current;
     return () => {
-      activeTimeouts.current.forEach(timeoutId => clearTimeout(timeoutId));
-      activeTimeouts.current.clear();
+      timeouts.forEach(timeoutId => clearTimeout(timeoutId));
+      timeouts.clear();
     };
   }, []);
 
