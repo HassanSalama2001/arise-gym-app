@@ -97,8 +97,8 @@ JSON backups usable again.
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P6.1 | ⬜ | Settings → "Download exercise visuals" (all, or just exercises in my plans) with progress, cancel, and a storage estimate; request `navigator.storage.persist()`. | Airplane mode shows GIFs for downloaded exercises |
-| P6.2 | ⬜ | Workbox runtime cache (`CacheFirst`) for `cdn.jsdelivr.net` GIFs as a fallback. | Cached after first view even outside the Dexie cache |
+| P6.1 | ✅ | Settings → "Download exercise visuals" (all, or just exercises in my plans) with progress, cancel, and a storage estimate; request `navigator.storage.persist()`. | Airplane mode shows GIFs for downloaded exercises — **Settings → Offline Demonstrations. Verified in-browser: cancel/resume, progress, live count. Removed the dead visualsMode toggle** |
+| P6.2 | ✅ | Workbox runtime cache (`CacheFirst`) for `cdn.jsdelivr.net` GIFs as a fallback. | Cached after first view even outside the Dexie cache — **CacheFirst for cdn.jsdelivr.net GIFs (400 entries, 90 days)** |
 
 ## P7 — Features
 
@@ -139,3 +139,4 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-22 | Workout finishing extracted and tested end to end (97 tests). |
 | 2026-09-22 | P4.1 done. Tests 100/100. |
 | 2026-09-23 | P4 done (P4.5 stays opportunistic). Screens split; all 8 render clean in-browser. Also added a mid-workout add-exercise button (superset mode was unreachable). |
+| 2026-09-23 | P6 done. Offline visual downloads with progress/cancel. |
