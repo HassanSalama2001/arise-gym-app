@@ -167,8 +167,7 @@ export default function PlanDetailScreen() {
         {/* Action Buttons */}
         <div style={{ marginBottom: 24 }}>
           <button 
-            className="btn-ghost" 
-            style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+            className="btn-ghost btn-dashed-gold"
             onClick={() => setShowAddSheet(true)}
           >
             + ADD EXERCISE

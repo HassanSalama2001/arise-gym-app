@@ -83,6 +83,10 @@ export async function syncWithCloud() {
     return { success: true, adoptedLegacyBackup, ...result };
   } catch (error) {
     console.error('Sync failed:', error);
+    // 42P01 = relation does not exist: the sync migration hasn't been run on the Supabase project.
+    if (error.code === '42P01') {
+      return { success: false, error: 'Cloud sync is not set up yet. Run the sync_records migration on your Supabase project.' };
+    }
     return { success: false, error: error.message || String(error) };
   }
 }

@@ -196,10 +196,9 @@ export default function ExerciseDetailScreen() {
         )}
 
         {/* Add to Plan Button */}
-        <div style={{ marginTop: 16 }}>
+        <div className="mt-16">
           <button 
-            className="btn-ghost" 
-            style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+            className="btn-ghost btn-dashed-gold"
             onClick={() => setShowAddToPlan(true)}
             id="add-to-plan-btn"
           >
@@ -208,7 +207,7 @@ export default function ExerciseDetailScreen() {
         </div>
 
         {/* Tabs */}
-        <div className="tab-pills" style={{ marginTop: 16 }}>
+        <div className="tab-pills mt-16">
           <button className={`tab-pill ${activeTab === 'guide' ? 'active' : ''}`} onClick={() => setActiveTab('guide')} id="tab-guide">FORM GUIDE</button>
           <button className={`tab-pill ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')} id="tab-history">HISTORY</button>
           <button className={`tab-pill ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')} id="tab-notes">MY NOTES</button>
@@ -222,7 +221,7 @@ export default function ExerciseDetailScreen() {
               {/* Media Player */}
               {visualsLoading ? (
                 <div className="guide-section">
-                  <div className="card" style={{ padding: 32, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div className="card ex-visual-placeholder">
                     <span style={{ color: 'var(--text-muted)' }}>Loading visual guide...</span>
                   </div>
                 </div>
@@ -239,7 +238,7 @@ export default function ExerciseDetailScreen() {
                 </div>
               ) : (
                 <div className="guide-section">
-                  <div className="card" style={{ padding: 32, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div className="card ex-visual-placeholder">
                     <span style={{ color: 'var(--text-muted)' }}>No visuals available for this exercise.</span>
                   </div>
                 </div>
@@ -389,7 +388,7 @@ export default function ExerciseDetailScreen() {
                   ))}
                 </div>
               ) : (
-                <div className="empty-state" style={{ marginTop: 16 }}>
+                <div className="empty-state mt-16">
                   <span style={{ fontSize: 32 }}>💪</span>
                   <p>No history for this exercise yet</p>
                   <span className="section-label">Your logged sets will appear here</span>
@@ -400,10 +399,9 @@ export default function ExerciseDetailScreen() {
 
           {activeTab === 'notes' && (
             <motion.div key="notes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              <div style={{ marginTop: 16 }}>
+              <div className="mt-16">
                 <button 
-                  className="btn-ghost" 
-                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  className="btn-ghost btn-dashed-gold"
                   onClick={() => setShowAddNote(true)}
                 >
                   + ADD NOTE OR HINT
@@ -418,7 +416,7 @@ export default function ExerciseDetailScreen() {
                   exerciseNotes.filter(n => !n.planId).map(note => (
                     <div key={note.id} className="card" style={{ padding: 12, marginBottom: 12, position: 'relative' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <span className={`chip ${note.type === 'Hint' ? 'chip-green' : note.type === 'Cue' ? 'chip-gold' : 'chip-blue'}`} style={{ fontSize: 10 }}>
+                        <span className={`chip text-10 ${note.type === 'Hint' ? 'chip-green' : note.type === 'Cue' ? 'chip-gold' : 'chip-blue'}`}>
                           {note.type}
                         </span>
                         <button className="btn-icon danger" onClick={() => handleDeleteNote(note.id)} style={{ padding: 4 }}>
@@ -428,7 +426,7 @@ export default function ExerciseDetailScreen() {
                           </svg>
                         </button>
                       </div>
-                      <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{note.text}</p>
+                      <p className="ex-note-text">{note.text}</p>
                     </div>
                   ))
                 ) : (
@@ -449,7 +447,7 @@ export default function ExerciseDetailScreen() {
                       <div key={note.id} className="card" style={{ padding: 12, marginBottom: 12, position: 'relative', borderLeft: '3px solid var(--accent-purple)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <span className={`chip ${note.type === 'Hint' ? 'chip-green' : note.type === 'Cue' ? 'chip-gold' : 'chip-blue'}`} style={{ fontSize: 10 }}>
+                            <span className={`chip text-10 ${note.type === 'Hint' ? 'chip-green' : note.type === 'Cue' ? 'chip-gold' : 'chip-blue'}`}>
                               {note.type}
                             </span>
                             <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>in {planName}</span>
@@ -461,7 +459,7 @@ export default function ExerciseDetailScreen() {
                             </svg>
                           </button>
                         </div>
-                        <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{note.text}</p>
+                        <p className="ex-note-text">{note.text}</p>
                       </div>
                     );
                   })
@@ -476,11 +474,11 @@ export default function ExerciseDetailScreen() {
 
           {activeTab === 'videos' && (
             <motion.div key="videos" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              <div className="videos-info card" style={{ marginTop: 16 }}>
+              <div className="videos-info card mt-16">
                 <p className="videos-desc">Record your sets and upload them for posture analysis on your laptop using ARISE-CV.</p>
               </div>
 
-              <button className="btn-primary" style={{ marginTop: 16 }} id="upload-video-btn">
+              <button className="btn-primary mt-16" id="upload-video-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ marginRight: 8 }}>
                   <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
                   <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/>
@@ -488,10 +486,10 @@ export default function ExerciseDetailScreen() {
                 UPLOAD VIDEO
               </button>
 
-              <div className="analyze-card card" style={{ marginTop: 16 }}>
+              <div className="analyze-card card mt-16">
                 <div className="analyze-header">
                   <span className="section-label">ANALYZE ON LAPTOP</span>
-                  <span className="chip chip-red" style={{ fontSize: 10 }}>Laptop Required</span>
+                  <span className="chip chip-red text-10">Laptop Required</span>
                 </div>
                 <div className="analyze-steps">
                   {[
@@ -582,26 +580,26 @@ export default function ExerciseDetailScreen() {
                           <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
                             <div style={{ display: 'flex', gap: 16 }}>
                               <div style={{ flex: 1 }}>
-                                <label className="section-label" style={{ fontSize: 10 }}>SETS</label>
+                                <label className="section-label text-10">SETS</label>
                                 <input
                                   type="number"
                                   min="1"
                                   max="20"
                                   value={localSets}
                                   onChange={e => setLocalSets(Math.max(1, parseInt(e.target.value) || 0))}
-                                  style={{ width: '100%', marginTop: 4, height: 38, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: '#fff', textAlign: 'center', fontWeight: 'bold' }}
+                                  className="ex-target-input"
                                   id={`input-sets-${plan.id}`}
                                 />
                               </div>
                               <div style={{ flex: 1 }}>
-                                <label className="section-label" style={{ fontSize: 10 }}>REPS</label>
+                                <label className="section-label text-10">REPS</label>
                                 <input
                                   type="number"
                                   min="1"
                                   max="100"
                                   value={localReps}
                                   onChange={e => setLocalReps(Math.max(1, parseInt(e.target.value) || 0))}
-                                  style={{ width: '100%', marginTop: 4, height: 38, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: '#fff', textAlign: 'center', fontWeight: 'bold' }}
+                                  className="ex-target-input"
                                   id={`input-reps-${plan.id}`}
                                 />
                               </div>
@@ -646,34 +644,34 @@ export default function ExerciseDetailScreen() {
       <AnimatePresence>
         {showAddNote && (
           <BottomSheet onClose={() => setShowAddNote(false)} title="ADD NOTE OR HINT">
-            <div style={{ marginTop: 16 }}>
-              <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>TYPE</label>
+            <div className="mt-16">
+              <label className="section-label field-label">TYPE</label>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 {['Hint', 'Note', 'Cue'].map(t => (
                   <button
                     key={t}
                     className={`tab-pill ${noteType === t ? 'active' : ''}`}
                     onClick={() => setNoteType(t)}
-                    style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                    className="tab-pill-sm"
                   >
                     {t}
                   </button>
                 ))}
               </div>
 
-              <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>SCOPE</label>
+              <label className="section-label field-label">SCOPE</label>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 <button
                   className={`tab-pill ${noteScope === 'Global' ? 'active' : ''}`}
                   onClick={() => setNoteScope('Global')}
-                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                  className="tab-pill-sm"
                 >
                   🌍 Global
                 </button>
                 <button
                   className={`tab-pill ${noteScope === 'Plan-specific' ? 'active' : ''}`}
                   onClick={() => setNoteScope('Plan-specific')}
-                  style={{ flex: 1, padding: '8px 0', fontSize: 13 }}
+                  className="tab-pill-sm"
                 >
                   📋 This Plan Only
                 </button>
@@ -681,7 +679,7 @@ export default function ExerciseDetailScreen() {
 
               {noteScope === 'Plan-specific' && (
                 <div style={{ marginBottom: 16 }}>
-                  <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>SELECT PLAN</label>
+                  <label className="section-label field-label">SELECT PLAN</label>
                   <select 
                     value={selectedPlanId || ''} 
                     onChange={e => setSelectedPlanId(Number(e.target.value))}
@@ -703,7 +701,7 @@ export default function ExerciseDetailScreen() {
                 </div>
               )}
 
-              <label className="section-label" style={{ marginBottom: 8, display: 'block' }}>CONTENT</label>
+              <label className="section-label field-label">CONTENT</label>
               <textarea
                 value={noteText}
                 onChange={e => setNoteText(e.target.value)}
