@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { migrateLegacyExercises, relocateCustomExercises, collapsePersonalRecords } from './remap';
+import { syncStampMiddleware, stampExistingRows } from './syncStamp';
 
 const db = new Dexie('AriseDB');
 
@@ -60,5 +61,30 @@ db.version(12).upgrade(relocateCustomExercises);
 // v13: PRs used to add a new row each time (and compare against the oldest one); keep one merged row
 // per exercise holding the best estimated-1RM set plus the heaviest weight.
 db.version(13).upgrade(collapsePersonalRecords);
+
+// v14: per-record cloud sync. Every synced row gets a uid (stable across devices) and updatedAt;
+// deletes leave a tombstone so they propagate instead of being resurrected by another device.
+db.version(14).stores({
+  exercises:'++id, name, muscleGroup, difficulty, uid, updatedAt',
+  workoutPlans: '++id, name, createdAt, uid, updatedAt',
+  planExercises: '++id, planId, exerciseId, order, uid, updatedAt',
+  sessions: '++id, planId, name, startTime, endTime, date, uid, updatedAt',
+  sets: '++id, sessionId, exerciseId, [sessionId+exerciseId], setNumber, weight, reps, completed, uid, updatedAt',
+  personalRecords: '++id, exerciseId, weight, reps, date, uid, updatedAt',
+  exerciseNotes: '++id, exerciseId, planId, createdAt, uid, updatedAt',
+  achievements: '++id, type, title, date, xpAwarded, uid, updatedAt',
+  dailyQuests: '++id, date, type, target, current, completed, xpReward, uid, updatedAt',
+  bodyWeight: '++id, date, weight, uid, updatedAt',
+  inbodyScans: '++id, date, uid, updatedAt',
+  measurements: '++id, date, uid, updatedAt',
+  userPosturalIssues: '++id, issueId, addedAt, status, targetSessions, completedSessions, position, uid, updatedAt',
+  customPosturalIssues: 'id, name, category, icon, severity, timeline, targetSessionsDefault, uid, updatedAt',
+  meals: '++id, date, type, uid, updatedAt',
+  hydration: '++id, date, uid, updatedAt',
+  playerProfile: 'key, uid, updatedAt',
+  settings: 'key, uid, updatedAt',
+}).upgrade(stampExistingRows);
+
+db.use(syncStampMiddleware());
 
 export default db;

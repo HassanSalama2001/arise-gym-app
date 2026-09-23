@@ -292,8 +292,7 @@ export default function WorkoutsScreen() {
 
               <div style={{ marginTop: 16 }}>
                 <button 
-                  className="btn-ghost" 
-                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  className="btn-ghost btn-dashed-gold"
                   onClick={() => setShowCreateExercise(true)}
                 >
                   + ADD CUSTOM EXERCISE
@@ -360,8 +359,7 @@ export default function WorkoutsScreen() {
             >
               <div style={{ marginBottom: 16 }}>
                 <button 
-                  className="btn-ghost" 
-                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  className="btn-ghost btn-dashed-gold"
                   onClick={() => setShowCreatePlan(true)}
                 >
                   + CREATE NEW PLAN
@@ -415,8 +413,7 @@ export default function WorkoutsScreen() {
 
               <div style={{ marginTop: 16 }}>
                 <button 
-                  className="btn-ghost" 
-                  style={{ width: '100%', border: '1px dashed var(--accent-gold)', color: 'var(--accent-gold)' }}
+                  className="btn-ghost btn-dashed-gold"
                   onClick={() => setShowCreateCorrective(true)}
                 >
                   + ADD CUSTOM CORRECTIVE

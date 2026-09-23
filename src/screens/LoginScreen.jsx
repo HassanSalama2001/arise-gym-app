@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../db/supabaseClient';
 import db from '../db/db';
-import { restoreFromCloud, getCloudBackupTime } from '../db/sync';
-import { hasLocalUserData } from '../db/backup';
+import { syncWithCloud } from '../db/cloudSync';
 import { useAlert } from '../context/useAlert';
 
 export default function LoginScreen({ onGuest, onLogin }) {
-  const { showAlert, showConfirm } = useAlert();
+  const { showAlert } = useAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +27,9 @@ export default function LoginScreen({ onGuest, onLogin }) {
         if (error) throw error;
         if (data.session) {
           await db.playerProfile.update('profile', { guestMode: false });
-          await restoreCloudBackupIfWanted();
+          // Sync merges per record, so signing in never discards what is on this device.
+          const result = await syncWithCloud();
+          if (!result.success) await showAlert('Signed in, but syncing failed: ' + result.error, 'Sync Failed');
           onLogin(data.session);
         }
       }
@@ -37,24 +38,6 @@ export default function LoginScreen({ onGuest, onLogin }) {
     } finally {
       setLoading(false);
     }
-  }
-
-  // Never let signing in silently replace data that only exists on this device.
-  async function restoreCloudBackupIfWanted() {
-    const cloudTime = await getCloudBackupTime();
-    if (!cloudTime) return;
-    if (await hasLocalUserData()) {
-      const useCloud = await showConfirm(
-        `Your account has a cloud backup from ${new Date(cloudTime).toLocaleString()}, and this device already has its own data.
-
-Replace this device's data with the cloud backup? If you keep this device's data, you can back it up to the cloud from Settings.`,
-        'Cloud Backup Found',
-        { okText: 'USE CLOUD BACKUP', cancelText: 'KEEP THIS DEVICE', danger: true }
-      );
-      if (!useCloud) return;
-    }
-    const res = await restoreFromCloud();
-    if (!res.success) await showAlert('Could not restore your cloud backup: ' + res.error, 'Restore Failed');
   }
 
   async function handleGuest() {

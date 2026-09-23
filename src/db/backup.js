@@ -4,6 +4,7 @@ import {
   EXERCISE_REF_TABLES, forEachExerciseRef, legacyResolver, LEGACY_CUSTOM_ID_BASE, CUSTOM_EXERCISE_ID_START,
 } from './remap';
 import { mergeRecords } from '../utils/workoutRules';
+import { resetSyncCursors } from './recordSync';
 
 export const BACKUP_FORMAT = 'arise-backup';
 export const BACKUP_SCHEMA_VERSION = 1;
@@ -105,6 +106,9 @@ export async function importBackup(data) {
       if (rows.length) await db.table(name).bulkPut(rows);
     }
   });
+
+  // Restored rows keep their original timestamps, which may predate the sync cursor.
+  await resetSyncCursors();
 
   return {
     sessions: tables.sessions.length,

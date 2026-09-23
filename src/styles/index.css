@@ -627,3 +627,13 @@ input[type="number"] {
 
 .sync-msg.success { color: var(--success); }
 .sync-msg.error { color: var(--accent-red); }
+
+/* Small shared helpers extracted from repeated inline styles */
+.text-10 { font-size: 10px; }
+.field-label { display: block; margin-bottom: 8px; }
+.tab-pill-sm { flex: 1; padding: 8px 0; font-size: 13px; }
+.btn-dashed-gold {
+  width: 100%;
+  border: 1px dashed var(--accent-gold);
+  color: var(--accent-gold);
+}

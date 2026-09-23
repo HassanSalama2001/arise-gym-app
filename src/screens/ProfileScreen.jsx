@@ -6,6 +6,7 @@ import db from '../db/db';
 import { getRankInfo, calculateSetXP } from '../data/progression';
 import { supabase } from '../db/supabaseClient';
 import { useBackup } from '../hooks/useBackup';
+import { resetSyncDb } from '../db/syncDb';
 import CircularProgress from '../components/profile/CircularProgress';
 import MuscleRadarChart from '../components/profile/MuscleRadarChart';
 import RankProgressionSheet from '../components/profile/RankProgressionSheet';
@@ -94,7 +95,7 @@ export default function ProfileScreen() {
   const [showInbody, setShowInbody] = useState(() => location.state?.openSheet === 'inbody');
   const [showMeasurement, setShowMeasurement] = useState(false);
   const [showRankDetails, setShowRankDetails] = useState(false);
-  const { syncing, syncStatus, exportMsg, backup, restore, exportFile } = useBackup();
+  const { syncing, syncStatus, exportMsg, sync, exportFile } = useBackup();
   const [session, setSession] = useState(null);
   const nameInputRef = useRef(null);
 
@@ -163,6 +164,7 @@ export default function ProfileScreen() {
   }
 
   async function handleDeleteAll() {
+    await resetSyncDb();
     await db.delete();
     window.location.reload();
   }
@@ -271,13 +273,9 @@ export default function ProfileScreen() {
             <div className="sync-actions-grid mt-16">
               {session ? (
                 <>
-                  <button className="sync-btn" onClick={backup} disabled={syncing}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    BACKUP
-                  </button>
-                  <button className="sync-btn" onClick={restore} disabled={syncing}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    RESTORE
+                  <button className="sync-btn" onClick={sync} disabled={syncing} style={{ gridColumn: 'span 2' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                    {syncing ? 'SYNCING...' : 'SYNC NOW'}
                   </button>
                 </>
               ) : (

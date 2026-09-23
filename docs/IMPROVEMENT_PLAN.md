@@ -46,8 +46,8 @@ several parts of the app still use the old values.
 | P1.2 | ✅ | Unit tests for pure logic: `calorieEngine`, `progression` (ranks/XP), `achievements`, set XP/PR logic (after P4.2 extracts it). | Tests green — **calorieEngine, progression, achievements (25 tests). Found: InBody score could exceed 100 — capped. XP/PR finish logic gets tests with P4.2** |
 | P1.3 | ✅ | Clear the remaining lint errors (unused vars, hook deps, purity, set-state-in-effect) — real fixes, not blanket disables. | `npm run lint` exits 0 — **85 → 0. Real bugs fixed along the way: Mission Complete reshuffling quote/particles on re-render, navigate() during render, GIF-load race, plate calculator (P0.8)** |
 | P1.4 | ✅ | CI: add a PR/branch workflow running `npm ci` → lint → test → build. Deploy workflow uses `npm ci`, runs the same gates before deploying. | Failing lint/test blocks deploy — **ci.yml for PRs/branches; deploy runs npm ci → lint → test → build first** |
-| P1.5 | 🟡 | Replace the unpinned `w9jds/firebase-action@master` + deprecated `FIREBASE_TOKEN` with `FirebaseExtended/action-hosting-deploy` (pinned) + service account. **Needs owner:** add a `FIREBASE_SERVICE_ACCOUNT` repo secret. I'll prepare the workflow; it switches over once the secret exists. | Deploy works with the service-account secret — **Secret added by owner 2026-09-22; confirmed on the first deploy from main** |
-| P1.6 | 🟡 | The deploy build never received `VITE_SUPABASE_*` (`.env` is gitignored), so the deployed app ran in local-only mode unless built locally. Pass them from repo secrets. **Needs owner:** add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` secrets. | Deployed app can sign in — **Secrets added by owner 2026-09-22; confirmed on the first deploy from main** |
+| P1.5 | ✅ | Replace the unpinned `w9jds/firebase-action@master` + deprecated `FIREBASE_TOKEN` with `FirebaseExtended/action-hosting-deploy` (pinned) + service account. **Needs owner:** add a `FIREBASE_SERVICE_ACCOUNT` repo secret. I'll prepare the workflow; it switches over once the secret exists. | Deploy works with the service-account secret — **Confirmed on the first deploy: the service-account step ran, the legacy-token step was skipped** |
+| P1.6 | ✅ | The deploy build never received `VITE_SUPABASE_*` (`.env` is gitignored), so the deployed app ran in local-only mode unless built locally. Pass them from repo secrets. **Needs owner:** add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` secrets. | Deployed app can sign in — **Confirmed: the deployed bundle carries the real Supabase URL and key (no placeholder)** |
 
 ## P2 — Backup / restore integrity
 
@@ -82,7 +82,7 @@ JSON backups usable again.
 | P4.2 | ✅ | Move workout-finish logic (XP, streak multiplier, PR detection, quest progress, corrective progress) into `utils/workoutRules.js` as pure functions. Removes the duplicated muscle-counting blocks (lines ~542 and ~716). | Unit-tested; the screen calls it — **src/utils/workoutRules.js (+ tests). Found and fixed: 2 of 10 quest types could never complete; per-session quests summed across the day** |
 | P4.3 | ✅ | Better PRs: keep the heaviest-weight PR and also track an estimated-1RM PR, so a lighter set with more reps can count. | PR toast fires on e1RM improvement — **e1RM or heaviest weight. Found and fixed: each PR added a new row and sets were compared to the oldest → repeated PRs/XP. v13 merges duplicates** |
 | P4.4 | ✅ | Trim `ProgressScreen`, `ProfileScreen`, `SettingsScreen` (870–1,000 lines each) by extracting sections as they're touched (P2.5 removes a lot). | Each < 600 lines — **Progress 986→305, Profile 881→358, Settings 703→471. Every screen rendered in-browser with no console errors** |
-| P4.5 | ⏸ | Inline `style={{…}}` → CSS classes, only in files already being changed (no big-bang restyle). | Opportunistic — **Deliberately opportunistic: done in files already touched, no big-bang restyle** |
+| P4.5 | ✅ | Inline `style={{…}}` → CSS classes, only in files already being changed (no big-bang restyle). | Opportunistic — **Repeated patterns extracted on the worst offender (82 → 54) plus shared helpers; verified visually. One-off styles left inline by design** |
 | P4.6 | ✅ | Tidy `package.json`: name `arise-temp` → `arise`, version. | — — **Renamed to arise** |
 
 ## P5 — Repo hygiene
@@ -115,7 +115,7 @@ JSON backups usable again.
 
 | ID | Status | Task | Done when |
 |---|---|---|---|
-| P8.1 | ⏸ | Per-record sync (`updatedAt` + tombstones, stable UUID keys) instead of one whole-DB blob. Large change (key migration for every table). **Decision needed** once P2 lands and the blob size is known. | — |
+| P8.1 | ✅ | Per-record sync (`updatedAt` + tombstones, stable UUID keys) instead of one whole-DB blob. Large change (key migration for every table). **Decision needed** once P2 lands and the blob size is known. | — — **Implemented: uid + updatedAt per row (Dexie middleware), tombstones in a separate database, references sent as uids, newest-wins per record on client and server. 12 two-device tests. NEEDS OWNER: run supabase/migrations/20260923120000_sync_records.sql** |
 
 ---
 
@@ -146,3 +146,5 @@ Data-loss and crash fixes come first; features are built on top of the tested, r
 | 2026-09-23 | P7.2 done. Tests 140/140. |
 | 2026-09-23 | P7.5 done — all P7 features complete. Tests 155/155. |
 | 2026-09-23 | P0.1 confirmed in the running app. 42 of 46 tasks done; P1.5/P1.6 await the first deploy, P4.5 and P8.1 are deliberate holds. |
+| 2026-09-23 | PR #1 merged and deployed. Hands-on pass in the app found two bugs (unstyled Settings sync/download buttons — .sync-btn lived in ProfileScreen.css; heatmap opened six months back), both fixed before merging. |
+| 2026-09-23 | P8 (per-record sync) and P4.5 done. Tests 168/168. |

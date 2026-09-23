@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import db from '../db/db';
 import { backupToCloud, restoreFromCloud } from '../db/sync';
 import { exportBackup, importBackup, parseBackup } from '../db/backup';
+import { syncWithCloud } from '../db/cloudSync';
 import { useAlert } from '../context/useAlert';
 
 const REPLACE_WARNING = 'This replaces everything on this device (workouts, plans, meals, scans and progress) with the backup. Export a copy first if you might want the current data back.';
@@ -47,6 +48,30 @@ export function useBackup() {
       flash(setSyncStatus, 'Backup complete!');
     } catch (err) {
       flash(setSyncStatus, 'Backup failed: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  /** Two-way sync: sends this device's changes and applies changes made elsewhere. */
+  async function sync() {
+    setSyncing(true);
+    setSyncStatus('Syncing...');
+    try {
+      const res = await syncWithCloud();
+      if (!res.success) throw new Error(res.error);
+      const changed = res.added + res.updated + res.deleted;
+      if (res.adoptedLegacyBackup) {
+        setSyncStatus('Older cloud backup restored. Reloading...');
+        window.location.reload();
+        return;
+      }
+      flash(setSyncStatus, changed || res.pushed
+        ? `Synced (${res.pushed} sent, ${changed} received)`
+        : 'Already up to date');
+      if (changed) window.location.reload();
+    } catch (err) {
+      flash(setSyncStatus, 'Sync failed: ' + err.message);
     } finally {
       setSyncing(false);
     }
@@ -114,5 +139,5 @@ export function useBackup() {
     }
   }
 
-  return { syncing, syncStatus, exportMsg, backup, restore, exportFile, importFile };
+  return { syncing, syncStatus, exportMsg, sync, backup, restore, exportFile, importFile };
 }
