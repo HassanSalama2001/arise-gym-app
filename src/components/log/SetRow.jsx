@@ -40,17 +40,32 @@ export default function SetRow({ set, index, onUpdate, onComplete, isActive, onD
         />
       </div>
 
-      <input
-        type="number"
-        inputMode="decimal"
-        className="set-input reps-input"
-        placeholder={lastSetData ? `${lastSetData.reps}` : "0"}
-        value={set.reps || ''}
-        onChange={e => onUpdate({ reps: parseInt(e.target.value) || 0 })}
-        disabled={set.completed}
-        aria-label="Reps"
-        id={`set-reps-${index}`}
-      />
+      {set.mode === 'time' ? (
+        <input
+          type="number"
+          inputMode="numeric"
+          className="set-input reps-input"
+          placeholder="0"
+          value={set.duration || ''}
+          onChange={e => onUpdate({ duration: parseInt(e.target.value) || 0 })}
+          disabled={set.completed}
+          aria-label="Seconds"
+          id={`set-duration-${index}`}
+        />
+      ) : (
+        <input
+          type="number"
+          inputMode="decimal"
+          className="set-input reps-input"
+          placeholder={lastSetData ? `${lastSetData.reps}` : "0"}
+          value={set.reps || ''}
+          onChange={e => onUpdate({ reps: parseInt(e.target.value) || 0 })}
+          disabled={set.completed}
+          aria-label={set.perSide ? 'Reps per side' : 'Reps'}
+          title={set.perSide ? 'Reps per side' : undefined}
+          id={`set-reps-${index}`}
+        />
+      )}
 
       <button
         className={`set-rpe-badge-btn ${set.completed ? 'completed' : ''}`}

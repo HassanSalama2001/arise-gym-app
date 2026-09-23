@@ -10,11 +10,24 @@ export function isCorrectiveExercise(exercise) {
   return !!(exercise?.isCorrective || exercise?.muscleGroup === 'Corrective');
 }
 
+/** Reps counted for a set: per-side sets are logged once but worked twice. */
+export function effectiveReps(set) {
+  return (set.reps || 0) * (set.perSide ? 2 : 1);
+}
+
+/** Volume (weight x reps) for a set. Timed holds have no rep volume. */
+export function setVolume(set) {
+  if (set.mode === 'time') return 0;
+  return (set.weight || 0) * effectiveReps(set);
+}
+
 /** XP for one completed set (before any PR bonus). Warm-ups earn nothing. */
 export function setXP(set, exercise) {
   if (set.type === 'warmup') return 0;
   if (isCorrectiveExercise(exercise)) return CORRECTIVE_SET_XP;
-  return calculateSetXP(set.weight || 0, set.reps || 0);
+  // A timed hold earns like bodyweight reps, counting roughly 3 seconds per rep.
+  if (set.mode === 'time') return Math.max(Math.round((set.duration || 0) / 3) * 2, 5);
+  return calculateSetXP(set.weight || 0, effectiveReps(set));
 }
 
 /** Epley estimated one-rep max. */
@@ -31,8 +44,8 @@ export function estimateOneRepMax(weight, reps) {
  */
 export function evaluatePR(record, set, now = Date.now()) {
   const weight = set.weight || 0;
-  const reps = set.reps || 0;
-  if (set.type === 'warmup' || weight <= 0 || reps <= 0) return { isPR: false, record };
+  const reps = effectiveReps(set);
+  if (set.type === 'warmup' || set.mode === 'time' || weight <= 0 || reps <= 0) return { isPR: false, record };
 
   const setE1RM = estimateOneRepMax(weight, reps);
   if (!record) {
@@ -82,7 +95,7 @@ export function summarizeSets(sets, exercisesById) {
     if (!done.length) continue;
     exercisesTrained++;
     totalSets += done.length;
-    volume += done.reduce((acc, s) => acc + (s.weight || 0) * (s.reps || 0), 0);
+    volume += done.reduce((acc, s) => acc + setVolume(s), 0);
     const group = exercisesById[exId]?.muscleGroup;
     if (group) byGroup[group] = (byGroup[group] || 0) + done.length;
   }

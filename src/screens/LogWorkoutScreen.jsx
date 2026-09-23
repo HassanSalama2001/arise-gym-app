@@ -309,6 +309,19 @@ export default function LogWorkoutScreen() {
   const currentBlockSets = currentBlock.length > 0 ? getExSets(currentBlock[0].id) : [];
   const completedBlockSets = currentBlockSets.filter(s => s.completed).length;
   const isBarbellBlock = currentBlock.some(ex => BARBELL_EQUIPMENT.has(ex.equipment));
+  const blockMode = currentBlockSets[0]?.mode === 'time' ? 'time' : 'reps';
+  const blockPerSide = !!currentBlockSets[0]?.perSide;
+
+  // Timed / per-side apply to the whole exercise (or superset block), like the target sets do.
+  function setBlockSetOption(changes) {
+    updateSets(prev => {
+      const next = { ...prev };
+      for (const ex of currentBlock) {
+        next[ex.id] = (prev[ex.id] || []).map(s => (s.completed ? s : { ...s, ...changes }));
+      }
+      return next;
+    });
+  }
   // Plate calculator loads the next set to do, or the last weight entered.
   const plateWeight = (currentBlockSets.find(s => !s.completed && s.weight > 0)
     || [...currentBlockSets].reverse().find(s => s.weight > 0))?.weight || 0;
@@ -395,11 +408,33 @@ export default function LogWorkoutScreen() {
               )}
             </div>
 
+            <div className="tab-pills" style={{ margin: '0 0 8px', width: 'fit-content' }}>
+              <button
+                className={`tab-pill ${blockMode === 'time' ? 'active' : ''}`}
+                style={{ padding: '4px 10px', fontSize: 11 }}
+                onClick={() => setBlockSetOption({ mode: blockMode === 'time' ? 'reps' : 'time', perSide: false })}
+                id="toggle-timed"
+                title="Log this exercise as a timed hold"
+              >
+                TIMED
+              </button>
+              <button
+                className={`tab-pill ${blockPerSide ? 'active' : ''}`}
+                style={{ padding: '4px 10px', fontSize: 11 }}
+                onClick={() => setBlockSetOption({ perSide: !blockPerSide })}
+                disabled={blockMode === 'time'}
+                id="toggle-per-side"
+                title="Reps are per side; volume counts both"
+              >
+                PER SIDE
+              </button>
+            </div>
+
             {/* Set Grid Headers */}
             <div className="set-row-header">
               <span className="header-label">SET</span>
               <span className="header-label">WEIGHT</span>
-              <span className="header-label">REPS</span>
+              <span className="header-label">{blockMode === 'time' ? 'SECONDS' : blockPerSide ? 'REPS/SIDE' : 'REPS'}</span>
               <span className="header-label">RPE</span>
               <span className="header-label" style={{ textAlign: 'center' }}>DONE</span>
               <span className="header-label"></span>

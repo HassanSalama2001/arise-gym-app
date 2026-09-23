@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   setXP, estimateOneRepMax, evaluatePR, summarizeSets, questSessionProgress, applyQuestProgress,
-  finalSessionXP, nextStreak, earnedAchievements, CORRECTIVE_SET_XP,
+  finalSessionXP, nextStreak, earnedAchievements, CORRECTIVE_SET_XP, effectiveReps, setVolume,
 } from './workoutRules';
 import { QUEST_TEMPLATES } from '../data/progression';
 
@@ -125,5 +125,35 @@ describe('earnedAchievements', () => {
     expect(earnedAchievements({ totalSessions: 1, streak: 1, totalXP: 999 })).toEqual([]);
     expect(earnedAchievements({ totalSessions: 12, streak: 7, totalXP: 5000 }))
       .toEqual(['sessions_10', 'streak_7', 'rank_d', 'rank_c']);
+  });
+});
+
+describe('per-side and timed sets', () => {
+  const perSide = { weight: 20, reps: 10, perSide: true, completed: true, type: 'normal' };
+  const timed = { weight: 0, reps: 0, mode: 'time', duration: 60, completed: true, type: 'normal' };
+
+  it('counts per-side reps twice for volume and XP', () => {
+    expect(effectiveReps(perSide)).toBe(20);
+    expect(setVolume(perSide)).toBe(400);
+    expect(setXP(perSide, bench)).toBe(40); // 20 x 20 / 10
+  });
+
+  it('gives timed holds no rep volume and XP from their duration', () => {
+    expect(setVolume(timed)).toBe(0);
+    expect(setXP(timed, bench)).toBe(40); // 60s ~ 20 reps
+    expect(setXP({ ...timed, duration: 5 }, bench)).toBe(5); // never below the floor
+  });
+
+  it('keeps timed holds out of personal records', () => {
+    expect(evaluatePR(undefined, { ...timed, weight: 40 }).isPR).toBe(false);
+  });
+
+  it('counts a per-side PR on the reps actually performed', () => {
+    expect(evaluatePR({ weight: 20, reps: 15 }, perSide).isPR).toBe(true); // 20 per side = 20 reps
+  });
+
+  it('includes both in the session summary', () => {
+    const stats = summarizeSets({ 25: [perSide], 27: [timed] }, { 25: bench, 27: row });
+    expect(stats).toMatchObject({ totalSets: 2, volume: 400, exercisesTrained: 2, byGroup: { Chest: 1, Back: 1 } });
   });
 });

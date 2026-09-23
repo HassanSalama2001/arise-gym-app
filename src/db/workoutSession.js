@@ -24,6 +24,9 @@ export function setRowsForSession(sessionId, sets) {
         reps: s.reps,
         rpe: s.rpe || null,
         type: s.type || 'normal',
+        mode: s.mode || 'reps',
+        ...(s.perSide ? { perSide: 1 } : {}),
+        ...(s.mode === 'time' ? { duration: s.duration || 0 } : {}),
         completed: s.completed ? 1 : 0,
       });
     });
