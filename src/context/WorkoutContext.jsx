@@ -42,6 +42,7 @@ export function WorkoutProvider({ children }) {
       currentExIdx: 0,
       sets: config.sets || {},
       blocks: config.blocks || [],
+      suggestions: config.suggestions || {},
       totalXP: 0,
       phase: 'active',
     });

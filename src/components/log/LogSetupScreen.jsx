@@ -39,6 +39,7 @@ export default function LogSetupScreen({ onStart }) {
         return {
           ...ex,
           groupId: pe.groupId ?? null, // superset link
+          progression: pe.progression ?? null,
           targetSets: pe.targetSets !== undefined ? pe.targetSets : 3,
           targetReps: pe.targetReps !== undefined ? pe.targetReps : 10
         };

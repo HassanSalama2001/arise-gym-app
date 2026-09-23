@@ -4,6 +4,7 @@ import { countPRsSince } from './records';
 import { checkAndUnlockAchievement } from '../utils/achievements';
 import { getToday, getYesterday } from '../utils/date';
 import { groupIntoBlocks } from '../utils/planGroups';
+import { suggestionsFor } from './progressionHistory';
 import {
   summarizeSets, applyQuestProgress, finalSessionXP, nextStreak, earnedAchievements,
 } from '../utils/workoutRules';
@@ -79,7 +80,13 @@ export async function startWorkoutSession({ planName, planId = null, exercises =
   const exercisesById = Object.fromEntries(allExercises.map(e => [e.id, e]));
   const correctives = correctiveBlocks(activeRecords, [...posturalIssues, ...customIssues], exercisesById);
 
-  const planSets = Object.fromEntries(exercises.map(ex => [ex.id, blankSets(ex.targetSets || 3, ex.targetReps || 10)]));
+  // Pre-fill each exercise with what its progression scheme (or last session) suggests.
+  const suggestions = await suggestionsFor(exercises);
+  const planSets = Object.fromEntries(exercises.map(ex => {
+    const suggestion = suggestions[ex.id];
+    const sets = blankSets(ex.targetSets || 3, suggestion?.reps ?? ex.targetReps ?? 10);
+    return [ex.id, suggestion ? sets.map(s => ({ ...s, weight: suggestion.weight })) : sets];
+  }));
   const sessionId = await db.sessions.add({ planId, name: planName, startTime: now, endTime: null });
 
   return {
@@ -91,6 +98,7 @@ export async function startWorkoutSession({ planName, planId = null, exercises =
       ...correctives.cooldown.map(ex => [ex]),
     ],
     sets: { ...planSets, ...correctives.sets },
+    suggestions,
     todayQuests,
   };
 }

@@ -5,6 +5,8 @@ import { Reorder, useDragControls } from 'framer-motion';
 import db from '../db/db';
 import { useAlert } from '../context/useAlert';
 import { toggleSupersetWithPrevious, isLinkedToPrevious, normalizeGroups } from '../utils/planGroups';
+import ProgressionSheet from '../components/plan/ProgressionSheet';
+import { PROGRESSION_TYPES } from '../utils/loadProgression';
 import { playClickSound } from '../utils/audio';
 import EditPlanModal from '../components/EditPlanModal';
 import AddExerciseToPlanSheet from '../components/AddExerciseToPlanSheet';
@@ -18,6 +20,7 @@ export default function PlanDetailScreen() {
   
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddSheet, setShowAddSheet] = useState(false); // For Phase 3A
+  const [progressionFor, setProgressionFor] = useState(null); // plan exercise being configured
 
   const plan = useLiveQuery(() => db.workoutPlans.get(Number(planId)), [planId]);
   
@@ -55,6 +58,14 @@ export default function PlanDetailScreen() {
       </div>
     );
   }
+
+  const handleSaveProgression = async (settings) => {
+    await db.planExercises.update(progressionFor.id, {
+      progression: settings.type === 'none' ? null : settings,
+    });
+    setProgressionFor(null);
+    showToast(settings.type === 'none' ? 'Progression turned off' : `${PROGRESSION_TYPES[settings.type].label} progression saved`);
+  };
 
   const handleToggleSuperset = async (index) => {
     const changes = toggleSupersetWithPrevious(planExercises, index);
@@ -183,6 +194,7 @@ export default function PlanDetailScreen() {
                 canLink={index > 0}
                 linkedToPrevious={isLinkedToPrevious(planExercises, index)}
                 onToggleSuperset={() => handleToggleSuperset(index)}
+                onEditProgression={() => setProgressionFor(pe)}
               />
             ))}
           </Reorder.Group>
@@ -210,6 +222,15 @@ export default function PlanDetailScreen() {
         onSave={handleSavePlan}
       />
 
+      {progressionFor && (
+        <ProgressionSheet
+          exerciseName={progressionFor.exercise.name}
+          progression={progressionFor.progression}
+          onSave={handleSaveProgression}
+          onClose={() => setProgressionFor(null)}
+        />
+      )}
+
       <AddExerciseToPlanSheet 
         isOpen={showAddSheet}
         onClose={() => setShowAddSheet(false)}
@@ -220,7 +241,7 @@ export default function PlanDetailScreen() {
   );
 }
 
-function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise, navigate, linkedToPrevious, canLink, onToggleSuperset }) {
+function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise, navigate, linkedToPrevious, canLink, onToggleSuperset, onEditProgression }) {
   const controls = useDragControls();
 
   return (
@@ -257,6 +278,11 @@ function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise,
           <div className="reorder-title">{pe.exercise.name}</div>
           <div className="reorder-meta">
             <span className="reorder-sets">{pe.targetSets || 3} sets</span>
+            {pe.progression?.type && pe.progression.type !== 'none' && (
+              <span className="chip chip-green" style={{ fontSize: 10, padding: '2px 6px' }}>
+                {PROGRESSION_TYPES[pe.progression.type]?.label?.toUpperCase()}
+              </span>
+            )}
             <span className="chip" style={{ fontSize: 10, padding: '2px 6px' }}>{pe.exercise.muscleGroup}</span>
           </div>
         </div>
@@ -280,6 +306,16 @@ function SortableExerciseItem({ pe, planId, exerciseNotes, handleRemoveExercise,
       </div>
 
       <div className="reorder-actions">
+        <button
+          className="btn-icon"
+          title="Progression"
+          onClick={(e) => { e.stopPropagation(); onEditProgression(); }}
+          style={pe.progression?.type && pe.progression.type !== 'none' ? { color: 'var(--success)' } : undefined}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
+          </svg>
+        </button>
         {canLink && (
           <button
             className="btn-icon"

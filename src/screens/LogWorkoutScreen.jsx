@@ -36,7 +36,7 @@ export default function LogWorkoutScreen() {
   
   // Use global workout context for state persistence
   const { workoutState, startWorkout, updateSets, updateBlocks, setCurrentExIdx, endWorkout, updateTotalXP } = useWorkout();
-  const { phase, sessionId, startTime, currentExIdx, sets, blocks, totalXP } = workoutState;
+  const { phase, sessionId, startTime, currentExIdx, sets, blocks, totalXP, suggestions = {} } = workoutState;
 
   const [initialQuests, setInitialQuests] = useState([]);
   const toastedQuests = useRef(new Set());
@@ -133,6 +133,7 @@ export default function LogWorkoutScreen() {
       startTime: session.startTime,
       blocks: session.blocks,
       sets: session.sets,
+      suggestions: session.suggestions,
     });
   }
 
@@ -407,6 +408,17 @@ export default function LogWorkoutScreen() {
                 </span>
               )}
             </div>
+
+            {currentBlock.map(ex => suggestions[ex.id] && (
+              <div key={`hint-${ex.id}`} className="xp-preview" style={{ marginBottom: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={suggestions[ex.id].deload ? 'var(--accent-gold)' : 'var(--success)'} strokeWidth="2.5">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
+                </svg>
+                <span>
+                  {currentBlock.length > 1 ? `${ex.name}: ` : ''}{suggestions[ex.id].reason}
+                </span>
+              </div>
+            ))}
 
             <div className="tab-pills" style={{ margin: '0 0 8px', width: 'fit-content' }}>
               <button
